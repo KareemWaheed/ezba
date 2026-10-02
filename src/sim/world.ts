@@ -7,6 +7,7 @@ import { Carrier } from './carrier';
 import { Station } from './station';
 import { CustomerSystem } from './customers';
 import { UpgradeSystem } from './upgrades';
+import { StaffSystem } from './staff';
 import { EventQueue } from './events';
 import { dist } from './math';
 
@@ -23,14 +24,13 @@ export class SimWorld {
   readonly stations: Station[];
   readonly customers: CustomerSystem;
   readonly upgrades: UpgradeSystem;
+  readonly staff: StaffSystem;
   readonly cash = { value: 0, bills: 0 };
   /** Lifetime counters (daily tasks, album and the simulator read these). */
   readonly stats = { earned: 0, served: 0, sold: 0 };
   readonly events = new EventQueue();
   /** Current stick input, magnitude 0..1. Set by the UI or the simulated player. */
   readonly input = { x: 0, z: 0 };
-  /** Whether a cashier serves customers without the player present (M5). */
-  cashier = false;
   /** True while simulating time away: the player can't carry, serve or pay. */
   away = false;
 
@@ -43,15 +43,32 @@ export class SimWorld {
     this.carry = new Carrier(ECONOMY.player.capacity);
     this.stations = STATIONS.map((d, i) => new Station(d, i));
     this.customers = new CustomerSystem(this);
+    this.staff = new StaffSystem(this);
     this.upgrades = new UpgradeSystem(this);
     this.upgrades.apply();
     this.upgrades.refresh();
   }
 
-  /** True when customers can take items right now. */
-  get canServe(): boolean {
-    const sp = LAYOUT.shop.servePoint;
-    return this.cashier || (!this.away && dist(this.player.x, this.player.z, sp.x, sp.z) < ECONOMY.serveRadius);
+  /** Open checkout lanes (1 at the start). */
+  get lanes(): number { return 1 + this.upgrades.level('shop.lanes'); }
+
+  /** Cashiers hired (cashier i works lane i). */
+  get cashiers(): number { return this.upgrades.level('cashier'); }
+
+  /** True when the player stands close enough to a lane's checkout spot to serve it. */
+  playerAtLane(lane: number): boolean {
+    if (this.away) return false;
+    const l = LAYOUT.shop.lanes[lane];
+    return dist(this.player.x, this.player.z, l.x, LAYOUT.shop.serveZ) < ECONOMY.serveRadius;
+  }
+
+  /** Whether the front customer of a lane can be served right now (player there, or its cashier). */
+  laneServed(lane: number): boolean { return lane < this.cashiers || this.playerAtLane(lane); }
+
+  /** Seconds between items at a lane: player speed, or the slower cashier. */
+  laneInterval(lane: number): number {
+    const base = ECONOMY.customers.takeInterval;
+    return this.playerAtLane(lane) ? base : base * this.staff.cashierSlow;
   }
 
   /** Advance the simulation. Callers keep dt <= MAX_STEP. */
@@ -60,7 +77,8 @@ export class SimWorld {
     if (!this.away) updatePlayer(this.player, this.input.x, this.input.z, dt, SOLIDS, LAYOUT.bounds);
     for (const s of this.stations) s.update(dt, this.rng, this.events);
     if (!this.away) this.interact(dt);
-    this.customers.update(dt, this.canServe);
+    this.staff.update(dt);
+    this.customers.update(dt);
     if (!this.away) this.upgrades.update(dt);
   }
 

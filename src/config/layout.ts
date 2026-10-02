@@ -15,16 +15,23 @@ export const LAYOUT = {
   /** Fenced animal areas. */
   coop: { x0: -7, x1: 0, z0: -9.4, z1: -2 } as Box,
   pen: { x0: 3, x1: 10, z0: -9.4, z1: -2 } as Box,
-  /** Shop front: where the player stands to serve, the customer line, entry/exit and the cash pile. */
+  /**
+   * Shop front. Checkout lanes sit side by side along the counter (opened in this order): the
+   * player/cashier stands at (x, serveZ) behind the counter, customers line up from (x, queueZ).
+   */
   shop: {
-    servePoint: { x: 0, z: 3.0 },
-    queue: { x: 0, z: 5.45, gap: 1.15 },
+    lanes: [{ x: 0 }, { x: -2.4 }, { x: 2.4 }],
+    serveZ: 3.0,
+    queueZ: 5.45,
+    queueGap: 1.15,
     spawn: { x0: -3, x1: -1.5, z: 14.5 },
     exit: { x: 10.5, z: 15 },
-    cash: { x: 3.6, z: 4.6 },
+    cash: { x: 5.0, z: 4.6 },
   },
+  /** HR office building (staff upgrades). */
+  hr: { x0: -8.2, x1: -5.0, z0: 9.2, z1: 10.8 } as Box,
   /** Sell counter body. */
-  counter: { x0: -2.3, x1: 2.3, z0: 3.55, z1: 4.45 } as Box,
+  counter: { x0: -3.6, x1: 3.6, z0: 3.55, z1: 4.45 } as Box,
 
   /** Decorative trees around the edge (x, z). */
   trees: [
@@ -39,6 +46,7 @@ export const SOLIDS: Box[] = [
   { x0: LAYOUT.coop.x0 - 0.1, x1: LAYOUT.coop.x1 + 0.1, z0: LAYOUT.coop.z0 - 0.5, z1: LAYOUT.coop.z1 + 0.1 },
   { x0: LAYOUT.pen.x0 - 0.1, x1: LAYOUT.pen.x1 + 0.1, z0: LAYOUT.pen.z0 - 0.5, z1: LAYOUT.pen.z1 + 0.1 },
   { ...LAYOUT.counter },
+  { ...LAYOUT.hr },
   // hay bales lie along x (length 1.2, radius 0.5)
   ...LAYOUT.hay.map(([x, z]) => ({ x0: x - 0.6, x1: x + 0.6, z0: z - 0.5, z1: z + 0.5 })),
   // tree trunks

@@ -53,7 +53,9 @@ class TileView {
     c.font = `64px ${EMOJI}`;
     c.fillText(d.icon, 128, 66);
     c.fillStyle = '#2b2a1f';
-    c.font = `800 32px ${FONT}`;
+    let fs = 32;
+    c.font = `800 ${fs}px ${FONT}`;
+    while (fs > 20 && c.measureText(d.label).width > 224) c.font = `800 ${--fs}px ${FONT}`;
     c.direction = 'rtl';
     c.fillText(d.label, 128, 132);
     c.direction = 'ltr';

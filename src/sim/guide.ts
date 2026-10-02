@@ -26,13 +26,11 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
 /** Early-game hint: the next step of the carry-and-sell loop. */
 export function nextAction(w: SimWorld, out: { x: number; z: number }): boolean {
   const c = w.carry, shop = LAYOUT.shop;
-  const front = w.customers.front();
   // cash waiting and nothing urgent in hand
   if (w.cash.value > 0 && c.n === 0) { out.x = shop.cash.x; out.z = shop.cash.z; return true; }
-  // someone is waiting at a stocked counter but nobody is serving
-  if (!w.cashier && front && w.stations[front.station].counter > 0 && !w.canServe && c.n === 0) {
-    out.x = shop.servePoint.x; out.z = shop.servePoint.z; return true;
-  }
+  // someone is waiting at a stocked counter but nobody is serving their lane
+  const lane = unservedLane(w);
+  if (lane >= 0 && c.n === 0) { out.x = shop.lanes[lane].x; out.z = shop.serveZ; return true; }
   // carrying: go drop it (full, or nothing left to grab)
   if (c.n > 0) {
     for (const s of w.stations) {
@@ -71,4 +69,13 @@ export function nextGoal(w: SimWorld): Goal | null {
   }
   if (!pick) return null;
   return { def: pick, cost: up.cost(pick.id), remaining: up.remaining(pick.id) };
+}
+
+/** A lane whose front customer could buy (stock on the counter) but nobody is serving it; -1 if none. */
+export function unservedLane(w: SimWorld): number {
+  for (let i = 0; i < w.lanes; i++) {
+    const f = w.customers.front(i);
+    if (f && w.stations[f.station].counter > 0 && !w.laneServed(i)) return i;
+  }
+  return -1;
 }

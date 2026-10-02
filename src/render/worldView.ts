@@ -65,8 +65,17 @@ export function buildWorld(scene: THREE.Scene): void {
     part(box, 0xd94f45, cx, 0.85, cz, 0, 0, 0, cw, 0.14, 1.0),
     part(box, 0xb83c33, cx, 0.48, cz + 0.46, 0, 0, 0, cw, 0.62, 0.08),
     ...Q4.map(([a, b]) => part(box, 0x7a3b2a, cx + a * (cw / 2 - 0.2), 0.4, cz + b * 0.38, 0, 0, 0, 0.14, 0.8, 0.14)),
-    part(box, 0x5ec6d0, cx, 1.08, cz + 0.05, 0, 0, 0, 0.45, 0.3, 0.35),
-    part(box, 0x2b2b2b, cx, 1.24, cz - 0.05, -0.4, 0, 0, 0.38, 0.04, 0.2),
+  );
+
+  // HR office: small house with a blue roof
+  const h = L.hr, hx = (h.x0 + h.x1) / 2, hz = (h.z0 + h.z1) / 2, hw = h.x1 - h.x0, hd = h.z1 - h.z0;
+  g.push(
+    part(box, 0xf3e3c3, hx, 0.9, hz, 0, 0, 0, hw, 1.8, hd),
+    part(box, 0x3d6fb6, hx, 1.95, hz, 0, 0, 0, hw + 0.3, 0.3, hd + 0.3),
+    part(box, 0x2f5893, hx, 2.25, hz, 0, 0, 0, hw - 0.6, 0.3, hd - 0.4),
+    part(box, 0x8a5a32, hx, 0.7, h.z1 + 0.01, 0, 0, 0, 0.8, 1.4, 0.04),
+    part(box, 0x9fd3f0, hx - 1.05, 1.1, h.z1 + 0.01, 0, 0, 0, 0.6, 0.5, 0.04),
+    part(box, 0x9fd3f0, hx + 1.05, 1.1, h.z1 + 0.01, 0, 0, 0, 0.6, 0.5, 0.04),
   );
 
   const mesh = new THREE.Mesh(merge(g), MAT);

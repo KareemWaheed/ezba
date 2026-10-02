@@ -48,7 +48,12 @@ export function migrate(raw: unknown): SaveData | null {
 
 export function serialize(w: SimWorld, now: number): SaveData {
   const stations: SaveData['stations'] = {};
-  for (const s of w.stations) stations[s.def.id] = { open: s.open, pile: s.pile + s.pending, counter: s.counter };
+  for (const s of w.stations) {
+    // items in workers' hands or on belts are saved as already on the counter
+    let moving = w.staff.belts[s.index].inTransit;
+    for (const x of w.staff.workers) if (x.station === s) moving += x.carry.n;
+    stations[s.def.id] = { open: s.open, pile: s.pile + s.pending, counter: s.counter + moving };
+  }
   return {
     v: SAVE_VERSION, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,

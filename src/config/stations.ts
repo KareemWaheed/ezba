@@ -18,6 +18,10 @@ export interface StationDef {
   counter: { x: number; z: number; dropX: number; dropZ: number };
   /** Upgrade track that adds animals (one per level step). */
   animalTrack?: UpgradeId;
+  /** Upgrade track that hires workers for this station (one per level). */
+  workerTrack?: UpgradeId;
+  /** Upgrade track for this station's belt (level 1 builds it, later levels speed it up). */
+  machineTrack?: UpgradeId;
   /** Whether the station is open at the start of a new game. */
   startsOpen: boolean;
 }
@@ -25,6 +29,7 @@ export interface StationDef {
 export const STATIONS: readonly StationDef[] = [
   {
     id: 'eggs', product: 'egg', producer: 'chicken', area: LAYOUT.coop, animalTrack: 'eggs.animals',
+    workerTrack: 'eggs.worker', machineTrack: 'eggs.machine',
     pile: { x: -3, z: -0.8, cols: 2, rows: 2 },
     counter: { x: -1.2, z: 4, dropX: -1.2, dropZ: 2.9 },
     startsOpen: true,

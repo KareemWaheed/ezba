@@ -26,3 +26,8 @@ This file records the decisions made on top of it.
 - Simulator writes an HTML income chart (active vs automation-only) and supports `--check` to fail on pacing regressions.
 - Input record/replay in the debug panel (sim is deterministic).
 - Screen wake lock while playing; haptic ticks on Android.
+- Checkout lanes (supermarket style): up to 3 lanes along the counter, each with its own line. Customers
+  join the shortest line; each extra lane raises the arrival rate. One cashier per open lane; the player
+  serves whichever lane(s) they stand at, faster than a cashier.
+- Tiles only take money while the player is (nearly) standing still, so running across one doesn't drain it.
+- Offline earnings = automation's real output for the time away (capped at 2 h) x `offline.efficiency`.

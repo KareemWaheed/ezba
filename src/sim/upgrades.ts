@@ -40,6 +40,7 @@ export class UpgradeSystem {
   /** Tile is shown when requirements are met and the track isn't maxed. */
   available(def: UpgradeDef): boolean {
     if (this.maxed(def.id)) return false;
+    if (def.capBy && this.level(def.id) >= 1 + this.level(def.capBy)) return false;
     for (const r of def.requires) if (this.level(r.id) < r.level) return false;
     return true;
   }
@@ -67,6 +68,7 @@ export class UpgradeSystem {
       const want = ECONOMY.producers[s.def.producer].start + this.level(track) * U[track].step;
       while (s.animals.length < want) s.addAnimal(w.rng);
     }
+    w.staff.sync();
   }
 
   private purchase(t: TileState): void {
@@ -87,7 +89,7 @@ export class UpgradeSystem {
     for (const t of this.tiles) {
       const d = dist(p.x, p.z, t.def.pos.x, t.def.pos.z);
       if (!t.armed) { if (d > cfg.armDistance) t.armed = true; continue; }
-      if (d >= cfg.radius || w.money <= 1e-6) continue;
+      if (d >= cfg.radius || p.speed > cfg.maxPaySpeed || w.money <= 1e-6) continue;
       const id = t.def.id, cost = this.cost(id);
       const amt = Math.min(w.money, cost - this.paid[id], Math.max(cost * cfg.costFraction, cfg.minRate) * dt);
       w.money -= amt;

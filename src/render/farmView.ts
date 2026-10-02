@@ -14,6 +14,7 @@ import { AnimalHerdView } from './animals';
 import { CustomersView } from './customers';
 import { FLY_SCALE, ITEM_H, ITEM_ICON } from './models';
 import { TilesView } from './tiles';
+import { StaffView } from './staffView';
 import { UPGRADES } from '../config/upgrades';
 
 const _v = new THREE.Vector3();
@@ -98,6 +99,7 @@ export class FarmView {
   readonly customers: CustomersView;
   readonly arrow: THREE.Mesh;
   readonly tiles: TilesView;
+  readonly staff: StaffView;
   /** True on frames where a coin flew into an upgrade tile (for the coin sound). */
   coinFlew = false;
   private payT = 0;
@@ -122,6 +124,7 @@ export class FarmView {
     scene.add(cm);
     this.customers = new CustomersView(scene);
     this.tiles = new TilesView(scene);
+    this.staff = new StaffView(scene);
     this.arrow = new THREE.Mesh(merge([
       part(PRIM.cone, 0xff8a1f, 0, 0, 0, Math.PI, 0, 0, 0.32, 0.6, 0.32),
       part(PRIM.cyl, 0xff8a1f, 0, 0.5, 0, 0, 0, 0, 0.12, 0.6, 0.12),
@@ -140,6 +143,7 @@ export class FarmView {
     this.cash.update(dt);
     this.customers.update(sim.customers.list, dt);
     this.tiles.sync(sim, dt, pop);
+    this.staff.sync(sim, dt, this.flyers, pop);
 
     // coins fly from the player into the tile being paid
     this.coinFlew = false;
