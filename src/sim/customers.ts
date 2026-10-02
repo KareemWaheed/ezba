@@ -3,10 +3,12 @@ import { LAYOUT } from '../config/layout';
 import { moveToward } from './math';
 import type { SimWorld } from './world';
 import type { Station } from './station';
+import type { CrowdStyle } from '../config/scenarios';
 
 /** queue = waiting in a lane; leave = paid and walking off; angry = gave up and walking off. */
 export type CustomerState = 'queue' | 'leave' | 'angry';
-export type CustomerKind = 'normal' | 'vip';
+/** guest = a scenario's special guest (president, Salah...): player-only service like a VIP. */
+export type CustomerKind = 'normal' | 'vip' | 'guest';
 export type Mood = 'happy' | 'bored' | 'angry';
 
 /** One product in an order. */
@@ -33,6 +35,10 @@ export interface Customer {
   playerItems: number;
   /** Arrived during a rush. */
   rush: boolean;
+  /** Part of a scenario event (crowd or guest). */
+  scenario: boolean;
+  /** Crowd look for the renderer ('' = random clothes). */
+  style: CrowdStyle | '';
   /** Arrived while the player was away (doesn't count toward the rating). */
   away: boolean;
   /** Cooldown before taking the next item. */
@@ -92,11 +98,14 @@ export class CustomerSystem {
     if (!open.length) return;
     // shop rushes only (café rushes are handled by the café)
     const rush = w.rush.active && w.rush.kind.target !== 'cafe';
-    const vip = this.forceVip || (!w.away && !rush && w.upgrades.bought >= ECONOMY.vip.minUpgrades && rng.chance(ECONOMY.vip.chance));
+    const sc = w.scenario, inScenario = sc.active;
+    const crowd = inScenario && rng.chance(sc.def.crowdShare);
+    const vip = this.forceVip || (!w.away && !rush && !inScenario && w.upgrades.bought >= ECONOMY.vip.minUpgrades && rng.chance(ECONOMY.vip.chance));
     this.forceVip = false;
-    const featured = rush ? open.find((s) => s.def.product === w.rush.featured) : undefined;
+    const featProduct = rush ? w.rush.featured : crowd ? sc.featured : null;
+    const featured = featProduct ? open.find((s) => s.def.product === featProduct) : undefined;
     let lines: OrderLine[];
-    if (featured && rng.chance(ECONOMY.rush.skew)) lines = [this.line(featured, 1)];
+    if (featured && (crowd || rng.chance(ECONOMY.rush.skew))) lines = [this.line(featured, crowd ? sc.def.qtyMult : 1)];
     else if (open.length >= 2 && rng.chance(cfg.mixedChance)) {
       // mixed order: two different products, each a bit smaller
       const a = rng.int(open.length);
@@ -108,13 +117,13 @@ export class CustomerSystem {
     for (const l of lines) qty += l.qty;
     const pc = ECONOMY.patience;
     const grace = pc.early * Math.max(0, 1 - w.upgrades.bought / pc.earlyUpgrades);
-    const patience = (pc.normal + grace) * (vip ? ECONOMY.vip.patienceMult : 1);
+    const patience = (pc.normal + grace) * (vip ? ECONOMY.vip.patienceMult : 1) * (inScenario ? sc.def.patienceMult : 1);
     const sp = LAYOUT.shop.spawn;
     this.list.push({
       id: this.nextId++, kind: vip ? 'vip' : 'normal', look: rng.int(1 << 30),
       x: rng.range(sp.x0, sp.x1), z: sp.z, rot: Math.PI, speed: 0,
       state: 'queue', lines, lane, qty, left: qty, patience, patienceMax: patience, playerItems: 0,
-      rush, away: w.away, takeT: 0, servedT: 0, gone: false,
+      rush, scenario: inScenario, style: crowd && sc.def.crowd ? sc.def.crowd : '', away: w.away, takeT: 0, servedT: 0, gone: false,
     });
     if (rush) w.rush.spawned++;
     if (vip) w.events.emit('vip', '', 0, 0, 0, lane, this.nextId - 1);
@@ -128,7 +137,7 @@ export class CustomerSystem {
 
   /** Whether this customer can be served at their lane right now (VIPs only accept the player). */
   servable(c: Customer): boolean {
-    return c.kind === 'vip' ? this.w.playerAtLane(c.lane) : this.w.laneServed(c.lane);
+    return c.kind !== 'normal' ? this.w.playerAtLane(c.lane) : this.w.laneServed(c.lane);
   }
 
   /** Mean seconds between arrivals for the current farm size, lanes, rating and rush. */
@@ -142,7 +151,7 @@ export class CustomerSystem {
       const maxQ = Math.max(1, Math.min(q.max, Math.floor(q.base + s.animals.length * q.perProducer)));
       base += (made * c.demandRatio) / ((1 + maxQ) / 2);
     }
-    const perMin = base * (1 + (w.lanes - 1) * c.perLane) * w.service.arrivalMult * w.rush.arrivalMult;
+    const perMin = base * (1 + (w.lanes - 1) * c.perLane) * w.service.arrivalMult * w.rush.arrivalMult * w.scenario.arrivalMult;
     return 60 / perMin;
   }
 
@@ -152,6 +161,7 @@ export class CustomerSystem {
     for (const l of c.lines) { this.w.stations[l.station].counter += l.qty - l.left; l.left = l.qty; }
     c.left = c.qty;
     if (c.rush) this.w.rush.angry++;
+    if (c.scenario && this.w.scenario.phase !== 'idle') this.w.scenario.angry++;
     this.w.service.angry(c);
     this.w.events.emit('angry', '', c.x, c.z, 0, 0, c.id);
   }
@@ -164,8 +174,15 @@ export class CustomerSystem {
     let value = 0;
     for (const l of c.lines) value += l.qty * ECONOMY.products[l.product].price;
     if (c.kind === 'vip') value *= ECONOMY.vip.payMult;
+    const sc = w.scenario, inEvent = c.scenario && sc.phase !== 'idle';
     if (c.rush) w.rush.sales += value;
-    const tip = w.service.complete(c, value);
+    if (inEvent) {
+      sc.sales += value;
+      // likes: fast services by the player during the event
+      if (c.playerItems * 2 >= c.qty && c.patience / c.patienceMax >= ECONOMY.tips.fastAbove) sc.likes++;
+    }
+    let tip = w.service.complete(c, value);
+    if (inEvent) tip = Math.round(tip * sc.def.tipMult);
     w.cash.value += value + tip;
     w.cash.bills += c.qty + (tip > 0 ? 2 : 0);
     w.events.emit('paid', c.lines[0].product, c.x, c.z, value, c.qty, c.id);

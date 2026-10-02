@@ -147,7 +147,7 @@ export class FarmView {
     for (const s of this.stations) s.sync(this.time, dt, this.flyers, pop);
     this.cash.set(sim.cash.bills, pop);
     this.cash.update(dt);
-    this.customers.update(sim.customers, dt);
+    this.customers.update(sim, dt);
     this.tiles.sync(sim, dt, pop);
     this.staff.sync(sim, dt, this.flyers, pop);
     this.pressure.sync(sim, dt);

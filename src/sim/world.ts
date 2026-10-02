@@ -12,6 +12,7 @@ import { ServiceSystem } from './service';
 import { RushSystem } from './rush';
 import { GoldenSystem } from './golden';
 import { CafeSystem } from './cafe';
+import { ScenarioSystem } from './scenario';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
@@ -34,11 +35,12 @@ export class SimWorld {
   readonly rush: RushSystem;
   readonly golden: GoldenSystem;
   readonly cafe: CafeSystem;
+  readonly scenario: ScenarioSystem;
   /** Real-world clock for seasonal events (the UI updates it; the simulator keeps the default). */
   clock: Clock = { weekday: 1, hour: 12, ramadan: false };
   readonly cash = { value: 0, bills: 0 };
   /** Lifetime counters (daily tasks, album and the simulator read these). */
-  readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0, tables: 0, cafeServed: 0 };
+  readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0, tables: 0, cafeServed: 0, scenariosWon: 0 };
   readonly events = new EventQueue();
   /** Walkable area; grows when walled plots are unlocked. */
   readonly bounds = { ...LAYOUT.bounds };
@@ -61,6 +63,7 @@ export class SimWorld {
     this.rush = new RushSystem(this);
     this.golden = new GoldenSystem(this);
     this.cafe = new CafeSystem(this);
+    this.scenario = new ScenarioSystem(this);
     this.upgrades = new UpgradeSystem(this);
     this.upgrades.apply();
     this.upgrades.refresh();
@@ -96,6 +99,7 @@ export class SimWorld {
     if (!this.away) this.interact(dt);
     this.staff.update(dt);
     this.rush.update(dt);
+    this.scenario.update(dt);
     this.customers.update(dt);
     this.service.update(dt);
     this.golden.update(dt);
@@ -117,11 +121,19 @@ export class SimWorld {
         this.pickT = cfg.pickInterval;
         this.events.emit('pick', d.product, d.pile.x, d.pile.z, 0, c.n, s.index);
       }
-      if (this.dropT <= 0 && c.has(d.product) && dist(p.x, p.z, d.counter.dropX, d.counter.dropZ) < ZONE.drop) {
+      // items a waiting VIP-stage guest still needs are kept (only surplus goes on the counter)
+      if (this.dropT <= 0 && c.has(d.product) && this.scenario.stillNeeds(d.product) < 0 && dist(p.x, p.z, d.counter.dropX, d.counter.dropZ) < ZONE.drop) {
         c.take(d.product);
         s.counter++;
         this.dropT = cfg.dropInterval;
         this.events.emit('drop', d.product, d.counter.x, d.counter.z, 0, c.n, s.index);
+      } else if (this.pickT <= 0 && !c.has(d.product) && !c.full() && s.counter > 0
+        && this.scenario.stillNeeds(d.product) > 0 && dist(p.x, p.z, d.counter.dropX, d.counter.dropZ) < ZONE.drop) {
+        // a guest is waiting on the VIP stage: grab their items from the counter stock, empty-handed
+        s.counter--;
+        c.push(d.product);
+        this.pickT = cfg.pickInterval * 2;
+        this.events.emit('pick', d.product, d.counter.x, d.counter.z, 0, c.n, s.index);
       }
     }
     // feeding troughs: stand there to refill once the boost is (nearly) used up
@@ -154,6 +166,7 @@ export class SimWorld {
       } else b.fixT = 0;
     }
     this.cafe.interact(dt);
+    this.scenario.deliver(dt);
     const cash = LAYOUT.shop.cash;
     if (this.cash.value > 0 && dist(p.x, p.z, cash.x, cash.z) < ZONE.cash) {
       const v = this.cash.value, n = this.cash.bills;

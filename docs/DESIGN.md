@@ -39,3 +39,10 @@ This file records the decisions made on top of it.
 - Café (stage 3): stove = generic recipe Converter (bakery/dairy reuse it); kitchen helpers take raw items
   from piles or from the shop counter's surplus (keeping a reserve), so the shop counter acts as the farm's
   storeroom. Café money is left on tables; cleaners carry it to the café cash pile. Breakfast rush hits the café.
+- Scenario events (config/scenarios.ts, looks in config/looks.ts, all data): president visits (Egypt, France,
+  USA), Salah, Messi, Amr Diab, army convoy, wedding zaffa, health inspector, storm/power cut, influencer live,
+  Japanese tourists. Each has a banner color, screen tint, intro card, music loop, props, crowd look, goals and a
+  production-scaled reward. Never overlaps a rush.
+- Special guests never join the normal lines: they arrive by motorcade, walk a carpet to the VIP stage, pose
+  while fans/press film, order, and the player delivers in person (from piles, or from the counter stock while
+  the guest waits), then they eat on stage and leave.

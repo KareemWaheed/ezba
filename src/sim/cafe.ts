@@ -424,7 +424,7 @@ export class CafeSystem {
 
   update(dt: number): void {
     if (!this.open) return;
-    this.stove.update(dt, this.w);
+    if (!this.w.scenario.powerCut) this.stove.update(dt, this.w);
     this.updateCustomers(dt);
     this.updateCleaners(dt);
   }

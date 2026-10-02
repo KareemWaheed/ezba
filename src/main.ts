@@ -16,7 +16,7 @@ import { FarmView } from './render/farmView';
 import { CarrierView } from './render/stacks';
 import { Input } from './ui/input';
 import { Hud } from './ui/hud';
-import { sfx, unlockAudio } from './audio';
+import { music, sfx, unlockAudio } from './audio';
 import { guideTarget, nextGoal } from './sim/guide';
 import { restore, serialize } from './sim/save';
 import { UPGRADES } from './config/upgrades';
@@ -24,6 +24,8 @@ import { clearSave, loadSave, requestPersistence, writeSave } from './storage';
 import { GoalCard, Toast } from './ui/panels';
 import { preventZoom } from './ui/noZoom';
 import { PressureHud } from './ui/pressureHud';
+import { ScenarioHud } from './ui/scenarioHud';
+import { ScenarioView } from './render/scenarioView';
 import { clockFromDate } from './config/events';
 
 preventZoom();
@@ -50,6 +52,8 @@ const hud = new Hud(uiRoot);
 const toast = new Toast(uiRoot);
 const goalCard = new GoalCard(uiRoot);
 const pressureHud = new PressureHud(uiRoot);
+const scenarioHud = new ScenarioHud(uiRoot);
+const scenarioView = new ScenarioView(view.scene, view);
 sim.clock = clockFromDate(new Date());
 setInterval(() => { sim.clock = clockFromDate(new Date()); }, 60_000);
 
@@ -72,6 +76,7 @@ uiRoot.insertAdjacentHTML('beforeend', `
     <button data-a="break">عطل</button>
     <button data-a="vip">VIP</button>
     <button data-a="golden">دهبي</button>
+    <button data-a="event">حدث 🎉</button>
     <button data-a="reset">ابدأ من الأول</button>
   </div>`);
 const devEl = document.getElementById('dev')!;
@@ -83,6 +88,7 @@ devEl.addEventListener('click', (e) => {
   if (a === 'break') for (const b of sim.staff.belts) if (b.level > 0) b.breakT = 0.01;
   if (a === 'vip') sim.customers.forceVip = true;
   if (a === 'golden') sim.golden.spawn();
+  if (a === 'event') sim.scenario.trigger();
   if (a === 'reset') { clearSave(); location.reload(); }
 });
 let taps: number[] = [];
@@ -127,7 +133,17 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       break;
     }
     case 'rushWarn': sfx.alarm(); break;
-    case 'vip': sfx.sparkle(); toast.show('زبون VIP وصل! خدمه بنفسك ⭐'); break;
+    case 'vip':
+      if (e.id === -1) { sfx.sparkle(); toast.show(`${sim.scenario.def.guest?.name ?? ''} طلب! هات الطلب بنفسك للمنصة ⭐`); }
+      else { sfx.sparkle(); toast.show('زبون VIP وصل! خدمه بنفسك ⭐'); }
+      break;
+    case 'scenarioWarn': sfx.alarm(); music.play(sim.scenario.def.music); break;
+    case 'scenarioStart': if (sim.scenario.def.intro) scenarioHud.showIntro(sim.scenario.def.intro, sim.scenario.def.color); break;
+    case 'scenarioEnd':
+      music.stop();
+      if (e.n) sfx.fanfare();
+      scenarioHud.showResult(sim, !!e.n, e.value);
+      break;
     case 'rushEnd':
       if (e.n) { sfx.fanfare(); toast.show(`الزحمة عدّت من غير زعل! +${e.value} 🎉`); }
       else toast.show('الزحمة خلصت، بس في زباين زعلوا 😕');
@@ -190,6 +206,9 @@ function frame(now: number): void {
   locks.cafe.visible = !sim.cafe.open;
   hud.setMoney(sim.money);
   pressureHud.update(sim);
+  scenarioHud.update(sim);
+  scenarioView.sync(sim, real);
+  if (sim.scenario.phase === 'idle') music.stop();
   goalT -= real;
   if (goalT <= 0) { goalT = 0.25; goalCard.update(nextGoal(sim), sim.money); }
   if (sim.carry.full()) {
@@ -201,7 +220,7 @@ function frame(now: number): void {
   fpsT += real;
   if (!devEl.hidden && fpsT > 0.5) { fpsT = 0; fpsEl.textContent = `${Math.round(view.fps)} fps · ${view.pixelRatio.toFixed(2)}x`; }
 
-  view.render();
+  view.render(real);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

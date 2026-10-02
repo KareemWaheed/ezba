@@ -272,7 +272,7 @@ export const ECONOMY = {
     /** +step running speed multiplier per level. */
     'player.speed': { base: 120, growth: 1.8, max: 4, step: 0.08 },
     /** Egg workers: +1 worker per level. */
-    'eggs.worker': { base: 600, growth: 6, max: 2, step: 1 },
+    'eggs.worker': { base: 750, growth: 5, max: 2, step: 1 },
     /** Egg belt: level 1 builds it, later levels speed it up. */
     'eggs.machine': { base: 20000, growth: 2.2, max: 4, step: 1 },
     /** Open the cow pen (single level): milk station starts with producers.cow.start cows. */

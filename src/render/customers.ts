@@ -1,5 +1,8 @@
 import * as THREE from 'three';
-import { moodOf, type CustomerSystem, type Mood } from '../sim/customers';
+import { moodOf, type Customer, type Mood } from '../sim/customers';
+import type { SimWorld } from '../sim/world';
+import { CROWD_LOOKS, GUEST_LOOKS, type GuestLook } from '../config/looks';
+import { bodyAccessories, handProp } from './accessories';
 import { CharacterView, type Outfit } from './character';
 import { CarrierView } from './stacks';
 import { CanvasSprite, EMOJI, FONT, rr } from './canvas';
@@ -36,7 +39,7 @@ function outfitOf(look: number): Outfit {
 /** One customer's visuals: body, carried items and the order bubble with a patience ring. */
 /** What a bubble needs: shop and café customers both fit this. */
 export interface BubbleCustomer {
-  kind?: 'normal' | 'vip';
+  kind?: 'normal' | 'vip' | 'guest';
   look: number;
   state: string;
   patience: number;
@@ -132,6 +135,24 @@ export class CustomerView {
     });
   }
 
+  /** Floating name tag (scenario guests). */
+  setName(name: string): void {
+    const tag = new CanvasSprite(256, 64, 1.6);
+    tag.draw((ctx, w, h) => {
+      ctx.font = `800 34px ${FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(name).width + 36;
+      ctx.fillStyle = 'rgba(212,175,55,0.95)';
+      rr(ctx, (w - tw) / 2, 6, tw, h - 12, 20);
+      ctx.fill();
+      ctx.fillStyle = '#1f1a0a';
+      ctx.fillText(name, w / 2, h / 2 + 2);
+    });
+    tag.sprite.position.set(0, 4.2, 0);
+    this.char.root.add(tag.sprite);
+  }
+
   /** Force a redraw (after the web font loads). */
   invalidate(): void { this.shownKey = -1; this.faceKey = -1; }
 }
@@ -142,12 +163,38 @@ export class CustomersView {
 
   constructor(private scene: THREE.Scene) {}
 
-  update(sys: CustomerSystem, dt: number): void {
-    const list = sys.list;
+  /** Clothes + accessories for a customer: scenario guest, themed crowd member, VIP or regular. */
+  private makeView(c: Customer, sim: SimWorld): CustomerView {
+    let outfit: Outfit | undefined;
+    let extras: Partial<GuestLook> | null = null;
+    let name = '';
+    if (c.kind === 'guest' && sim.scenario.def.guest) {
+      const g = sim.scenario.def.guest, look: GuestLook = GUEST_LOOKS[g.look];
+      outfit = { shirt: look.shirt, pants: look.pants, skin: look.skin, hair: look.hair };
+      extras = look;
+      name = g.name;
+    } else if (c.style) {
+      const cl = CROWD_LOOKS[c.style] as { shirts: readonly number[]; pants: readonly number[]; hat?: GuestLook['hat'] };
+      outfit = { ...outfitOf(c.look), shirt: cl.shirts[c.look % cl.shirts.length], pants: cl.pants[(c.look >>> 5) % cl.pants.length] };
+      if (cl.hat) extras = { hat: cl.hat };
+    }
+    const v = new CustomerView(c, outfit);
+    if (extras) {
+      const body = bodyAccessories(extras);
+      if (body) v.char.attach(body);
+      const hand = handProp(extras);
+      if (hand) v.char.attach(hand, 'hand');
+    }
+    if (name) v.setName(name);
+    return v;
+  }
+
+  update(sim: SimWorld, dt: number): void {
+    const sys = sim.customers, list = sys.list;
     for (const c of list) {
       let v = this.views.get(c.id);
       if (!v) {
-        v = new CustomerView(c);
+        v = this.makeView(c, sim);
         this.views.set(c.id, v);
         this.scene.add(v.char.root);
       }

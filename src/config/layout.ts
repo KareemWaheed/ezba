@@ -41,6 +41,16 @@ export const LAYOUT = {
     building: { x0: -16.2, x1: -11.4, z0: 2.1, z1: 3.9 } as Box,
     unlockedX0: -16.3,
   },
+  /**
+   * VIP stage for scenario guests (president, stars...): they arrive from `entry` (motorcade side),
+   * walk the carpet to the stage, pose, order, and the player delivers to `drop` in person.
+   */
+  vipStage: {
+    x: -6.4, z: 8.4, w: 3.2, d: 2.2,
+    seat: { x: -6.4, z: 8.1 },
+    drop: { x: -6.4, z: 10.1 },
+    entry: { x: -11.5, z: 13.4 },
+  },
   /** Sell counter body. */
   counter: { x0: -5.4, x1: 5.4, z0: 3.55, z1: 4.45 } as Box,
 

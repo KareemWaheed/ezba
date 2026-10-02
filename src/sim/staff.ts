@@ -225,7 +225,7 @@ export class StaffSystem {
   update(dt: number): void {
     const w = this.w, speedMult = 1 + w.upgrades.level('hr.speed') * ECONOMY.upgrades['hr.speed'].step;
     for (const x of this.workers) x.update(w, dt, speedMult);
-    for (const b of this.belts) b.update(dt);
+    if (!w.scenario.powerCut) for (const b of this.belts) b.update(dt);
     // schedule and trigger jams for every running machine
     for (const m of this.machines) {
       if (!m.running || m.broken) continue;

@@ -18,6 +18,12 @@ export class Renderer {
   quality: Quality = 'auto';
   fps = 0;
 
+  private hemi: THREE.HemisphereLight;
+  private sun: THREE.DirectionalLight;
+  private sky = new THREE.Color(0xa7dcf2);
+  private mood = 1;
+  private moodTarget = 1;
+  private flash = 0;
   private fAcc = 0; private fN = 0; private slowStreak = 0;
   private adaptLocked = false;
   private trial: { pr: number; fps: number; wait: number } | null = null;
@@ -31,10 +37,11 @@ export class Renderer {
     this.scene.background = new THREE.Color(sky);
     this.scene.fog = new THREE.Fog(sky, 40, 80);
     // Physically based light units: intensities here match the r128 prototype's look (old values x PI).
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x88aa55, 2.45));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.73);
-    sun.position.set(-6, 12, 8);
-    this.scene.add(sun);
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0x88aa55, 2.45);
+    this.scene.add(this.hemi);
+    this.sun = new THREE.DirectionalLight(0xffffff, 1.73);
+    this.sun.position.set(-6, 12, 8);
+    this.scene.add(this.sun);
     addEventListener('resize', () => this.resize());
     this.resize();
   }
@@ -80,5 +87,24 @@ export class Renderer {
     } else this.slowStreak = 0;
   }
 
-  render(): void { this.gl.render(this.scene, this.camera); }
+  /** Scene brightness 0..1 (storms darken it); eases toward the target. */
+  setMood(target: number): void { this.moodTarget = target; }
+  /** A lightning flash. */
+  lightning(): void { this.flash = 1; }
+
+  private applyMood(dt: number): void {
+    this.mood += (this.moodTarget - this.mood) * Math.min(1, dt * 2);
+    this.flash = Math.max(0, this.flash - dt * 4);
+    const k = Math.min(1.6, this.mood + this.flash * 1.2);
+    this.hemi.intensity = 2.45 * k;
+    this.sun.intensity = 1.73 * k;
+    const bg = this.scene.background as THREE.Color;
+    bg.copy(this.sky).multiplyScalar(0.35 + 0.65 * Math.min(1, k));
+    (this.scene.fog as THREE.Fog).color.copy(bg);
+  }
+
+  render(dt = 0): void {
+    if (this.mood !== this.moodTarget || this.flash > 0) this.applyMood(dt);
+    this.gl.render(this.scene, this.camera);
+  }
 }

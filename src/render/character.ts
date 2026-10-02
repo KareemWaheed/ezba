@@ -63,6 +63,26 @@ export class CharacterView {
     this.armL = limb(g.arm, -0.37, 1.13); this.armR = limb(g.arm, 0.37, 1.13);
   }
 
+  /** Raise the right arm and wave (call after update()). */
+  wave(time: number): void {
+    this.armR.rotation.x = -2.7;
+    this.armR.rotation.z = -0.3 + Math.sin(time * 9) * 0.35;
+  }
+
+  /** Hold something up in front of the face (phone filming), both arms. Call after update(). */
+  film(): void {
+    this.armL.rotation.x = this.armR.rotation.x = -1.9;
+    this.armL.rotation.z = 0.35;
+    this.armR.rotation.z = -0.35;
+  }
+
+  /** Add a merged accessory mesh to the body (hat, beard...) or to the right hand (props). */
+  attach(geo: THREE.BufferGeometry, to: 'body' | 'hand' = 'body'): THREE.Mesh {
+    const m = new THREE.Mesh(geo, MAT);
+    (to === 'hand' ? this.armR : this.body).add(m);
+    return m;
+  }
+
   /**
    * Pose from sim state. The cycle phase advances with distance travelled (speed * dt),
    * not with time, so stride always matches ground speed.
@@ -82,6 +102,7 @@ export class CharacterView {
     const swing = sw * 0.8 * (1 - this.hold), hold = -1.25 * this.hold;
     this.armL.rotation.x = hold - swing;
     this.armR.rotation.x = hold + swing;
+    this.armL.rotation.z = this.armR.rotation.z = 0;
     this.body.position.y = Math.abs(Math.cos(this.phase)) * 0.11 * s;
     this.body.rotation.z = Math.sin(this.phase) * 0.09 * s;
     this.body.rotation.x = 0.14 * s;

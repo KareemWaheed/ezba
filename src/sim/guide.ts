@@ -12,10 +12,12 @@ const EARLY_UPGRADES = 4;
  * Pure: also usable by the simulated player.
  */
 export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean {
+  // the scenario guest waiting at the VIP stage: bring their order in person
+  if (vipDelivery(w, out)) return true;
   // things only the player can do come first: VIPs, jammed machines, golden animals
   for (let i = 0; i < w.lanes; i++) {
     const f = w.customers.front(i);
-    if (f && f.kind === 'vip') { out.x = LAYOUT.shop.lanes[i].x; out.z = LAYOUT.shop.serveZ; return true; }
+    if (f && f.kind !== 'normal') { out.x = LAYOUT.shop.lanes[i].x; out.z = LAYOUT.shop.serveZ; return true; }
   }
   for (const b of w.staff.belts) if (b.broken) { out.x = b.mx; out.z = b.mz; return true; }
   const g = w.golden.animal;
@@ -97,6 +99,27 @@ function cafeAction(w: SimWorld, out: { x: number; z: number }): boolean {
     const t = cafe.tables[i];
     if (t.dirty || t.cash > 0) return go(t.x, t.z);
   }
+  return false;
+}
+
+/** Guest waiting on the VIP stage: go to the stage with their items, or fetch them from a pile. */
+export function vipDelivery(w: SimWorld, out: { x: number; z: number }): boolean {
+  const g = w.scenario.guest;
+  if (!g || g.state !== 'order') return false;
+  const c = w.carry;
+  const need = g.lines.filter((l) => l.left > 0);
+  if (need.some((l) => c.has(l.product)) && (c.full() || need.every((l) => c.items.filter((x) => x === l.product).length >= l.left))) {
+    out.x = LAYOUT.vipStage.drop.x; out.z = LAYOUT.vipStage.drop.z; return true;
+  }
+  for (const l of need) {
+    if (c.full() || w.scenario.stillNeeds(l.product) <= 0) continue;
+    const st = w.stations.find((s) => s.open && s.def.product === l.product && s.pile >= 2);
+    if (st) { out.x = st.def.pile.x; out.z = st.def.pile.z; return true; }
+    // piles drained by belts: take it from the shop counter (works while the guest waits)
+    const ct = w.stations.find((s) => s.open && s.def.product === l.product && s.counter > 0 && !c.has(l.product));
+    if (ct) { out.x = ct.def.counter.dropX; out.z = ct.def.counter.dropZ; return true; }
+  }
+  if (need.some((l) => c.has(l.product))) { out.x = LAYOUT.vipStage.drop.x; out.z = LAYOUT.vipStage.drop.z; return true; }
   return false;
 }
 

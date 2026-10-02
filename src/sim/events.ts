@@ -23,7 +23,10 @@ export type SimEventType =
   | 'cooked'    // a converter finished an item (product = dish)
   | 'cafeTake'  // a café customer took a dish (id = customer)
   | 'cafePaid'  // a café customer left money on a table (value, id = table)
-  | 'cleaned';  // a table was cleaned (id = table)
+  | 'cleaned'   // a table was cleaned (id = table)
+  | 'scenarioWarn'  // a scenario event is coming (n = seconds)
+  | 'scenarioStart'
+  | 'scenarioEnd'; // value = reward, n = 1 if every goal passed
 
 export interface SimEvent {
   type: SimEventType;

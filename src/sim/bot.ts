@@ -5,6 +5,7 @@ import type { DishId, ProductId } from '../config/economy';
 import { dist, type Box } from './math';
 import type { SimWorld } from './world';
 import type { TileState } from './upgrades';
+import { vipDelivery } from './guide';
 
 /**
  * Simulated players for the pacing simulator.
@@ -62,6 +63,7 @@ export class Bot {
   private lastZ = 0;
   private pickStation = -1;
   private way = { x: 0, z: 0 };
+  private vip = { x: 0, z: 0 };
   /** Current raw-item trip is for the café stove rather than the shop counter. */
   private supplying = false;
 
@@ -92,7 +94,7 @@ export class Bot {
     for (let i = 0; i < w.lanes; i++) {
       const f = w.customers.front(i);
       if (!f || !w.customers.takeable(f)) continue;
-      const score = (f.kind === 'vip' ? 100 : i < w.cashiers ? 1 : 10) + w.customers.waitingPerLane[i];
+      const score = (f.kind !== 'normal' ? 100 : i < w.cashiers ? 1 : 10) + w.customers.waitingPerLane[i];
       if (score > bestScore) { best = i; bestScore = score; }
     }
     return best;
@@ -107,9 +109,10 @@ export class Bot {
       if (jam) { this.go('fix', jam.mx, jam.mz); return; }
       const g = w.golden.animal;
       if (g) { this.go('golden', g.x, g.z); return; }
+      if (vipDelivery(w, this.vip)) { this.go('serve', this.vip.x, this.vip.z); return; }
       for (let i = 0; i < w.lanes; i++) {
         const f = w.customers.front(i);
-        if (f && f.kind === 'vip' && w.customers.takeable(f)) { this.go('serve', shop.lanes[i].x, shop.serveZ); return; }
+        if (f && f.kind !== 'normal' && w.customers.takeable(f)) { this.go('serve', shop.lanes[i].x, shop.serveZ); return; }
       }
     }
     const tile = this.cheapestAffordable();
