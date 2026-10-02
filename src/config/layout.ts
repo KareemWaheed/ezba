@@ -15,6 +15,14 @@ export const LAYOUT = {
   /** Fenced animal areas. */
   coop: { x0: -7, x1: 0, z0: -9.4, z1: -2 } as Box,
   pen: { x0: 3, x1: 10, z0: -9.4, z1: -2 } as Box,
+  /** Shop front: where the player stands to serve, the customer line, entry/exit and the cash pile. */
+  shop: {
+    servePoint: { x: 0, z: 3.0 },
+    queue: { x: 0, z: 5.45, gap: 1.15 },
+    spawn: { x0: -3, x1: -1.5, z: 14.5 },
+    exit: { x: 10.5, z: 15 },
+    cash: { x: 3.6, z: 4.6 },
+  },
   /** Sell counter body. */
   counter: { x0: -2.3, x1: 2.3, z0: 3.55, z1: 4.45 } as Box,
 

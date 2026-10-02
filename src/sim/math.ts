@@ -26,3 +26,22 @@ export function resolveCircle(p: Vec2, r: number, solids: readonly Box[], bounds
   p.x = clamp(p.x, bounds.x0, bounds.x1);
   p.z = clamp(p.z, bounds.z0, bounds.z1);
 }
+
+/** Rotate `rot` toward the direction (dx, dz) at `rate`; returns the new angle. */
+export function turnToward(rot: number, dx: number, dz: number, rate: number, dt: number): number {
+  return rot + angleDiff(rot, Math.atan2(dx, dz)) * Math.min(1, dt * rate);
+}
+
+export interface Mover { x: number; z: number; rot: number; speed: number }
+
+/** Walk toward (tx, tz). Sets m.speed for the walk cycle. Returns true once within `stop`. */
+export function moveToward(m: Mover, tx: number, tz: number, speed: number, dt: number, stop: number): boolean {
+  const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz);
+  if (d <= stop) { m.speed = 0; return true; }
+  const s = Math.min(d, speed * dt);
+  m.x += (dx / d) * s;
+  m.z += (dz / d) * s;
+  m.rot = turnToward(m.rot, dx, dz, 12, dt);
+  m.speed = dt > 0 ? s / dt : 0;
+  return false;
+}
