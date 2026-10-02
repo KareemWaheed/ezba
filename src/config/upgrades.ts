@@ -35,7 +35,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'eggs.worker', icon: '👷', label: 'عامل للبيض', msg: 'العامل بيلم البيض بدالك 👷',
-    pos: { x: -0.8, z: 0.2 }, requires: [{ id: 'eggs.animals', level: 4 }], milestone: true,
+    pos: { x: -0.6, z: 0.6 }, requires: [{ id: 'eggs.animals', level: 4 }], milestone: true,
   },
   {
     id: 'cashier', icon: '🧾', label: 'كاشير', msg: 'الكاشير بيبيع بدالك دلوقتي 🧾',
@@ -82,6 +82,18 @@ export const UPGRADES: readonly UpgradeDef[] = [
   {
     id: 'hr.cashier', icon: '💨', label: 'كاشير أسرع', msg: 'الكاشير بقى أسرع 💨',
     pos: { x: -13.4, z: 5.4 }, requires: [{ id: 'hr.office', level: 1 }, { id: 'cashier', level: 1 }],
+  },
+  {
+    id: 'maint', icon: '🔧', label: 'صيانة', msg: 'المكن بقى يعطل أقل 🔧',
+    pos: { x: -15.2, z: 5.4 }, requires: [{ id: 'hr.office', level: 1 }, { id: 'eggs.machine', level: 1 }],
+  },
+  {
+    id: 'rush.reward', icon: '🎁', label: 'مكافأة الزحمة', msg: 'مكافأة الزحمة زادت 🎁',
+    pos: { x: -13.4, z: 9.3 }, requires: [{ id: 'hr.office', level: 1 }],
+  },
+  {
+    id: 'rush.warning', icon: '📣', label: 'إنذار بدري', msg: 'هتعرف بالزحمة بدري ⏰',
+    pos: { x: -15.2, z: 9.3 }, requires: [{ id: 'hr.office', level: 1 }],
   },
 ];
 

@@ -39,9 +39,9 @@ export class Hud {
   }
 
   /** Rising "+X" text at a screen position. */
-  float(text: string, x: number, y: number): void {
+  float(text: string, x: number, y: number, kind = ''): void {
     const el = document.createElement('div');
-    el.className = 'float';
+    el.className = kind ? `float ${kind}` : 'float';
     el.textContent = text;
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;

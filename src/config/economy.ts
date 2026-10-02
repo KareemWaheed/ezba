@@ -27,8 +27,8 @@ export const ECONOMY = {
 
   /** Sale price per item. */
   products: {
-    egg: { price: 3 },
-    milk: { price: 7 },
+    egg: { price: 2 },
+    milk: { price: 4 },
   },
 
   /** Animals / machines that generate items into a pickup pile. */
@@ -59,11 +59,14 @@ export const ECONOMY = {
 
   customers: {
     /**
-     * Average seconds between arrivals with one lane (arrivals are rate-driven, never stock-driven).
-     * Each extra open lane multiplies the arrival rate by (1 + perLane).
+     * Demand follows the farm, never the stock on the counter: customers per minute are set so they
+     * want about `demandRatio` of what the animals produce (base rate, no trough boost), plus
+     * `perMinute`. Each extra open lane adds (1 + perLane); rating and rushes multiply it too.
+     * Feeding boosts and bigger farms therefore create a surplus that contracts can absorb later.
      */
-    interval: 2.4,
-    perLane: 0.8,
+    perMinute: 2,
+    demandRatio: 0.85,
+    perLane: 0.25,
     /** Random +/- fraction applied to each arrival gap. */
     intervalJitter: 0.3,
     /** Max customers waiting per lane; arrivals pause while every lane is full. */
@@ -83,6 +86,107 @@ export const ECONOMY = {
 
   /** How close the player must stand to a lane's checkout spot to serve it (covers about two lanes). */
   serveRadius: 1.9,
+
+  /** Patience and mood. Patience drains while waiting in line and pauses while being served. */
+  patience: {
+    /** Seconds a normal customer will wait. */
+    normal: 45,
+    /** New-farm grace: extra patience that fades out linearly over the first `earlyUpgrades` purchases. */
+    early: 60,
+    earlyUpgrades: 12,
+    /** Mood thresholds (fraction of patience left): above `happy` = 😊, above `bored` = 😐, else 😠. */
+    happy: 0.6,
+    bored: 0.3,
+  },
+
+  /** Rewards only the player earns (staff never get tips or combos). */
+  tips: {
+    /** A service counts as fast if the customer still had at least this much patience left. */
+    fastAbove: 0.6,
+    /** Tip = order value x rate x (rating / 3). */
+    rate: 0.08,
+    /** Each fast service in a row adds this much to the order value (x combo, capped). */
+    comboStep: 0.015,
+    comboMax: 10,
+    /** The combo resets if the player doesn't finish a fast service within this many seconds. */
+    comboTimeout: 25,
+  },
+
+  /**
+   * Farm rating, 1..5 stars, from recent customers who arrived while the app was open.
+   * Gentle on purpose: fewer customers at low rating means easier service, so it recovers.
+   */
+  rating: {
+    start: 3,
+    /** How far each customer moves the rating toward their score (0..1). */
+    weight: 0.06,
+    /** Customer scores mapped to stars as 1 + 4 x score. */
+    scoreFast: 1, scoreNormal: 0.75, scoreAngry: 0,
+    /** Arrival rate multiplier = arrivalBase + arrivalPerStar x rating (1 star 0.85x, 5 stars 1.25x). */
+    arrivalBase: 0.75,
+    arrivalPerStar: 0.1,
+  },
+
+  /** Rush events (active play only): a warned burst of customers, often skewed to one product. */
+  rush: {
+    /** Seconds of active play between rushes. */
+    gapMin: 240,
+    gapMax: 420,
+    /** Warning countdown before the rush (rush.warning upgrade adds more). */
+    warning: 5,
+    /** Burst length and arrival multiplier. */
+    duration: 40,
+    arrivalMult: 3,
+    /** Chance a rush customer orders the rush's featured product. */
+    skew: 0.75,
+    /** Bonus for a rush with no angry customers: flat + share of the rush's sales (rush.reward raises the share). */
+    bonusFlat: 100,
+    bonusShare: 0.5,
+    /** Rushes start once the player has bought this many upgrades. */
+    minUpgrades: 8,
+  },
+
+  vip: {
+    /** Chance an arriving customer is a VIP (active play only). */
+    chance: 0.04,
+    minUpgrades: 10,
+    /** VIPs order bigger, wait longer and pay this many times the price. Only the player can serve them. */
+    qtyMult: 1.5,
+    patienceMult: 1.6,
+    payMult: 4,
+  },
+
+  /** Machines jam now and then; only the player can fix them by standing next to them. */
+  breakdowns: {
+    /** Mean seconds of running between jams for one machine (maint upgrade multiplies it). */
+    mean: 420,
+    /** Seconds the player must stand next to a jammed machine. */
+    fixTime: 2,
+    fixRadius: 1.6,
+  },
+
+  /** Golden animal: escapes into the yard now and then; catch it before it runs off. */
+  golden: {
+    gapMin: 420,
+    gapMax: 780,
+    /** Seconds it stays before running off. */
+    lifetime: 25,
+    catchRadius: 1.0,
+    /** Reward = seconds of that station's full production value, paid in cash. */
+    rewardSeconds: 45,
+    minUpgrades: 8,
+  },
+
+  /** Feeding troughs: the player refills them; a full trough doubles that station's production. */
+  feed: {
+    /** Seconds the boost lasts after a refill. */
+    duration: 150,
+    mult: 2,
+    /** Stand at the trough this long to refill (only when it's below `refillBelow`). */
+    refillTime: 1,
+    refillBelow: 0.25,
+    radius: 1.1,
+  },
 
   /**
    * Staff. By design they're good but worse than the player: smaller stacks, slower service,
@@ -144,6 +248,12 @@ export const ECONOMY = {
     'milk.worker': { base: 2500, growth: 3, max: 2, step: 1 },
     /** Milk belt: level 1 builds it, later levels speed it up. */
     'milk.machine': { base: 12000, growth: 2.2, max: 4, step: 1 },
+    /** Maintenance: breakdowns.mean x (1 + step x level). Never reaches zero breakdowns. */
+    maint: { base: 3000, growth: 2, max: 4, step: 0.6 },
+    /** Rush bonus share +step per level. */
+    'rush.reward': { base: 2500, growth: 2, max: 4, step: 0.25 },
+    /** Rush warning +step seconds per level. */
+    'rush.warning': { base: 1500, growth: 2, max: 3, step: 3 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */

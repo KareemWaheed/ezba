@@ -11,6 +11,14 @@ const EARLY_UPGRADES = 4;
  * Pure: also usable by the simulated player.
  */
 export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean {
+  // things only the player can do come first: VIPs, jammed machines, golden animals
+  for (let i = 0; i < w.lanes; i++) {
+    const f = w.customers.front(i);
+    if (f && f.kind === 'vip') { out.x = LAYOUT.shop.lanes[i].x; out.z = LAYOUT.shop.serveZ; return true; }
+  }
+  for (const b of w.staff.belts) if (b.broken) { out.x = b.mx; out.z = b.mz; return true; }
+  const g = w.golden.animal;
+  if (g) { out.x = g.x; out.z = g.z; return true; }
   // the cheapest upgrade the player can afford right now
   const up = w.upgrades;
   let best: UpgradeDef | null = null, bestR = Infinity;

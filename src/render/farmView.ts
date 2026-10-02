@@ -15,6 +15,7 @@ import { CustomersView } from './customers';
 import { FLY_SCALE, ITEM_H, ITEM_ICON } from './models';
 import { TilesView } from './tiles';
 import { StaffView } from './staffView';
+import { PressureView } from './pressureView';
 import { UPGRADES } from '../config/upgrades';
 
 const _v = new THREE.Vector3();
@@ -100,6 +101,7 @@ export class FarmView {
   readonly arrow: THREE.Mesh;
   readonly tiles: TilesView;
   readonly staff: StaffView;
+  readonly pressure: PressureView;
   /** True on frames where a coin flew into an upgrade tile (for the coin sound). */
   coinFlew = false;
   private payT = 0;
@@ -125,6 +127,7 @@ export class FarmView {
     this.customers = new CustomersView(scene);
     this.tiles = new TilesView(scene);
     this.staff = new StaffView(scene);
+    this.pressure = new PressureView(scene, sim);
     this.arrow = new THREE.Mesh(merge([
       part(PRIM.cone, 0xff8a1f, 0, 0, 0, Math.PI, 0, 0, 0.32, 0.6, 0.32),
       part(PRIM.cyl, 0xff8a1f, 0, 0.5, 0, 0, 0, 0, 0.12, 0.6, 0.12),
@@ -141,9 +144,10 @@ export class FarmView {
     for (const s of this.stations) s.sync(this.time, dt, this.flyers, pop);
     this.cash.set(sim.cash.bills, pop);
     this.cash.update(dt);
-    this.customers.update(sim.customers.list, dt);
+    this.customers.update(sim.customers, dt);
     this.tiles.sync(sim, dt, pop);
     this.staff.sync(sim, dt, this.flyers, pop);
+    this.pressure.sync(sim, dt);
 
     // coins fly from the player into the tile being paid
     this.coinFlew = false;
@@ -164,6 +168,10 @@ export class FarmView {
   /** Cosmetic reactions to sim events. */
   onEvent(e: SimEvent): void {
     if (e.type === 'buy') this.tiles.bump(UPGRADES[e.id].id);
+    if (e.type === 'goldenCaught') {
+      _v.set(e.x, 0.8, e.z);
+      for (let i = 0; i < 16; i++) this.flyers.launch('bill', _v, null, this.hand, 0.35, 1, 1.6, i * 0.03);
+    }
     if (e.type === 'collect') {
       const n = Math.min(this.cash.max, e.n);
       for (let i = 0; i < n; i++) {

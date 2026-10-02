@@ -7,7 +7,11 @@ import { Carrier } from './carrier';
 import { Station } from './station';
 import { CustomerSystem } from './customers';
 import { UpgradeSystem } from './upgrades';
-import { StaffSystem } from './staff';
+import { StaffSystem, nextBreak } from './staff';
+import { ServiceSystem } from './service';
+import { RushSystem } from './rush';
+import { GoldenSystem } from './golden';
+import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
 
@@ -25,9 +29,14 @@ export class SimWorld {
   readonly customers: CustomerSystem;
   readonly upgrades: UpgradeSystem;
   readonly staff: StaffSystem;
+  readonly service: ServiceSystem;
+  readonly rush: RushSystem;
+  readonly golden: GoldenSystem;
+  /** Real-world clock for seasonal events (the UI updates it; the simulator keeps the default). */
+  clock: Clock = { weekday: 1, hour: 12, ramadan: false };
   readonly cash = { value: 0, bills: 0 };
   /** Lifetime counters (daily tasks, album and the simulator read these). */
-  readonly stats = { earned: 0, served: 0, sold: 0 };
+  readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0 };
   readonly events = new EventQueue();
   /** Walkable area; grows when walled plots are unlocked. */
   readonly bounds = { ...LAYOUT.bounds };
@@ -46,6 +55,9 @@ export class SimWorld {
     this.stations = STATIONS.map((d, i) => new Station(d, i));
     this.customers = new CustomerSystem(this);
     this.staff = new StaffSystem(this);
+    this.service = new ServiceSystem(this);
+    this.rush = new RushSystem(this);
+    this.golden = new GoldenSystem(this);
     this.upgrades = new UpgradeSystem(this);
     this.upgrades.apply();
     this.upgrades.refresh();
@@ -80,7 +92,10 @@ export class SimWorld {
     for (const s of this.stations) s.update(dt, this.rng, this.events);
     if (!this.away) this.interact(dt);
     this.staff.update(dt);
+    this.rush.update(dt);
     this.customers.update(dt);
+    this.service.update(dt);
+    this.golden.update(dt);
     if (!this.away) this.upgrades.update(dt);
   }
 
@@ -104,6 +119,35 @@ export class SimWorld {
         this.dropT = cfg.dropInterval;
         this.events.emit('drop', d.product, d.counter.x, d.counter.z, 0, c.n, s.index);
       }
+    }
+    // feeding troughs: stand there to refill once the boost is (nearly) used up
+    const fc = ECONOMY.feed;
+    for (const s of this.stations) {
+      const t = s.def.trough;
+      if (s.open && s.boostT < fc.duration * fc.refillBelow && dist(p.x, p.z, t.x, t.z) < fc.radius) {
+        s.refillT += dt;
+        if (s.refillT >= fc.refillTime) {
+          s.boostT = fc.duration;
+          s.refillT = 0;
+          this.stats.feeds++;
+          this.events.emit('feed', s.def.product, t.x, t.z, 0, 0, s.index);
+        }
+      } else s.refillT = 0;
+    }
+    // jammed machines: stand next to one to fix it
+    const bc = ECONOMY.breakdowns;
+    for (const b of this.staff.belts) {
+      if (!b.broken) continue;
+      if (dist(p.x, p.z, b.mx, b.mz) < bc.fixRadius) {
+        b.fixT += dt;
+        if (b.fixT >= bc.fixTime) {
+          b.broken = false;
+          b.fixT = 0;
+          b.breakT = nextBreak(this);
+          this.stats.fixes++;
+          this.events.emit('fixed', '', b.mx, b.mz, 0, 0, b.station.index);
+        }
+      } else b.fixT = 0;
     }
     const cash = LAYOUT.shop.cash;
     if (this.cash.value > 0 && dist(p.x, p.z, cash.x, cash.z) < ZONE.cash) {

@@ -29,6 +29,10 @@ export class Station {
   pending = 0;
   /** Items on the sell counter. Unlimited by design. */
   counter = 0;
+  /** Seconds of feeding-trough boost left (production x feed.mult while > 0). */
+  boostT = 0;
+  /** Seconds the player has been refilling the trough. */
+  refillT = 0;
   /** Pooled flights; inactive entries are reused. */
   readonly flights: Flight[] = [];
 
@@ -57,6 +61,8 @@ export class Station {
     if (!this.open) return;
     const cfg = ECONOMY.producers[this.def.producer];
     const area = this.def.area;
+    const interval = this.boostT > 0 ? cfg.interval / ECONOMY.feed.mult : cfg.interval;
+    if (this.boostT > 0) this.boostT = Math.max(0, this.boostT - dt);
     for (const a of this.animals) {
       if (a.pause > 0) { a.pause -= dt; a.speed = 0; }
       else if (moveToward(a, a.tx, a.tz, cfg.wanderSpeed, dt, 0.1)) {
@@ -65,13 +71,13 @@ export class Station {
         a.tz = rng.range(area.z0 + 0.9, area.z1 - 0.7);
       }
       a.t += dt;
-      if (a.t >= cfg.interval) {
+      if (a.t >= interval) {
         if (!this.pileFull) {
-          a.t -= cfg.interval;
+          a.t -= interval;
           a.hop = 1;
           this.launch(a.x, a.z);
           events.emit('produce', this.def.product, a.x, a.z, 0, 0, this.index);
-        } else a.t = cfg.interval; // wait until the pile has room
+        } else a.t = interval; // wait until the pile has room
       }
       a.hop = Math.max(0, a.hop - dt * 3);
     }

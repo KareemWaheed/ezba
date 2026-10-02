@@ -13,7 +13,7 @@ import type { TileState } from './upgrades';
  */
 export type BotProfile = 'active' | 'idle';
 
-type Task = 'tile' | 'stepOff' | 'drop' | 'cash' | 'pick' | 'serve' | 'wait';
+type Task = 'tile' | 'stepOff' | 'drop' | 'cash' | 'pick' | 'serve' | 'wait' | 'fix' | 'golden' | 'feed';
 
 /** Clearance kept from obstacles when routing around them. */
 const CLEAR = ECONOMY.player.radius + 0.25;
@@ -87,7 +87,7 @@ export class Bot {
     for (let i = 0; i < w.lanes; i++) {
       const f = w.customers.front(i);
       if (!f || !w.customers.takeable(f)) continue;
-      const score = (i < w.cashiers ? 1 : 10) + w.customers.waitingPerLane[i];
+      const score = (f.kind === 'vip' ? 100 : i < w.cashiers ? 1 : 10) + w.customers.waitingPerLane[i];
       if (score > bestScore) { best = i; bestScore = score; }
     }
     return best;
@@ -96,6 +96,17 @@ export class Bot {
   /** Pick what to do this tick. */
   private decide(): void {
     const w = this.w, p = w.player, c = w.carry, shop = LAYOUT.shop;
+    if (this.profile === 'active') {
+      // player-only jobs first: jammed machines, golden animals, VIPs
+      const jam = w.staff.belts.find((b) => b.broken);
+      if (jam) { this.go('fix', jam.mx, jam.mz); return; }
+      const g = w.golden.animal;
+      if (g) { this.go('golden', g.x, g.z); return; }
+      for (let i = 0; i < w.lanes; i++) {
+        const f = w.customers.front(i);
+        if (f && f.kind === 'vip' && w.customers.takeable(f)) { this.go('serve', shop.lanes[i].x, shop.serveZ); return; }
+      }
+    }
     const tile = this.cheapestAffordable();
     if (tile) {
       const d = dist(p.x, p.z, tile.def.pos.x, tile.def.pos.z);
@@ -113,16 +124,29 @@ export class Bot {
       else this.go('wait', p.x, p.z);
       return;
     }
-    if (c.n > 0 && !(this.task === 'pick' && !c.full() && w.stations[this.pickStation]?.pile > 0)) {
+    if (c.n > 0) {
+      // once a trip has started, fill up while the pile still has items, then unload
+      const ps = w.stations[this.pickStation];
+      if (ps && !c.full() && ps.pile > 0 && dist(p.x, p.z, ps.def.pile.x, ps.def.pile.z) < 2) { this.go('pick', ps.def.pile.x, ps.def.pile.z); return; }
       for (const s of w.stations) {
         if (s.open && c.has(s.def.product)) { this.go('drop', s.def.counter.dropX, s.def.counter.dropZ); return; }
       }
     }
     if (w.cash.value > 0 && (cashNeeded || w.cash.bills >= 20)) { this.go('cash', shop.cash.x, shop.cash.z); return; }
+    // keep the troughs full (player-only production boost)
+    const fc = ECONOMY.feed;
+    const hungry = w.stations.find((s) => s.open && s.boostT < fc.duration * fc.refillBelow);
+    if (hungry && c.n === 0) { this.go('feed', hungry.def.trough.x, hungry.def.trough.z + 0.5); return; }
     // fetch from the fullest pile once it can fill (most of) a trip
     let best = -1, bestN = 0;
     for (const s of w.stations) if (s.open && s.pile > bestN) { best = s.index; bestN = s.pile; }
     const lane = this.serveLane();
+    // serve while there's stock for the waiting customer; fetch when stock runs low or the pile is nearly full
+    const front = lane >= 0 ? w.customers.front(lane) : null;
+    const line = front ? w.customers.takeable(front) : null;
+    const stock = line ? w.stations[line.station].counter : 0;
+    const pileUrgent = bestN >= ECONOMY.pile.max * 0.75;
+    if (lane >= 0 && stock >= 1 && !(pileUrgent && stock < 4)) { this.go('serve', shop.lanes[lane].x, shop.serveZ); return; }
     if (best >= 0 && (bestN >= Math.min(c.cap, 4) || lane < 0)) {
       this.pickStation = best;
       const d = w.stations[best].def;

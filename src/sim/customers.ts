@@ -4,13 +4,17 @@ import { moveToward } from './math';
 import type { SimWorld } from './world';
 import type { Station } from './station';
 
-export type CustomerState = 'queue' | 'leave';
+/** queue = waiting in a lane; leave = paid and walking off; angry = gave up and walking off. */
+export type CustomerState = 'queue' | 'leave' | 'angry';
+export type CustomerKind = 'normal' | 'vip';
+export type Mood = 'happy' | 'bored' | 'angry';
 
 /** One product in an order. */
 export interface OrderLine { product: ProductId; station: number; qty: number; left: number }
 
 export interface Customer {
   id: number;
+  kind: CustomerKind;
   /** Random look seed; the renderer maps it to clothes/skin/hair. */
   look: number;
   x: number; z: number; rot: number; speed: number;
@@ -22,13 +26,30 @@ export interface Customer {
   /** Total items ordered / still wanted across all lines. */
   qty: number;
   left: number;
+  /** Seconds of patience left / at the start. */
+  patience: number;
+  patienceMax: number;
+  /** Items handed over while the player was at the lane (decides who gets credit). */
+  playerItems: number;
+  /** Arrived during a rush. */
+  rush: boolean;
+  /** Arrived while the player was away (doesn't count toward the rating). */
+  away: boolean;
   /** Cooldown before taking the next item. */
   takeT: number;
+  /** >0 right after taking an item: patience doesn't drain while being served. */
+  servedT: number;
   /** Set when the customer walked off the map; removed at end of tick. */
   gone: boolean;
 }
 
-/** Customer arrivals, per-lane lines at the counter, serving and payment. */
+export function moodOf(c: Customer): Mood {
+  if (c.state === 'angry') return 'angry';
+  const f = c.patience / c.patienceMax, p = ECONOMY.patience;
+  return f > p.happy ? 'happy' : f > p.bored ? 'bored' : 'angry';
+}
+
+/** Customer arrivals, per-lane lines at the counter, patience, serving and payment. */
 export class CustomerSystem {
   readonly list: Customer[] = [];
   private nextId = 1;
@@ -36,6 +57,8 @@ export class CustomerSystem {
   /** Customers waiting per lane (rebuilt each tick). */
   readonly waitingPerLane = [0, 0, 0];
   private slots = [0, 0, 0];
+  /** Debug: make the next arrival a VIP and bring it now. */
+  forceVip = false;
 
   constructor(private w: SimWorld) {}
 
@@ -67,21 +90,33 @@ export class CustomerSystem {
     const w = this.w, rng = w.rng, cfg = ECONOMY.customers;
     const open = w.stations.filter((s) => s.open);
     if (!open.length) return;
+    const rush = w.rush.active;
+    const vip = this.forceVip || (!w.away && !rush && w.upgrades.bought >= ECONOMY.vip.minUpgrades && rng.chance(ECONOMY.vip.chance));
+    this.forceVip = false;
+    const featured = rush ? open.find((s) => s.def.product === w.rush.featured) : undefined;
     let lines: OrderLine[];
-    if (open.length >= 2 && rng.chance(cfg.mixedChance)) {
+    if (featured && rng.chance(ECONOMY.rush.skew)) lines = [this.line(featured, 1)];
+    else if (open.length >= 2 && rng.chance(cfg.mixedChance)) {
       // mixed order: two different products, each a bit smaller
       const a = rng.int(open.length);
       const b = (a + 1 + rng.int(open.length - 1)) % open.length;
       lines = [this.line(open[a], cfg.mixedScale), this.line(open[b], cfg.mixedScale)];
     } else lines = [this.line(rng.pick(open), 1)];
+    if (vip) for (const l of lines) { l.qty = Math.ceil(l.qty * ECONOMY.vip.qtyMult); l.left = l.qty; }
     let qty = 0;
     for (const l of lines) qty += l.qty;
+    const pc = ECONOMY.patience;
+    const grace = pc.early * Math.max(0, 1 - w.upgrades.bought / pc.earlyUpgrades);
+    const patience = (pc.normal + grace) * (vip ? ECONOMY.vip.patienceMult : 1);
     const sp = LAYOUT.shop.spawn;
     this.list.push({
-      id: this.nextId++, look: rng.int(1 << 30),
+      id: this.nextId++, kind: vip ? 'vip' : 'normal', look: rng.int(1 << 30),
       x: rng.range(sp.x0, sp.x1), z: sp.z, rot: Math.PI, speed: 0,
-      state: 'queue', lines, lane, qty, left: qty, takeT: 0, gone: false,
+      state: 'queue', lines, lane, qty, left: qty, patience, patienceMax: patience, playerItems: 0,
+      rush, away: w.away, takeT: 0, servedT: 0, gone: false,
     });
+    if (rush) w.rush.spawned++;
+    if (vip) w.events.emit('vip', '', 0, 0, 0, lane, this.nextId - 1);
   }
 
   /** First order line that still needs items and has stock on the counter, or null. */
@@ -90,10 +125,49 @@ export class CustomerSystem {
     return null;
   }
 
-  /** Mean seconds between arrivals for the current number of lanes. */
+  /** Whether this customer can be served at their lane right now (VIPs only accept the player). */
+  servable(c: Customer): boolean {
+    return c.kind === 'vip' ? this.w.playerAtLane(c.lane) : this.w.laneServed(c.lane);
+  }
+
+  /** Mean seconds between arrivals for the current farm size, lanes, rating and rush. */
   get interval(): number {
-    const c = ECONOMY.customers;
-    return c.interval / (1 + (this.w.lanes - 1) * c.perLane);
+    const c = ECONOMY.customers, w = this.w;
+    let base = c.perMinute;
+    for (const s of w.stations) {
+      if (!s.open) continue;
+      const made = (s.animals.length * 60) / ECONOMY.producers[s.def.producer].interval;
+      const q = c.qty[s.def.product];
+      const maxQ = Math.max(1, Math.min(q.max, Math.floor(q.base + s.animals.length * q.perProducer)));
+      base += (made * c.demandRatio) / ((1 + maxQ) / 2);
+    }
+    const perMin = base * (1 + (w.lanes - 1) * c.perLane) * w.service.arrivalMult * w.rush.arrivalMult;
+    return 60 / perMin;
+  }
+
+  private giveUp(c: Customer): void {
+    c.state = 'angry';
+    // anything already taken goes back on the counter
+    for (const l of c.lines) { this.w.stations[l.station].counter += l.qty - l.left; l.left = l.qty; }
+    c.left = c.qty;
+    if (c.rush) this.w.rush.angry++;
+    this.w.service.angry(c);
+    this.w.events.emit('angry', '', c.x, c.z, 0, 0, c.id);
+  }
+
+  private finish(c: Customer): void {
+    const w = this.w;
+    c.state = 'leave';
+    w.stats.served++;
+    if (c.kind === 'vip') w.stats.vips++;
+    let value = 0;
+    for (const l of c.lines) value += l.qty * ECONOMY.products[l.product].price;
+    if (c.kind === 'vip') value *= ECONOMY.vip.payMult;
+    if (c.rush) w.rush.sales += value;
+    const tip = w.service.complete(c, value);
+    w.cash.value += value + tip;
+    w.cash.bills += c.qty + (tip > 0 ? 2 : 0);
+    w.events.emit('paid', c.lines[0].product, c.x, c.z, value, c.qty, c.id);
   }
 
   update(dt: number): void {
@@ -103,6 +177,7 @@ export class CustomerSystem {
     for (const c of this.list) if (c.state === 'queue') wl[c.lane]++;
 
     this.spawnT -= dt;
+    if (this.forceVip) this.spawnT = 0;
     if (this.spawnT <= 0) {
       const lane = this.pickLane();
       if (lane >= 0) { this.spawn(lane); wl[lane]++; }
@@ -118,28 +193,27 @@ export class CustomerSystem {
         const lx = shop.lanes[c.lane].x;
         const arrived = moveToward(c, lx, shop.queueZ + slot * shop.queueGap, cfg.walkSpeed, dt, 0.08);
         if (arrived) c.rot += (Math.PI - c.rot) * Math.min(1, dt * 12);
+        c.servedT -= dt;
         if (slot === 0 && arrived) {
           c.takeT -= dt;
-          const line = c.takeT <= 0 && w.laneServed(c.lane) ? this.takeable(c) : null;
+          const line = c.takeT <= 0 && this.servable(c) ? this.takeable(c) : null;
           if (line) {
             w.stations[line.station].counter--;
             line.left--;
             c.left--;
             w.stats.sold++;
+            if (w.playerAtLane(c.lane)) c.playerItems++;
             c.takeT = w.laneInterval(c.lane);
+            c.servedT = 0.8;
             w.events.emit('sell', line.product, c.x, c.z, 0, c.qty - c.left, c.id);
-            if (c.left <= 0) {
-              c.state = 'leave';
-              w.stats.served++;
-              let value = 0;
-              for (const l of c.lines) value += l.qty * ECONOMY.products[l.product].price;
-              w.cash.value += value;
-              w.cash.bills += c.qty;
-              w.events.emit('paid', c.lines[0].product, c.x, c.z, value, c.qty, c.id);
-            }
+            if (c.left <= 0) { this.finish(c); continue; }
           }
         }
-      } else if (moveToward(c, shop.exit.x, shop.exit.z, cfg.walkSpeed * 1.08, dt, 0.3)) c.gone = true;
+        if (c.servedT <= 0) {
+          c.patience -= dt;
+          if (c.patience <= 0) this.giveUp(c);
+        }
+      } else if (moveToward(c, shop.exit.x, shop.exit.z, cfg.walkSpeed * (c.state === 'angry' ? 1.3 : 1.08), dt, 0.3)) c.gone = true;
     }
     for (let i = this.list.length - 1; i >= 0; i--) if (this.list[i].gone) this.list.splice(i, 1);
   }

@@ -7,7 +7,19 @@ export type SimEventType =
   | 'paid'      // a customer finished and left cash (value)
   | 'collect'   // player collected the cash pile (value, n = bills)
   | 'produce'   // an animal produced an item (id = station index)
-  | 'buy';      // an upgrade level was bought (id = UPGRADES index, n = new level)
+  | 'buy'       // an upgrade level was bought (id = UPGRADES index, n = new level)
+  | 'angry'     // a customer gave up (id = customer)
+  | 'tip'       // player earned a tip (value, n = combo)
+  | 'rushWarn'  // rush warning started (product = featured, n = seconds)
+  | 'rushStart'
+  | 'rushEnd'   // value = bonus, n = 1 if cleared with no angry customers
+  | 'break'     // a machine jammed (id = station)
+  | 'fixed'     // the player fixed it (id = station)
+  | 'feed'      // the player refilled a trough (id = station)
+  | 'golden'    // a golden animal escaped (id = station)
+  | 'goldenCaught' // value = reward
+  | 'goldenGone'
+  | 'vip';      // a VIP joined a line (id = customer, n = lane)
 
 export interface SimEvent {
   type: SimEventType;

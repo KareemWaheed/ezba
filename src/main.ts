@@ -23,6 +23,8 @@ import { UPGRADES } from './config/upgrades';
 import { clearSave, loadSave, requestPersistence, writeSave } from './storage';
 import { GoalCard, Toast } from './ui/panels';
 import { preventZoom } from './ui/noZoom';
+import { PressureHud } from './ui/pressureHud';
+import { clockFromDate } from './config/events';
 
 preventZoom();
 const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -47,6 +49,9 @@ input.onGesture = unlockAudio;
 const hud = new Hud(uiRoot);
 const toast = new Toast(uiRoot);
 const goalCard = new GoalCard(uiRoot);
+const pressureHud = new PressureHud(uiRoot);
+sim.clock = clockFromDate(new Date());
+setInterval(() => { sim.clock = clockFromDate(new Date()); }, 60_000);
 
 // ---- save / load ----
 const saved = loadSave();
@@ -63,6 +68,10 @@ uiRoot.insertAdjacentHTML('beforeend', `
   <div id="dev" data-ui hidden>
     <span id="fps"></span>
     <button data-a="money">+500</button>
+    <button data-a="rush">زحمة</button>
+    <button data-a="break">عطل</button>
+    <button data-a="vip">VIP</button>
+    <button data-a="golden">دهبي</button>
     <button data-a="reset">ابدأ من الأول</button>
   </div>`);
 const devEl = document.getElementById('dev')!;
@@ -70,6 +79,10 @@ const fpsEl = document.getElementById('fps')!;
 devEl.addEventListener('click', (e) => {
   const a = (e.target as HTMLElement).closest('button')?.dataset.a;
   if (a === 'money') sim.money += 500;
+  if (a === 'rush') sim.rush.trigger();
+  if (a === 'break') for (const b of sim.staff.belts) if (b.level > 0) b.breakT = 0.01;
+  if (a === 'vip') sim.customers.forceVip = true;
+  if (a === 'golden') sim.golden.spawn();
   if (a === 'reset') { clearSave(); location.reload(); }
 });
 let taps: number[] = [];
@@ -101,6 +114,34 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       break;
     case 'sell': sfx.sell(); break;
     case 'paid': sfx.kaching(); break;
+    case 'tip': {
+      sfx.tip();
+      const s = toScreen(e.x, 3.4, e.z);
+      hud.float(`+${e.value}`, s.x, s.y, 'tip');
+      break;
+    }
+    case 'angry': {
+      sfx.angry();
+      const s = toScreen(e.x, 3.2, e.z);
+      hud.float('😡', s.x, s.y, 'bad');
+      break;
+    }
+    case 'rushWarn': sfx.alarm(); break;
+    case 'vip': sfx.sparkle(); toast.show('زبون VIP وصل! خدمه بنفسك ⭐'); break;
+    case 'rushEnd':
+      if (e.n) { sfx.fanfare(); toast.show(`الزحمة عدّت من غير زعل! +${e.value} 🎉`); }
+      else toast.show('الزحمة خلصت، بس في زباين زعلوا 😕');
+      break;
+    case 'break': sfx.clunk(); toast.show('السير عطل! روح صلّحه 🔧'); break;
+    case 'fixed': sfx.fixed(); break;
+    case 'feed': sfx.drop(); break;
+    case 'golden': sfx.sparkle(); toast.show('في حيوان دهبي هرب! امسكه ✨'); break;
+    case 'goldenCaught': {
+      sfx.fanfare();
+      const s = toScreen(e.x, 2, e.z);
+      hud.float(`+${e.value}`, s.x, s.y);
+      break;
+    }
     case 'buy':
       sfx.buy();
       toast.show(UPGRADES[e.id].msg);
@@ -147,6 +188,7 @@ function frame(now: number): void {
   locks.hrYard.visible = sim.upgrades.level('hr.office') === 0;
   locks.pen.visible = !sim.stations.some((s) => s.def.id === 'milk' && s.open);
   hud.setMoney(sim.money);
+  pressureHud.update(sim);
   goalT -= real;
   if (goalT <= 0) { goalT = 0.25; goalCard.update(nextGoal(sim), sim.money); }
   if (sim.carry.full()) {

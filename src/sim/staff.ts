@@ -1,4 +1,6 @@
 import { ECONOMY } from '../config/economy';
+import { LAYOUT } from '../config/layout';
+import { beltEnds } from '../config/stations';
 import { Carrier } from './carrier';
 import { dist, moveToward, turnToward } from './math';
 import type { Station } from './station';
@@ -65,6 +67,12 @@ export class Worker {
   }
 }
 
+/** Seconds of running until a machine's next jam: exponential, stretched by maintenance. */
+export function nextBreak(w: SimWorld): number {
+  const mean = ECONOMY.breakdowns.mean * (1 + w.upgrades.level('maint') * ECONOMY.upgrades.maint.step);
+  return -Math.log(1 - w.rng.next()) * mean;
+}
+
 /** One item riding a belt. */
 export interface BeltItem { active: boolean; t: number }
 
@@ -73,17 +81,39 @@ export class Belt {
   level = 0;
   private timer = 0.5;
   readonly items: BeltItem[] = [];
+  /** Jammed: stops moving until the player fixes it. */
+  broken = false;
+  /** Seconds of running until the next jam (set when built / fixed). */
+  breakT = -1;
+  /** Seconds the player has spent fixing it. */
+  fixT = 0;
+  /** Midpoint of the belt (where the player stands to fix it). */
+  readonly mx: number;
+  readonly mz: number;
 
-  constructor(readonly station: Station) {}
+  constructor(readonly station: Station) {
+    const e = beltEnds(station.def, LAYOUT.counter.z0);
+    this.mx = (e.ax + e.bx) / 2;
+    this.mz = (e.az + e.bz) / 2;
+  }
 
   get interval(): number {
     const b = ECONOMY.machines.belt;
     return b.interval / Math.pow(b.speedUp, Math.max(0, this.level - 1));
   }
 
-  update(dt: number): void {
+  update(dt: number, w: SimWorld): void {
     if (this.level <= 0) return;
     const st = this.station, travel = ECONOMY.machines.belt.travel;
+    if (this.breakT < 0) this.breakT = nextBreak(w);
+    if (this.broken) return;
+    this.breakT -= dt;
+    if (this.breakT <= 0) {
+      this.broken = true;
+      this.fixT = 0;
+      w.events.emit('break', st.def.product, this.mx, this.mz, 0, 0, st.index);
+      return;
+    }
     this.timer -= dt;
     if (this.timer <= 0 && st.pile > 0) {
       st.pile--;
@@ -139,6 +169,6 @@ export class StaffSystem {
   update(dt: number): void {
     const speedMult = 1 + this.w.upgrades.level('hr.speed') * ECONOMY.upgrades['hr.speed'].step;
     for (const x of this.workers) x.update(this.w, dt, speedMult);
-    for (const b of this.belts) b.update(dt);
+    for (const b of this.belts) b.update(dt, this.w);
   }
 }

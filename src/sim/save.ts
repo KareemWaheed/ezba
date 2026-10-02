@@ -22,7 +22,11 @@ export interface SaveData {
   carry: string[];
   cash: { value: number; bills: number };
   player: { x: number; z: number };
-  stats?: { earned: number; served: number; sold: number };
+  stats?: Partial<Record<string, number>>;
+  rating?: number;
+  /** Per station: trough boost seconds left; per belt: jammed. */
+  boost?: Record<string, number>;
+  broken?: Record<string, boolean>;
 }
 
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
@@ -58,6 +62,9 @@ export function serialize(w: SimWorld, now: number): SaveData {
     v: SAVE_VERSION, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
+    rating: w.service.rating,
+    boost: Object.fromEntries(w.stations.map((s) => [s.def.id, s.boostT])),
+    broken: Object.fromEntries(w.staff.belts.map((b) => [b.station.def.id, b.broken])),
   };
 }
 
@@ -83,15 +90,16 @@ export function restore(w: SimWorld, s: SaveData): void {
   }
   w.player.x = num(s.player?.x, w.player.x);
   w.player.z = num(s.player?.z, w.player.z);
-  w.stats.earned = num(s.stats?.earned);
-  w.stats.served = num(s.stats?.served);
-  w.stats.sold = num(s.stats?.sold);
+  for (const k of Object.keys(w.stats) as (keyof typeof w.stats)[]) w.stats[k] = num(s.stats?.[k]);
+  w.service.rating = Math.max(1, Math.min(5, num(s.rating, w.service.rating)));
+  for (const st of w.stations) st.boostT = Math.max(0, num(s.boost?.[st.def.id]));
   w.cash.value = num(s.cash?.value);
   w.cash.bills = Math.floor(num(s.cash?.bills));
   up.apply();
   const products = Object.keys(ECONOMY.products);
   w.carry.items.length = 0;
   for (const p of s.carry ?? []) if (products.includes(p) && !w.carry.full()) w.carry.push(p as ProductId);
+  for (const b of w.staff.belts) b.broken = b.level > 0 && !!s.broken?.[b.station.def.id];
   // rebuild tiles from scratch so one under the restored player position starts disarmed
   up.tiles = [];
   up.refresh();

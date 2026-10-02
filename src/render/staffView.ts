@@ -3,6 +3,7 @@ import { ECONOMY } from '../config/economy';
 import { LAYOUT } from '../config/layout';
 import type { SimWorld } from '../sim/world';
 import type { Belt } from '../sim/staff';
+import { beltEnds } from '../config/stations';
 import { CharacterView } from './character';
 import { CarrierView, easeOutBack } from './stacks';
 import { MAT, PRIM, merge, part } from './geo';
@@ -39,9 +40,9 @@ class BeltView {
   constructor(scene: THREE.Scene, belt: Belt) {
     const d = belt.station.def;
     // runs along the outer side of the pile/slot so workers walk the inner path
-    const side = Math.sign(d.counter.x) || -1;
-    this.a.set(d.pile.x + side * 1.05, 0.2, d.pile.z + 0.3);
-    this.b.set(d.counter.x + side * 0.35, 0.2, LAYOUT.counter.z0 - 0.15);
+    const e = beltEnds(d, LAYOUT.counter.z0);
+    this.a.set(e.ax, 0.2, e.az);
+    this.b.set(e.bx, 0.2, e.bz);
     const dx = this.b.x - this.a.x, dz = this.b.z - this.a.z, L = Math.hypot(dx, dz);
     const parts = [part(PRIM.box, 0x4a4f57, 0, 0.08, 0, 0, 0, 0, 0.8, 0.12, L)];
     for (let s = -L / 2 + 0.2; s < L / 2; s += 0.45) parts.push(part(PRIM.box, 0x777e88, 0, 0.15, s, 0, 0, 0, 0.82, 0.03, 0.12));

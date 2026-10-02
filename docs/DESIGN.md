@@ -31,3 +31,8 @@ This file records the decisions made on top of it.
   serves whichever lane(s) they stand at, faster than a cashier.
 - Tiles only take money while the player is (nearly) standing still, so running across one doesn't drain it.
 - Offline earnings = automation's real output for the time away (capped at 2 h) x `offline.efficiency`.
+- Demand follows production: customers want ~85% of what the animals make (base rate). Feeding
+  troughs (player-only, 2x production) create surplus for future contracts.
+- New-farm grace: extra patience that fades over the first 12 upgrades.
+- Only the front customer of each lane shows the full order bubble; others show a mood/patience face.
+- VIPs: crown + gold bubble, toast on arrival, guide arrow points at their lane; only the player serves them.
