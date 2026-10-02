@@ -49,6 +49,23 @@ export const UPGRADES: readonly UpgradeDef[] = [
     id: 'eggs.machine', icon: '⚙️', label: 'سير للبيض', msg: 'سير البيض شغال لوحده ⚙️',
     pos: { x: -5.4, z: -0.3 }, requires: [{ id: 'cashier', level: 1 }], milestone: true,
   },
+  // Stage 2: cows
+  {
+    id: 'milk.unlock', icon: '🐄', label: 'حظيرة البقر', msg: 'فتحت حظيرة البقر 🐄🥛',
+    pos: { x: 6.5, z: 0.2 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true,
+  },
+  {
+    id: 'milk.animals', icon: '🐄', label: 'بقرة جديدة', msg: 'بقرة جديدة في الحظيرة 🐄',
+    pos: { x: 9.8, z: 2.0 }, requires: [{ id: 'milk.unlock', level: 1 }],
+  },
+  {
+    id: 'milk.worker', icon: '👷', label: 'عامل للبن', msg: 'العامل بيلم اللبن بدالك 👷',
+    pos: { x: 4.0, z: 0.6 }, requires: [{ id: 'milk.animals', level: 2 }], milestone: true,
+  },
+  {
+    id: 'milk.machine', icon: '⚙️', label: 'سير للبن', msg: 'سير اللبن شغال لوحده ⚙️',
+    pos: { x: 9.0, z: -0.3 }, requires: [{ id: 'milk.worker', level: 1 }, { id: 'cashier', level: 1 }], milestone: true,
+  },
   // HR office: an unlockable walled yard west of the farm, with the staff upgrades inside
   {
     id: 'hr.office', icon: '🏢', label: 'مكتب الموظفين', msg: 'فتحت مكتب الموظفين، طوّر عمالك من جوه 🏢',

@@ -53,13 +53,17 @@ export function nextAction(w: SimWorld, out: { x: number; z: number }): boolean 
 export interface Goal { def: UpgradeDef; cost: number; remaining: number }
 
 /**
- * The 'next goal' for the HUD card: the first available milestone, otherwise the cheapest
- * tile the player can't afford yet. Null when every tile is affordable or none exist.
+ * The 'next goal' for the HUD card: the cheapest big unlock not bought yet (a milestone at level 0),
+ * otherwise the cheapest tile the player can't afford yet. Null when nothing qualifies.
  */
 export function nextGoal(w: SimWorld): Goal | null {
   const up = w.upgrades;
-  let pick: UpgradeDef | null = null;
-  for (const d of UPGRADES) if (d.milestone && up.available(d)) { pick = d; break; }
+  let pick: UpgradeDef | null = null, pickC = Infinity;
+  for (const d of UPGRADES) {
+    if (!d.milestone || up.level(d.id) > 0 || !up.available(d)) continue;
+    const r = up.remaining(d.id);
+    if (r < pickC) { pick = d; pickC = r; }
+  }
   if (!pick) {
     let bestC = Infinity;
     for (const t of up.tiles) {

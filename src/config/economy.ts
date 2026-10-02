@@ -41,7 +41,7 @@ export const ECONOMY = {
       /** Wander speed (visual only, but simulated deterministically). */
       wanderSpeed: 0.9,
     },
-    cow: { interval: 5.0, start: 1, wanderSpeed: 0.6 },
+    cow: { interval: 6.0, start: 1, wanderSpeed: 0.6 },
   },
 
   /** Pickup piles next to producers. Producers pause when their pile is full. */
@@ -130,6 +130,14 @@ export const ECONOMY = {
     'eggs.worker': { base: 600, growth: 6, max: 2, step: 1 },
     /** Egg belt: level 1 builds it, later levels speed it up. */
     'eggs.machine': { base: 6000, growth: 2.2, max: 4, step: 1 },
+    /** Open the cow pen (single level): milk station starts with producers.cow.start cows. */
+    'milk.unlock': { base: 3000, growth: 1, max: 1, step: 1 },
+    /** +1 cow per level. */
+    'milk.animals': { base: 350, growth: 1.6, max: 6, step: 1 },
+    /** Milk workers: +1 worker per level. */
+    'milk.worker': { base: 2500, growth: 3, max: 2, step: 1 },
+    /** Milk belt: level 1 builds it, later levels speed it up. */
+    'milk.machine': { base: 12000, growth: 2.2, max: 4, step: 1 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */

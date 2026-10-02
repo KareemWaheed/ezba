@@ -64,6 +64,7 @@ export class UpgradeSystem {
     w.carry.cap = ECONOMY.player.capacity + this.level('player.capacity') * U['player.capacity'].step;
     w.player.speedMult = 1 + this.level('player.speed') * U['player.speed'].step;
     for (const s of w.stations) {
+      if (s.def.unlockTrack) s.open = this.level(s.def.unlockTrack) > 0;
       const track = s.def.animalTrack;
       if (!s.open || !track) continue;
       const want = ECONOMY.producers[s.def.producer].start + this.level(track) * U[track].step;

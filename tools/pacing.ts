@@ -66,6 +66,9 @@ export function checkTargets(active: RunResult): TargetResult[] {
   const wk = first(active, 'eggs.worker');
   out.push({ name: 'first worker around 20-30 min', ok: !!wk && wk.playMin >= 18 && wk.playMin <= 32, detail: wk ? `${wk.playMin.toFixed(1)} min` : 'never' });
 
+  const cows = first(active, 'milk.unlock');
+  out.push({ name: 'cows around the end of day 1 (60-120 min of play)', ok: !!cows && cows.playMin >= 60 && cows.playMin <= 120, detail: cows ? `${cows.playMin.toFixed(1)} min, day ${cows.day}` : 'never' });
+
   // active play must beat automation alone; checked on every session once automation exists
   const auto = active.sessions.filter((s) => s.autoPerMin > 0);
   const worst = auto.reduce((m, s) => Math.min(m, s.activePerMin / s.autoPerMin), Infinity);

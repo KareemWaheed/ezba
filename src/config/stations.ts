@@ -24,6 +24,8 @@ export interface StationDef {
   machineTrack?: UpgradeId;
   /** Whether the station is open at the start of a new game. */
   startsOpen: boolean;
+  /** Upgrade that opens a station that doesn't start open. */
+  unlockTrack?: UpgradeId;
 }
 
 export const STATIONS: readonly StationDef[] = [
@@ -35,7 +37,8 @@ export const STATIONS: readonly StationDef[] = [
     startsOpen: true,
   },
   {
-    id: 'milk', product: 'milk', producer: 'cow', area: LAYOUT.pen,
+    id: 'milk', product: 'milk', producer: 'cow', area: LAYOUT.pen, unlockTrack: 'milk.unlock',
+    animalTrack: 'milk.animals', workerTrack: 'milk.worker', machineTrack: 'milk.machine',
     pile: { x: 6.5, z: -0.8, cols: 2, rows: 2 },
     counter: { x: 4.4, z: 4, dropX: 4.4, dropZ: 2.9 },
     startsOpen: false,

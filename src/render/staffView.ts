@@ -39,7 +39,7 @@ class BeltView {
   constructor(scene: THREE.Scene, belt: Belt) {
     const d = belt.station.def;
     // runs along the outer side of the pile/slot so workers walk the inner path
-    const side = Math.sign(d.counter.x - d.pile.x) || -1;
+    const side = Math.sign(d.counter.x) || -1;
     this.a.set(d.pile.x + side * 1.05, 0.2, d.pile.z + 0.3);
     this.b.set(d.counter.x + side * 0.35, 0.2, LAYOUT.counter.z0 - 0.15);
     const dx = this.b.x - this.a.x, dz = this.b.z - this.a.z, L = Math.hypot(dx, dz);
