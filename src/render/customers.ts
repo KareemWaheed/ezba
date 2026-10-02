@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Customer } from '../sim/customers';
+import type { Customer, OrderLine } from '../sim/customers';
 import { CharacterView, type Outfit } from './character';
 import { CarrierView } from './stacks';
 import { CanvasSprite, EMOJI, FONT, rr } from './canvas';
@@ -24,37 +24,47 @@ function outfitOf(look: number): Outfit {
 class CustomerView {
   readonly char: CharacterView;
   readonly carrier: CarrierView;
-  readonly bubble = new CanvasSprite(160, 100, 1.3);
+  readonly bubble = new CanvasSprite(160, 152, 1.3);
   readonly items: ProductId[] = [];
-  private shownLeft = -1;
+  private shownKey = -1;
 
   constructor(look: number) {
     this.char = new CharacterView(outfitOf(look));
     this.carrier = new CarrierView(this.char.root, 8);
-    this.bubble.sprite.position.set(0, 2.6, 0);
+    this.bubble.sprite.position.set(0, 2.9, 0);
     this.char.root.add(this.bubble.sprite);
   }
 
-  drawBubble(product: ProductId, left: number): void {
-    if (left === this.shownLeft) return;
-    this.shownLeft = left;
-    this.bubble.draw((c) => {
-      rr(c, 6, 4, 148, 72, 26);
+  /** One row per order line (icon + items still wanted); two-line orders get a taller bubble. */
+  drawBubble(lines: readonly OrderLine[]): void {
+    let key = lines.length;
+    for (const l of lines) key = key * 64 + l.left;
+    if (key === this.shownKey) return;
+    this.shownKey = key;
+    this.bubble.draw((c, _w, h) => {
+      const rows = lines.length, top = h - 30 - rows * 56;
+      rr(c, 6, top, 148, rows * 56 + 16, 26);
       c.fillStyle = '#ffffff';
       c.fill();
-      c.beginPath(); c.moveTo(66, 74); c.lineTo(80, 96); c.lineTo(94, 74); c.fill();
+      const tip = top + rows * 56 + 14;
+      c.beginPath(); c.moveTo(66, tip); c.lineTo(80, h - 4); c.lineTo(94, tip); c.fill();
       c.textBaseline = 'middle';
       c.textAlign = 'center';
-      c.font = `44px ${EMOJI}`;
-      c.fillText(ITEM_ICON[product], 52, 42);
-      c.fillStyle = '#2b2a1f';
-      c.font = `800 46px ${FONT}`;
-      c.fillText(String(left), 108, 45);
+      lines.forEach((l, i) => {
+        const y = top + 36 + i * 56;
+        c.globalAlpha = l.left > 0 ? 1 : 0.35;
+        c.font = `42px ${EMOJI}`;
+        c.fillText(ITEM_ICON[l.product], 52, y);
+        c.fillStyle = '#2b2a1f';
+        c.font = `800 44px ${FONT}`;
+        c.fillText(l.left > 0 ? String(l.left) : '✓', 108, y + 3);
+        c.globalAlpha = 1;
+      });
     });
   }
 
   /** Force a redraw (after the web font loads). */
-  invalidate(): void { this.shownLeft = -1; }
+  invalidate(): void { this.shownKey = -1; }
 }
 
 /** Maps sim customers to views; views are created on arrival and dropped when the customer leaves. */
@@ -72,10 +82,10 @@ export class CustomersView {
         this.scene.add(v.char.root);
       }
       const carried = c.qty - c.left;
-      v.items.length = carried;
-      for (let i = 0; i < carried; i++) v.items[i] = c.product;
+      v.items.length = 0;
+      for (const l of c.lines) for (let i = l.left; i < l.qty; i++) v.items.push(l.product);
       v.bubble.sprite.visible = c.state === 'queue';
-      if (c.state === 'queue') v.drawBubble(c.product, c.left);
+      if (c.state === 'queue') v.drawBubble(c.lines);
       v.char.update(c.x, c.z, c.rot, c.speed, dt, carried > 0);
       v.carrier.update(v.items, c.speed > 0.1 ? 1 : 0, dt);
     }

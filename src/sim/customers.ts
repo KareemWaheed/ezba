@@ -6,18 +6,21 @@ import type { Station } from './station';
 
 export type CustomerState = 'queue' | 'leave';
 
+/** One product in an order. */
+export interface OrderLine { product: ProductId; station: number; qty: number; left: number }
+
 export interface Customer {
   id: number;
   /** Random look seed; the renderer maps it to clothes/skin/hair. */
   look: number;
   x: number; z: number; rot: number; speed: number;
   state: CustomerState;
-  product: ProductId;
-  station: number;
+  /** What they want: one line per product (mixed orders have two). */
+  lines: OrderLine[];
   /** Checkout lane this customer lines up in. */
   lane: number;
+  /** Total items ordered / still wanted across all lines. */
   qty: number;
-  /** Items still wanted. */
   left: number;
   /** Cooldown before taking the next item. */
   takeT: number;
@@ -53,20 +56,38 @@ export class CustomerSystem {
     return best;
   }
 
+  private line(st: Station, scale: number): OrderLine {
+    const q = ECONOMY.customers.qty[st.def.product];
+    const maxQ = Math.max(1, Math.min(q.max, Math.floor((q.base + st.animals.length * q.perProducer) * scale)));
+    const qty = 1 + this.w.rng.int(maxQ);
+    return { product: st.def.product, station: st.index, qty, left: qty };
+  }
+
   private spawn(lane: number): void {
-    const w = this.w, rng = w.rng;
+    const w = this.w, rng = w.rng, cfg = ECONOMY.customers;
     const open = w.stations.filter((s) => s.open);
     if (!open.length) return;
-    const st: Station = rng.pick(open);
-    const q = ECONOMY.customers.qty[st.def.product];
-    const maxQ = Math.max(1, Math.min(q.max, Math.floor(q.base + st.animals.length * q.perProducer)));
-    const qty = 1 + rng.int(maxQ);
+    let lines: OrderLine[];
+    if (open.length >= 2 && rng.chance(cfg.mixedChance)) {
+      // mixed order: two different products, each a bit smaller
+      const a = rng.int(open.length);
+      const b = (a + 1 + rng.int(open.length - 1)) % open.length;
+      lines = [this.line(open[a], cfg.mixedScale), this.line(open[b], cfg.mixedScale)];
+    } else lines = [this.line(rng.pick(open), 1)];
+    let qty = 0;
+    for (const l of lines) qty += l.qty;
     const sp = LAYOUT.shop.spawn;
     this.list.push({
       id: this.nextId++, look: rng.int(1 << 30),
       x: rng.range(sp.x0, sp.x1), z: sp.z, rot: Math.PI, speed: 0,
-      state: 'queue', product: st.def.product, station: st.index, lane, qty, left: qty, takeT: 0, gone: false,
+      state: 'queue', lines, lane, qty, left: qty, takeT: 0, gone: false,
     });
+  }
+
+  /** First order line that still needs items and has stock on the counter, or null. */
+  takeable(c: Customer): OrderLine | null {
+    for (const l of c.lines) if (l.left > 0 && this.w.stations[l.station].counter > 0) return l;
+    return null;
   }
 
   /** Mean seconds between arrivals for the current number of lanes. */
@@ -98,21 +119,23 @@ export class CustomerSystem {
         const arrived = moveToward(c, lx, shop.queueZ + slot * shop.queueGap, cfg.walkSpeed, dt, 0.08);
         if (arrived) c.rot += (Math.PI - c.rot) * Math.min(1, dt * 12);
         if (slot === 0 && arrived) {
-          const st = w.stations[c.station];
           c.takeT -= dt;
-          if (w.laneServed(c.lane) && st.counter > 0 && c.takeT <= 0) {
-            st.counter--;
+          const line = c.takeT <= 0 && w.laneServed(c.lane) ? this.takeable(c) : null;
+          if (line) {
+            w.stations[line.station].counter--;
+            line.left--;
             c.left--;
             w.stats.sold++;
             c.takeT = w.laneInterval(c.lane);
-            w.events.emit('sell', c.product, c.x, c.z, 0, c.qty - c.left, c.id);
+            w.events.emit('sell', line.product, c.x, c.z, 0, c.qty - c.left, c.id);
             if (c.left <= 0) {
               c.state = 'leave';
               w.stats.served++;
-              const value = c.qty * ECONOMY.products[c.product].price;
+              let value = 0;
+              for (const l of c.lines) value += l.qty * ECONOMY.products[l.product].price;
               w.cash.value += value;
               w.cash.bills += c.qty;
-              w.events.emit('paid', c.product, c.x, c.z, value, c.qty, c.id);
+              w.events.emit('paid', c.lines[0].product, c.x, c.z, value, c.qty, c.id);
             }
           }
         }

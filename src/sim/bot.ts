@@ -86,7 +86,7 @@ export class Bot {
     let best = -1, bestScore = 0;
     for (let i = 0; i < w.lanes; i++) {
       const f = w.customers.front(i);
-      if (!f || w.stations[f.station].counter <= 0) continue;
+      if (!f || !w.customers.takeable(f)) continue;
       const score = (i < w.cashiers ? 1 : 10) + w.customers.waitingPerLane[i];
       if (score > bestScore) { best = i; bestScore = score; }
     }

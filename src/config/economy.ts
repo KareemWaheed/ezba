@@ -71,6 +71,9 @@ export const ECONOMY = {
     walkSpeed: 2.6,
     /** Seconds between a customer taking two items off the counter. */
     takeInterval: 0.22,
+    /** Chance a customer orders two products (once two are on sale), and how much smaller each line is. */
+    mixedChance: 0.35,
+    mixedScale: 0.6,
     /** Order size: 1..min(qtyMax, qtyBase + producers * qtyPerProducer), per product. */
     qty: {
       egg: { base: 2, perProducer: 0.5, max: 6 },

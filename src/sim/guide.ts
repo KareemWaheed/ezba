@@ -79,7 +79,7 @@ export function nextGoal(w: SimWorld): Goal | null {
 export function unservedLane(w: SimWorld): number {
   for (let i = 0; i < w.lanes; i++) {
     const f = w.customers.front(i);
-    if (f && w.stations[f.station].counter > 0 && !w.laneServed(i)) return i;
+    if (f && w.customers.takeable(f) && !w.laneServed(i)) return i;
   }
   return -1;
 }
