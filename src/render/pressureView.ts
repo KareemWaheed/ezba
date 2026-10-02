@@ -114,7 +114,7 @@ export class PressureView {
 
   constructor(scene: THREE.Scene, sim: SimWorld) {
     this.troughs = sim.stations.map((s) => new TroughView(scene, s.def.trough.x, s.def.trough.z));
-    for (const b of sim.staff.belts) {
+    for (const b of sim.staff.machines) {
       const sign = new CanvasSprite(96, 96, 0.9);
       sign.draw((c) => { c.font = `70px ${EMOJI}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('⚠️', 48, 52); });
       sign.sprite.position.set(b.mx, 1.8, b.mz);
@@ -171,7 +171,7 @@ export class PressureView {
     this.emitT -= dt;
     const emit = this.emitT <= 0;
     if (emit) this.emitT = 0.12;
-    sim.staff.belts.forEach((b, i) => {
+    sim.staff.machines.forEach((b, i) => {
       const w = this.warn[i];
       w.sign.sprite.visible = b.broken;
       w.ring.s.sprite.visible = b.broken && b.fixT > 0;

@@ -1,4 +1,5 @@
 import type { Box } from '../sim/math';
+import { CAFE } from './cafe';
 
 /**
  * Static farm layout (world units, +x right, +z toward the camera).
@@ -45,10 +46,10 @@ export const LAYOUT = {
 
   /** Decorative trees around the edge (x, z). */
   trees: [
-    [-10, -11], [-10.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 13], [-16.5, 12.5], [-14, -1], [13.5, -10], [14, -3], [13.5, 4],
-    [14, 11], [-4, -13], [2, -12.5], [9, -13], [4, 17], [-5, 17.5],
+    [-10, -11], [-10.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 13], [-16.5, 12.5], [-14, -1], [13.5, -10], [14, -3], [22.5, 4],
+    [22.5, 11], [-4, -13], [2, -12.5], [9, -13], [4, 17], [-5, 17.5],
   ] as const,
-  hay: [[11.6, 7], [11.6, 8.6], [11.6, 10.2], [12.8, 7.8], [12.8, 9.4]] as const,
+  hay: [[11.3, -7.6], [11.3, -6.0], [11.3, -4.4], [12.5, -6.8]] as const,
 } as const;
 
 /** Yard walls (0.3 thick) with a gap for the gate in the east wall. */
@@ -71,6 +72,8 @@ export const SOLIDS: Box[] = [
   { ...LAYOUT.counter },
   ...hrWalls(),
   { ...LAYOUT.hrYard.building },
+  { ...CAFE.stove.box },
+  { ...CAFE.counter.box },
   // hay bales lie along x (length 1.2, radius 0.5)
   ...LAYOUT.hay.map(([x, z]) => ({ x0: x - 0.6, x1: x + 0.6, z0: z - 0.5, z1: z + 0.5 })),
   // tree trunks

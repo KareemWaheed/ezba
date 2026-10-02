@@ -66,6 +66,39 @@ export const UPGRADES: readonly UpgradeDef[] = [
     id: 'milk.machine', icon: '⚙️', label: 'سير للبن', msg: 'سير اللبن شغال لوحده ⚙️',
     pos: { x: 9.0, z: -0.3 }, requires: [{ id: 'milk.worker', level: 1 }, { id: 'cashier', level: 1 }], milestone: true,
   },
+  // Stage 3: farm café (east of the shop)
+  {
+    id: 'cafe.unlock', icon: '☕', label: 'كافيه المزرعة', msg: 'فتحت الكافيه! اطبخ واخدم الزباين ☕',
+    pos: { x: 10.4, z: 7.0 }, requires: [{ id: 'milk.unlock', level: 1 }, { id: 'cashier', level: 1 }], milestone: true,
+  },
+  {
+    id: 'cafe.tables', icon: '🪑', label: 'ترابيزة زيادة', msg: 'ترابيزة جديدة في الكافيه 🪑',
+    pos: { x: 13.0, z: 12.0 }, requires: [{ id: 'cafe.unlock', level: 1 }],
+  },
+  {
+    id: 'cafe.nice', icon: '🌷', label: 'ترابيزات أشيك', msg: 'الكافيه بقى أشيك، الأسعار زادت 🌷',
+    pos: { x: 15.0, z: 12.0 }, requires: [{ id: 'cafe.tables', level: 2 }],
+  },
+  {
+    id: 'cafe.cleaner', icon: '🧹', label: 'عامل نظافة', msg: 'عامل النظافة بيمسح الترابيزات 🧹',
+    pos: { x: 17.0, z: 12.0 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'cafe.waiter', icon: '💁', label: 'كاشير الكافيه', msg: 'كاشير الكافيه بيخدم الزباين 💁',
+    pos: { x: 19.0, z: 12.0 }, requires: [{ id: 'cafe.cleaner', level: 1 }], milestone: true,
+  },
+  {
+    id: 'cafe.stove', icon: '🔥', label: 'بوتاجاز أسرع', msg: 'البوتاجاز بقى أسرع 🔥',
+    pos: { x: 19.6, z: 1.6 }, requires: [{ id: 'cafe.unlock', level: 1 }],
+  },
+  {
+    id: 'cafe.helper', icon: '🧑‍🍳', label: 'مساعد مطبخ', msg: 'مساعد المطبخ بيجيب البيض واللبن للبوتاجاز 🧑‍🍳',
+    pos: { x: 19.6, z: 3.8 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'cafe.belt', icon: '⚙️', label: 'سير الأطباق', msg: 'سير الأطباق شغال لوحده ⚙️',
+    pos: { x: 11.0, z: 4.2 }, requires: [{ id: 'cafe.helper', level: 1 }], milestone: true,
+  },
   // HR office: an unlockable walled yard west of the farm, with the staff upgrades inside
   {
     id: 'hr.office', icon: '🏢', label: 'مكتب الموظفين', msg: 'فتحت مكتب الموظفين، طوّر عمالك من جوه 🏢',

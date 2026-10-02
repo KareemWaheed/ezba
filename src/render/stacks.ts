@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { MAT } from './geo';
 import { ITEM_GEO, ITEM_H, type ItemKind } from './models';
-import type { ProductId } from '../config/economy';
+import { ITEM_IDS, type ItemId } from '../config/economy';
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler();
 const _p = new THREE.Vector3(), _s = new THREE.Vector3();
@@ -87,7 +87,7 @@ export class InstancedStack {
   }
 }
 
-const PRODUCTS: ProductId[] = ['egg', 'milk'];
+const PRODUCTS: readonly ItemId[] = ITEM_IDS;
 
 /**
  * The swaying tower carried by a character. One InstancedMesh per product type, parented to the
@@ -95,8 +95,8 @@ const PRODUCTS: ProductId[] = ['egg', 'milk'];
  */
 export class CarrierView {
   readonly group = new THREE.Group();
-  private meshes = new Map<ProductId, THREE.InstancedMesh>();
-  private counts = new Map<ProductId, number>();
+  private meshes = new Map<ItemId, THREE.InstancedMesh>();
+  private counts = new Map<ItemId, number>();
   private sway = 0;
   private sv = 0;
   private popT = new Float32Array(64).fill(1);
@@ -138,7 +138,7 @@ export class CarrierView {
   dispose(): void { for (const m of this.meshes.values()) m.dispose(); }
 
   /** `items` bottom-first; `motion` 0..1 drives the sway. */
-  update(items: readonly ProductId[], motion: number, dt: number): void {
+  update(items: readonly ItemId[], motion: number, dt: number): void {
     const n = items.length;
     this.ensure(n);
     if (n > this.prevN) for (let i = this.prevN; i < n; i++) this.popT[i] = 0;

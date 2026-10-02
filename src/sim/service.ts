@@ -1,6 +1,13 @@
 import { ECONOMY } from '../config/economy';
-import type { Customer } from './customers';
 import type { SimWorld } from './world';
+
+/** What the service system needs to know about a finished or angry customer (shop or café). */
+export interface ServedCustomer {
+  x: number; z: number; id: number;
+  patience: number; patienceMax: number;
+  playerItems: number; qty: number;
+  away: boolean;
+}
 
 /**
  * How service goes: farm rating, tips and the fast-service combo.
@@ -28,7 +35,7 @@ export class ServiceSystem {
   }
 
   /** Customer paid `value`. Returns the tip (0 if staff served or service was slow). */
-  complete(c: Customer, value: number): number {
+  complete(c: ServedCustomer, value: number): number {
     const cfg = ECONOMY.tips, r = ECONOMY.rating;
     const fast = c.patience / c.patienceMax >= cfg.fastAbove;
     const byPlayer = c.playerItems * 2 >= c.qty;
@@ -45,7 +52,7 @@ export class ServiceSystem {
   }
 
   /** Customer gave up. */
-  angry(c: Customer): void {
+  angry(c: Pick<ServedCustomer, 'away'>): void {
     if (!c.away) this.rate(ECONOMY.rating.scoreAngry);
     this.combo = 0;
     this.w.stats.angry++;

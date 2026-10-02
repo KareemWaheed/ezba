@@ -31,7 +31,8 @@ export class RushSystem {
 
   get active(): boolean { return this.phase === 'active'; }
 
-  get arrivalMult(): number { return this.active ? ECONOMY.rush.arrivalMult : 1; }
+  /** Shop arrival multiplier (café rushes use their own, see CafeSystem.interval). */
+  get arrivalMult(): number { return this.active && this.kind.target !== 'cafe' ? ECONOMY.rush.arrivalMult : 1; }
 
   /** Start the warning now (debug panel / tests). */
   trigger(): void {
@@ -41,7 +42,7 @@ export class RushSystem {
   }
 
   private pickKind(): RushKind {
-    const w = this.w, ok = RUSH_KINDS.filter((k) => !k.when || k.when(w.clock));
+    const w = this.w, ok = RUSH_KINDS.filter((k) => (!k.when || k.when(w.clock)) && (k.target !== 'cafe' || w.cafe.open));
     let total = 0;
     for (const k of ok) total += k.weight;
     let r = w.rng.next() * total;
@@ -82,6 +83,7 @@ export class RushSystem {
         break;
       case 'settle': {
         if (w.customers.list.some((c) => c.rush)) break;
+        if (this.kind.target === 'cafe') this.sales = Math.max(this.sales, 100);
         const ok = this.spawned > 0 && this.angry === 0;
         const share = cfg.bonusShare + w.upgrades.level('rush.reward') * ECONOMY.upgrades['rush.reward'].step;
         const bonus = ok ? Math.round(cfg.bonusFlat + this.sales * share) : 0;

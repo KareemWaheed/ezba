@@ -1,67 +1,107 @@
-import { ECONOMY } from '../config/economy';
+import { ECONOMY, type ItemId } from '../config/economy';
 import { LAYOUT } from '../config/layout';
 import { beltEnds } from '../config/stations';
 import { Carrier } from './carrier';
 import { dist, moveToward, turnToward } from './math';
 import type { Station } from './station';
+import type { Breakable } from './converter';
 import type { SimWorld } from './world';
 
-type WorkerState = 'toPile' | 'load' | 'toCounter' | 'unload';
+type WorkerState = 'toLoad' | 'load' | 'toUnload' | 'unload';
 
-/** A hired hand that shuttles items from a station's pile to its counter slot. */
+/** What a worker shuttles: where to load, what to take, where to unload, what to do with it. */
+export interface WorkerJob {
+  /** Identifies the job (e.g. station id) for reconciling worker counts. */
+  readonly key: string;
+  /** Called when heading out to load; writes the loading spot. */
+  loadAt(w: SimWorld, slot: number, out: { x: number; z: number }): void;
+  /** Take one item at the loading spot, or null if there's nothing to take. */
+  take(w: SimWorld): ItemId | null;
+  unloadAt(w: SimWorld, slot: number, out: { x: number; z: number }): void;
+  /** Hand one item over; false if the target can't take it right now. */
+  give(w: SimWorld, item: ItemId): boolean;
+}
+
+/** Station job: pile -> counter slot (unloads on the inner side; belts use the outer side). */
+export class StationJob implements WorkerJob {
+  readonly key: string;
+  private inner: number;
+  constructor(readonly station: Station) {
+    this.key = station.def.id;
+    this.inner = -Math.sign(station.def.counter.x) || 1;
+  }
+  loadAt(_w: SimWorld, slot: number, out: { x: number; z: number }): void {
+    const d = this.station.def;
+    out.x = d.pile.x + this.inner * slot * 0.45;
+    out.z = d.pile.z + 1.0;
+  }
+  take(): ItemId | null {
+    if (this.station.pile <= 0) return null;
+    this.station.pile--;
+    return this.station.def.product;
+  }
+  unloadAt(_w: SimWorld, slot: number, out: { x: number; z: number }): void {
+    const d = this.station.def;
+    out.x = d.counter.dropX + this.inner * (0.6 + slot * 0.45);
+    out.z = d.counter.dropZ - 0.1;
+  }
+  give(): boolean {
+    this.station.counter++;
+    return true;
+  }
+}
+
+/** A hired hand running a WorkerJob. Worse than the player (smaller stack, slower transfers). */
 export class Worker {
   x: number; z: number; rot = 0; speed = 0;
-  state: WorkerState = 'toPile';
+  state: WorkerState = 'toLoad';
   readonly carry: Carrier;
   private t = 0;
   private wait = 0;
+  private spot = { x: 0, z: 0 };
 
-  /** +1/-1: direction from the counter end toward the middle of the shop. */
-  private inner: number;
-
-  constructor(readonly station: Station, readonly slot: number) {
-    const d = station.def.pile;
-    this.inner = -Math.sign(station.def.counter.x) || 1;
-    this.x = d.x + 1.2 + slot * 0.5;
-    this.z = d.z + 1.4;
+  constructor(readonly job: WorkerJob, readonly slot: number, x: number, z: number) {
+    this.x = x;
+    this.z = z;
     this.carry = new Carrier(ECONOMY.staff.worker.capacity);
   }
 
   update(w: SimWorld, dt: number, speedMult: number): void {
-    const cfg = ECONOMY.staff.worker, st = this.station, d = st.def;
+    const cfg = ECONOMY.staff.worker;
     const near = !w.away && dist(w.player.x, w.player.z, this.x, this.z) < ECONOMY.staff.boostRadius;
     const boost = near ? 1 + ECONOMY.staff.boost : 1;
     const speed = cfg.speed * speedMult * boost;
     const interval = cfg.transferInterval / boost;
-    const off = this.slot * 0.45;
+    const s = this.spot;
     this.t -= dt;
     this.speed = 0;
     switch (this.state) {
-      case 'toPile':
-        if (moveToward(this, d.pile.x + this.inner * off, d.pile.z + 1.0, speed, dt, 0.15)) { this.state = 'load'; this.wait = 0; }
+      case 'toLoad':
+        this.job.loadAt(w, this.slot, s);
+        if (moveToward(this, s.x, s.z, speed, dt, 0.15)) { this.state = 'load'; this.wait = 0; }
         break;
-      case 'load':
+      case 'load': {
         this.wait += dt;
         this.rot = turnToward(this.rot, 0, -1, 12, dt);
-        if (this.t <= 0 && st.pile > 0 && !this.carry.full()) {
-          st.pile--;
-          this.carry.push(d.product);
-          this.t = interval;
+        if (this.t <= 0 && !this.carry.full()) {
+          const it = this.job.take(w);
+          if (it) { this.carry.push(it); this.t = interval; }
         }
-        if (this.carry.full() || (this.carry.n > 0 && this.wait > cfg.maxWait)) this.state = 'toCounter';
+        if (this.carry.full() || (this.carry.n > 0 && this.wait > cfg.maxWait)) this.state = 'toUnload';
         break;
-      case 'toCounter':
-        // unload on the inner side of the slot (the belt, if any, comes in on the outer side)
-        if (moveToward(this, d.counter.dropX + this.inner * (0.6 + off), d.counter.dropZ - 0.1, speed, dt, 0.15)) this.state = 'unload';
+      }
+      case 'toUnload':
+        this.job.unloadAt(w, this.slot, s);
+        if (moveToward(this, s.x, s.z, speed, dt, 0.15)) this.state = 'unload';
         break;
       case 'unload':
         this.rot = turnToward(this.rot, 0, 1, 12, dt);
         if (this.t <= 0 && this.carry.n > 0) {
-          this.carry.take(d.product);
-          st.counter++;
-          this.t = interval;
+          const it = this.carry.items[this.carry.n - 1];
+          if (this.job.give(w, it)) { this.carry.items.pop(); this.t = interval; }
+          else if (this.wait > 0) this.wait -= dt; // target full: wait a little
         }
-        if (this.carry.n === 0) this.state = 'toPile';
+        if (this.carry.n === 0) this.state = 'toLoad';
         break;
     }
   }
@@ -74,73 +114,93 @@ export function nextBreak(w: SimWorld): number {
 }
 
 /** One item riding a belt. */
-export interface BeltItem { active: boolean; t: number }
+export interface BeltItem { active: boolean; t: number; item: ItemId }
 
-/** Conveyor from a station's pile to its counter slot. */
-export class Belt {
+/** What a belt moves: a source to take from and a target to deliver to. */
+export interface BeltRoute {
+  take(): ItemId | null;
+  deliver(item: ItemId): void;
+  readonly ax: number; readonly az: number;
+  readonly bx: number; readonly bz: number;
+}
+
+/** Station belt route: pile -> counter slot, along the outer side. */
+export function stationRoute(st: Station): BeltRoute {
+  const e = beltEnds(st.def, LAYOUT.counter.z0);
+  return {
+    ax: e.ax, az: e.az, bx: e.bx, bz: e.bz,
+    take: () => (st.pile > 0 ? (st.pile--, st.def.product) : null),
+    deliver: () => { st.counter++; },
+  };
+}
+
+/** Conveyor belt. Level 1 builds it; each level speeds it up. Can jam. */
+export class Belt implements Breakable {
   level = 0;
   private timer = 0.5;
   readonly items: BeltItem[] = [];
-  /** Jammed: stops moving until the player fixes it. */
   broken = false;
-  /** Seconds of running until the next jam (set when built / fixed). */
   breakT = -1;
-  /** Seconds the player has spent fixing it. */
   fixT = 0;
-  /** Midpoint of the belt (where the player stands to fix it). */
   readonly mx: number;
   readonly mz: number;
 
-  constructor(readonly station: Station) {
-    const e = beltEnds(station.def, LAYOUT.counter.z0);
-    this.mx = (e.ax + e.bx) / 2;
-    this.mz = (e.az + e.bz) / 2;
+  constructor(readonly route: BeltRoute, readonly id: number, private baseInterval: number = ECONOMY.machines.belt.interval) {
+    this.mx = (route.ax + route.bx) / 2;
+    this.mz = (route.az + route.bz) / 2;
   }
+
+  get running(): boolean { return this.level > 0; }
 
   get interval(): number {
-    const b = ECONOMY.machines.belt;
-    return b.interval / Math.pow(b.speedUp, Math.max(0, this.level - 1));
+    return this.baseInterval / Math.pow(ECONOMY.machines.belt.speedUp, Math.max(0, this.level - 1));
   }
 
-  update(dt: number, w: SimWorld): void {
-    if (this.level <= 0) return;
-    const st = this.station, travel = ECONOMY.machines.belt.travel;
-    if (this.breakT < 0) this.breakT = nextBreak(w);
-    if (this.broken) return;
-    this.breakT -= dt;
-    if (this.breakT <= 0) {
-      this.broken = true;
-      this.fixT = 0;
-      w.events.emit('break', st.def.product, this.mx, this.mz, 0, 0, st.index);
-      return;
-    }
+  update(dt: number): void {
+    if (this.level <= 0 || this.broken) return;
+    const travel = ECONOMY.machines.belt.travel;
     this.timer -= dt;
-    if (this.timer <= 0 && st.pile > 0) {
-      st.pile--;
-      let it = this.items.find((i) => !i.active);
-      if (!it) { it = { active: false, t: 0 }; this.items.push(it); }
-      it.active = true;
-      it.t = 0;
-      this.timer = this.interval;
-    } else if (this.timer < 0) this.timer = 0;
+    if (this.timer <= 0) {
+      const item = this.route.take();
+      if (item) {
+        let it = this.items.find((i) => !i.active);
+        if (!it) { it = { active: false, t: 0, item }; this.items.push(it); }
+        it.active = true;
+        it.t = 0;
+        it.item = item;
+        this.timer = this.interval;
+      } else this.timer = 0;
+    }
     for (const it of this.items) {
       if (!it.active) continue;
       it.t += dt / travel;
-      if (it.t >= 1) { it.active = false; st.counter++; }
+      if (it.t >= 1) { it.active = false; this.route.deliver(it.item); }
     }
   }
 
-  /** Items in transit (counted as stock for saving). */
+  /** Items in transit (saved as already delivered). */
   get inTransit(): number { let n = 0; for (const i of this.items) if (i.active) n++; return n; }
 }
 
-/** Workers, belts and the cashier, reconciled from upgrade levels. */
+/** Station workers and belts, reconciled from upgrade levels, plus every machine that can jam. */
 export class StaffSystem {
   readonly workers: Worker[] = [];
+  /** One belt per station (index = station index); extra belts (café) are appended by their systems. */
   readonly belts: Belt[] = [];
+  /** Everything the jam/fix logic looks at. */
+  readonly machines: Breakable[] = [];
 
   constructor(private w: SimWorld) {
-    for (const s of w.stations) this.belts.push(new Belt(s));
+    for (const s of w.stations) this.addBelt(new Belt(stationRoute(s), s.index));
+  }
+
+  addBelt(b: Belt): void { this.belts.push(b); this.machines.push(b); }
+
+  /** Ensure `want` workers run jobs with this key. */
+  ensureWorkers(job: WorkerJob, want: number, x: number, z: number): void {
+    let have = 0;
+    for (const wk of this.workers) if (wk.job.key === job.key) have++;
+    while (have < want) this.workers.push(new Worker(job, have++, x + have * 0.5, z));
   }
 
   /** Match staff/machines to upgrade levels. Called from UpgradeSystem.apply(). */
@@ -149,11 +209,7 @@ export class StaffSystem {
     for (const s of w.stations) {
       if (!s.open) continue;
       const wt = s.def.workerTrack;
-      if (wt) {
-        const want = up.level(wt) * ECONOMY.upgrades[wt].step;
-        let have = this.workers.filter((x) => x.station === s).length;
-        while (have < want) this.workers.push(new Worker(s, have++));
-      }
+      if (wt) this.ensureWorkers(new StationJob(s), up.level(wt) * ECONOMY.upgrades[wt].step, s.def.pile.x + 1.2, s.def.pile.z + 1.4);
       const mt = s.def.machineTrack;
       if (mt) this.belts[s.index].level = up.level(mt);
     }
@@ -167,8 +223,19 @@ export class StaffSystem {
   }
 
   update(dt: number): void {
-    const speedMult = 1 + this.w.upgrades.level('hr.speed') * ECONOMY.upgrades['hr.speed'].step;
-    for (const x of this.workers) x.update(this.w, dt, speedMult);
-    for (const b of this.belts) b.update(dt, this.w);
+    const w = this.w, speedMult = 1 + w.upgrades.level('hr.speed') * ECONOMY.upgrades['hr.speed'].step;
+    for (const x of this.workers) x.update(w, dt, speedMult);
+    for (const b of this.belts) b.update(dt);
+    // schedule and trigger jams for every running machine
+    for (const m of this.machines) {
+      if (!m.running || m.broken) continue;
+      if (m.breakT < 0) m.breakT = nextBreak(w);
+      m.breakT -= dt;
+      if (m.breakT <= 0) {
+        m.broken = true;
+        m.fixT = 0;
+        w.events.emit('break', '', m.mx, m.mz, 0, 0, this.machines.indexOf(m));
+      }
+    }
   }
 }

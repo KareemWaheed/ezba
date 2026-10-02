@@ -12,7 +12,7 @@ export const PLAY = {
   breakHours: 3,
   overnightHours: 12,
   /** Days simulated by default (override with --days N). */
-  days: 2,
+  days: 7,
   seed: 12345,
 };
 
@@ -69,14 +69,23 @@ export function checkTargets(active: RunResult): TargetResult[] {
   const cows = first(active, 'milk.unlock');
   out.push({ name: 'cows around the end of day 1 (60-120 min of play)', ok: !!cows && cows.playMin >= 60 && cows.playMin <= 120, detail: cows ? `${cows.playMin.toFixed(1)} min, day ${cows.day}` : 'never' });
 
+  const cafe = first(active, 'cafe.unlock');
+  out.push({ name: 'café around day 2-3', ok: !!cafe && cafe.day >= 2 && cafe.day <= 3, detail: cafe ? `${cafe.playMin.toFixed(0)} min, day ${cafe.day}` : 'never' });
+
+  // stages 1-3 fully automated: every worker/cashier/machine step bought at least once
+  const auto: UpgradeId[] = ['eggs.worker', 'eggs.machine', 'cashier', 'milk.worker', 'milk.machine', 'cafe.helper', 'cafe.belt', 'cafe.waiter', 'cafe.cleaner'];
+  const last = auto.map((id) => first(active, id));
+  let done: Purchase | null = null;
+  if (last.every(Boolean)) for (const x of last as Purchase[]) if (!done || x.playMin > done.playMin) done = x;
+  out.push({ name: 'stages 1-3 fully automated around day 5-7', ok: !!done && done.day >= 5 && done.day <= 7, detail: done ? `${done.playMin.toFixed(0)} min, day ${done.day} (last: ${done.id})` : `missing: ${auto.filter((_, i) => !last[i]).join(', ')}` });
+
   // active play must beat automation alone; checked on every session once automation exists
-  const auto = active.sessions.filter((s) => s.autoPerMin > 0);
-  const worst = auto.reduce((m, s) => Math.min(m, s.activePerMin / s.autoPerMin), Infinity);
+  const autoS = active.sessions.filter((s) => s.autoPerMin > 0);
+  const worst = autoS.reduce((m, s) => Math.min(m, s.activePerMin / s.autoPerMin), Infinity);
   out.push({
     name: 'active player earns noticeably more than automation alone (>= 1.5x)',
-    ok: auto.length === 0 || worst >= 1.5,
-    pending: 'M7 (tips, VIP, rushes, golden animals, feeding troughs)',
-    detail: auto.length ? `worst ratio ${worst.toFixed(2)}x` : 'no automation yet',
+    ok: autoS.length === 0 || worst >= 1.5,
+    detail: autoS.length ? `worst ratio ${worst.toFixed(2)}x` : 'no automation yet',
   });
   return out;
 }

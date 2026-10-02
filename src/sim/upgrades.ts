@@ -1,6 +1,7 @@
 import { ECONOMY, type UpgradeId } from '../config/economy';
 import { UPGRADES, type UpgradeDef } from '../config/upgrades';
 import { LAYOUT } from '../config/layout';
+import { CAFE } from '../config/cafe';
 import { dist } from './math';
 import type { SimWorld } from './world';
 
@@ -72,6 +73,8 @@ export class UpgradeSystem {
     }
     w.staff.sync();
     w.bounds.x0 = this.level('hr.office') > 0 ? LAYOUT.hrYard.unlockedX0 : LAYOUT.bounds.x0;
+    w.cafe.sync();
+    w.bounds.x1 = w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
   }
 
   private purchase(t: TileState): void {

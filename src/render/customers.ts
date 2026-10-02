@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { moodOf, type Customer, type CustomerSystem, type Mood, type OrderLine } from '../sim/customers';
+import { moodOf, type CustomerSystem, type Mood } from '../sim/customers';
 import { CharacterView, type Outfit } from './character';
 import { CarrierView } from './stacks';
 import { CanvasSprite, EMOJI, FONT, rr } from './canvas';
 import { ITEM_ICON } from './models';
 import { MAT, PRIM, merge, part } from './geo';
-import type { ProductId } from '../config/economy';
+import type { ItemId } from '../config/economy';
 
 const SHIRTS = [0xe8554e, 0x4a90d9, 0x8e6cc4, 0x2fb59a, 0xf28c38, 0xd96aa7];
 const PANTS = [0x3b4a6b, 0x5a4632, 0x2e2e2e, 0x6b4f8a];
@@ -34,19 +34,29 @@ function outfitOf(look: number): Outfit {
 }
 
 /** One customer's visuals: body, carried items and the order bubble with a patience ring. */
-class CustomerView {
+/** What a bubble needs: shop and café customers both fit this. */
+export interface BubbleCustomer {
+  kind?: 'normal' | 'vip';
+  look: number;
+  state: string;
+  patience: number;
+  patienceMax: number;
+  lines: readonly { product: ItemId; left: number }[];
+}
+
+export class CustomerView {
   readonly char: CharacterView;
   readonly carrier: CarrierView;
   readonly bubble = new CanvasSprite(220, 152, 1.5);
   /** Small mood face + patience ring for customers further back in line. */
   readonly face = new CanvasSprite(72, 72, 0.6);
   private faceKey = -1;
-  readonly items: ProductId[] = [];
+  readonly items: ItemId[] = [];
   private shownKey = -1;
 
-  constructor(c: Customer) {
+  constructor(c: Pick<BubbleCustomer, 'kind' | 'look'>, outfit?: Outfit) {
     const vip = c.kind === 'vip';
-    this.char = new CharacterView(vip ? VIP : outfitOf(c.look));
+    this.char = new CharacterView(outfit ?? (vip ? VIP : outfitOf(c.look)));
     if (vip) this.char.body.add(new THREE.Mesh(VIP_GEO, MAT));
     this.carrier = new CarrierView(this.char.root, 8);
     this.bubble.sprite.position.set(0, 2.8, 0);
@@ -58,8 +68,8 @@ class CustomerView {
    * Bubble: patience ring with a mood face on the left, then one row per order line.
    * Redrawn only when something visible changes (patience is quantized to 24 steps).
    */
-  draw(c: Customer): void {
-    const lines: readonly OrderLine[] = c.lines;
+  draw(c: BubbleCustomer): void {
+    const lines = c.lines;
     const mood = moodOf(c);
     const angry = c.state === 'angry';
     const frac = Math.max(0, c.patience / c.patienceMax);
@@ -104,7 +114,7 @@ class CustomerView {
   }
 
   /** Compact indicator: mood face inside a patience ring. */
-  drawFace(c: Customer): void {
+  drawFace(c: BubbleCustomer): void {
     const mood = moodOf(c), frac = Math.max(0, c.patience / c.patienceMax);
     const key = Math.round(frac * 16) * 4 + (mood === 'happy' ? 0 : mood === 'bored' ? 1 : 2);
     if (key === this.faceKey) return;

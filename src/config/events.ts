@@ -16,6 +16,8 @@ export interface RushKind {
   title: string;
   weight: number;
   when?: (c: Clock) => boolean;
+  /** 'cafe' rushes hit the café instead of the shop (only when the café is open). */
+  target?: 'cafe';
 }
 
 export const RUSH_KINDS: readonly RushKind[] = [
@@ -24,6 +26,8 @@ export const RUSH_KINDS: readonly RushKind[] = [
   { id: 'market-any', icon: '🧺', title: 'يوم السوق!', weight: 1 },
   { id: 'school', icon: '🎒', title: 'المدارس خرّجت!', weight: 2, when: (c) => c.hour >= 13 && c.hour <= 15 },
   { id: 'iftar', icon: '🌙', title: 'زحمة قبل الفطار!', weight: 8, when: (c) => c.ramadan && c.hour >= 16 && c.hour <= 19 },
+  { id: 'breakfast', icon: '🍳', title: 'زحمة الفطار في الكافيه!', weight: 6, target: 'cafe', when: (c) => c.hour >= 6 && c.hour <= 11 },
+  { id: 'cafe-crowd', icon: '☕', title: 'الكافيه اتملى!', weight: 2, target: 'cafe' },
 ];
 
 /**

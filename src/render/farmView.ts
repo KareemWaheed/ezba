@@ -16,6 +16,7 @@ import { FLY_SCALE, ITEM_H, ITEM_ICON } from './models';
 import { TilesView } from './tiles';
 import { StaffView } from './staffView';
 import { PressureView } from './pressureView';
+import { CafeView } from './cafeView';
 import { UPGRADES } from '../config/upgrades';
 
 const _v = new THREE.Vector3();
@@ -102,6 +103,7 @@ export class FarmView {
   readonly tiles: TilesView;
   readonly staff: StaffView;
   readonly pressure: PressureView;
+  readonly cafe: CafeView;
   /** True on frames where a coin flew into an upgrade tile (for the coin sound). */
   coinFlew = false;
   private payT = 0;
@@ -128,6 +130,7 @@ export class FarmView {
     this.tiles = new TilesView(scene);
     this.staff = new StaffView(scene);
     this.pressure = new PressureView(scene, sim);
+    this.cafe = new CafeView(scene);
     this.arrow = new THREE.Mesh(merge([
       part(PRIM.cone, 0xff8a1f, 0, 0, 0, Math.PI, 0, 0, 0.32, 0.6, 0.32),
       part(PRIM.cyl, 0xff8a1f, 0, 0.5, 0, 0, 0, 0, 0.12, 0.6, 0.12),
@@ -148,6 +151,7 @@ export class FarmView {
     this.tiles.sync(sim, dt, pop);
     this.staff.sync(sim, dt, this.flyers, pop);
     this.pressure.sync(sim, dt);
+    this.cafe.sync(sim, dt);
 
     // coins fly from the player into the tile being paid
     this.coinFlew = false;
@@ -173,9 +177,12 @@ export class FarmView {
       for (let i = 0; i < 16; i++) this.flyers.launch('bill', _v, null, this.hand, 0.35, 1, 1.6, i * 0.03);
     }
     if (e.type === 'collect') {
-      const n = Math.min(this.cash.max, e.n);
+      const shop = Math.abs(e.x - LAYOUT.shop.cash.x) < 0.01 && Math.abs(e.z - LAYOUT.shop.cash.z) < 0.01;
+      const n = Math.min(shop ? this.cash.max : 12, e.n);
       for (let i = 0; i < n; i++) {
-        this.flyers.launch('bill', this.cash.slotWorld(i, _v), null, this.hand, 0.25, 1, 1.2, i * 0.012);
+        if (shop) this.cash.slotWorld(i, _v);
+        else _v.set(e.x + (i % 3) * 0.15, 0.9 + i * 0.05, e.z);
+        this.flyers.launch('bill', _v, null, this.hand, 0.25, 1, 1.2, i * 0.012);
       }
     }
   }
@@ -189,6 +196,7 @@ export class FarmView {
   /** Redraw canvas text once the web font has loaded. */
   invalidateText(): void {
     this.customers.invalidate();
+    this.cafe.invalidate();
     this.tiles.invalidate();
     for (const s of this.stations) s.invalidateLabel();
   }

@@ -67,7 +67,7 @@ export class CharacterView {
    * Pose from sim state. The cycle phase advances with distance travelled (speed * dt),
    * not with time, so stride always matches ground speed.
    */
-  update(x: number, z: number, rot: number, speed: number, dt: number, carrying: boolean): void {
+  update(x: number, z: number, rot: number, speed: number, dt: number, carrying: boolean, sitting = false): void {
     this.root.position.set(x, 0, z);
     this.root.rotation.y = rot;
     this.spd += (speed - this.spd) * Math.min(1, dt * 20);
@@ -85,5 +85,11 @@ export class CharacterView {
     this.body.position.y = Math.abs(Math.cos(this.phase)) * 0.11 * s;
     this.body.rotation.z = Math.sin(this.phase) * 0.09 * s;
     this.body.rotation.x = 0.14 * s;
+    if (sitting) {
+      // seated on a chair: thighs forward, body lowered, hands on the table
+      this.legL.rotation.x = this.legR.rotation.x = -1.45;
+      this.body.position.y = -0.22;
+      this.armL.rotation.x = this.armR.rotation.x = -1.1;
+    }
   }
 }

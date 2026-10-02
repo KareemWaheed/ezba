@@ -1,10 +1,10 @@
 import type * as THREE from 'three';
-import type { ProducerKind, ProductId } from '../config/economy';
+import type { ItemId, ProducerKind } from '../config/economy';
 import { PRIM, Q4, merge, part } from './geo';
 
-const { box, sph, sphLo, cylLo, cone } = PRIM;
+const { box, sph, sphLo, cyl, cylLo, cone } = PRIM;
 
-export type ItemKind = ProductId | 'bill';
+export type ItemKind = ItemId | 'bill';
 
 /** Low-poly item models (one merged geometry each). */
 export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
@@ -18,6 +18,19 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
     ...Q4.map(([a, b]) => part(cylLo, 0xffffff, a * 0.15, 0.4, b * 0.15, 0, 0, 0, 0.1, 0.38, 0.1)),
     ...Q4.map(([a, b]) => part(cylLo, 0x2b6cb0, a * 0.15, 0.62, b * 0.15, 0, 0, 0, 0.07, 0.07, 0.07)),
   ]),
+  omelette: merge([
+    part(cyl, 0xffffff, 0, 0.04, 0, 0, 0, 0, 0.3, 0.06, 0.3),
+    part(cyl, 0xf6d24a, 0, 0.09, 0, 0, 0, 0, 0.22, 0.05, 0.16),
+    part(sphLo, 0xffffff, 0.04, 0.12, 0.02, 0, 0, 0, 0.07, 0.03, 0.07),
+    part(sphLo, 0xf2a73b, 0.04, 0.14, 0.02, 0, 0, 0, 0.035, 0.025, 0.035),
+  ]),
+  milkcup: merge([
+    part(box, 0xc98a4b, 0, 0.03, 0, 0, 0, 0, 0.5, 0.06, 0.34),
+    part(cylLo, 0xd8eef7, -0.1, 0.2, 0, 0, 0, 0, 0.09, 0.28, 0.09),
+    part(cylLo, 0xd8eef7, 0.1, 0.2, 0, 0, 0, 0, 0.09, 0.28, 0.09),
+    part(cylLo, 0xffffff, -0.1, 0.32, 0, 0, 0, 0, 0.08, 0.04, 0.08),
+    part(cylLo, 0xffffff, 0.1, 0.32, 0, 0, 0, 0, 0.08, 0.04, 0.08),
+  ]),
   bill: merge([
     part(box, 0x4dbb4f, 0, 0.05, 0, 0, 0, 0, 0.56, 0.1, 0.3),
     part(box, 0x8fe58a, 0, 0.051, 0, 0, 0, 0, 0.3, 0.104, 0.16),
@@ -25,9 +38,9 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
 };
 
 /** Stacking height of one item. */
-export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, bill: 0.11 };
+export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, omelette: 0.17, milkcup: 0.36, bill: 0.11 };
 
-export const ITEM_ICON: Record<ProductId, string> = { egg: '🥚', milk: '🥛' };
+export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', omelette: '🍳', milkcup: '☕' };
 
 export const ANIMAL_GEO: Record<ProducerKind, THREE.BufferGeometry> = {
   chicken: merge([

@@ -3,7 +3,6 @@ import { ECONOMY } from '../config/economy';
 import { LAYOUT } from '../config/layout';
 import type { SimWorld } from '../sim/world';
 import type { Belt } from '../sim/staff';
-import { beltEnds } from '../config/stations';
 import { CharacterView } from './character';
 import { CarrierView, easeOutBack } from './stacks';
 import { MAT, PRIM, merge, part } from './geo';
@@ -38,11 +37,9 @@ class BeltView {
   readonly mesh: THREE.Mesh;
 
   constructor(scene: THREE.Scene, belt: Belt) {
-    const d = belt.station.def;
-    // runs along the outer side of the pile/slot so workers walk the inner path
-    const e = beltEnds(d, LAYOUT.counter.z0);
-    this.a.set(e.ax, 0.2, e.az);
-    this.b.set(e.bx, 0.2, e.bz);
+    const r = belt.route;
+    this.a.set(r.ax, 0.2, r.az);
+    this.b.set(r.bx, 0.2, r.bz);
     const dx = this.b.x - this.a.x, dz = this.b.z - this.a.z, L = Math.hypot(dx, dz);
     const parts = [part(PRIM.box, 0x4a4f57, 0, 0.08, 0, 0, 0, 0, 0.8, 0.12, L)];
     for (let s = -L / 2 + 0.2; s < L / 2; s += 0.45) parts.push(part(PRIM.box, 0x777e88, 0, 0.15, s, 0, 0, 0, 0.82, 0.03, 0.12));
@@ -104,17 +101,16 @@ export class StaffView {
 
     for (const belt of staff.belts) {
       if (belt.level <= 0) continue;
-      let v = this.belts.get(belt.station.index);
+      let v = this.belts.get(belt.id);
       if (!v) {
         v = new BeltView(this.scene, belt);
-        this.belts.set(belt.station.index, v);
+        this.belts.set(belt.id, v);
         this.pop(v.mesh, animate);
       }
-      const product = belt.station.def.product;
       for (const it of belt.items) {
         if (!it.active) continue;
         const k = it.t, lift = k > 0.85 ? ((k - 0.85) / 0.15) * 0.8 : 0;
-        flyers.put(product, v.a.x + (v.b.x - v.a.x) * k, v.a.y + lift, v.a.z + (v.b.z - v.a.z) * k, 0, 0.8);
+        flyers.put(it.item, v.a.x + (v.b.x - v.a.x) * k, v.a.y + lift, v.a.z + (v.b.z - v.a.z) * k, 0, 0.8);
       }
     }
 

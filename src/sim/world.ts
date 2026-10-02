@@ -11,6 +11,7 @@ import { StaffSystem, nextBreak } from './staff';
 import { ServiceSystem } from './service';
 import { RushSystem } from './rush';
 import { GoldenSystem } from './golden';
+import { CafeSystem } from './cafe';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
@@ -32,11 +33,12 @@ export class SimWorld {
   readonly service: ServiceSystem;
   readonly rush: RushSystem;
   readonly golden: GoldenSystem;
+  readonly cafe: CafeSystem;
   /** Real-world clock for seasonal events (the UI updates it; the simulator keeps the default). */
   clock: Clock = { weekday: 1, hour: 12, ramadan: false };
   readonly cash = { value: 0, bills: 0 };
   /** Lifetime counters (daily tasks, album and the simulator read these). */
-  readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0 };
+  readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0, tables: 0, cafeServed: 0 };
   readonly events = new EventQueue();
   /** Walkable area; grows when walled plots are unlocked. */
   readonly bounds = { ...LAYOUT.bounds };
@@ -58,6 +60,7 @@ export class SimWorld {
     this.service = new ServiceSystem(this);
     this.rush = new RushSystem(this);
     this.golden = new GoldenSystem(this);
+    this.cafe = new CafeSystem(this);
     this.upgrades = new UpgradeSystem(this);
     this.upgrades.apply();
     this.upgrades.refresh();
@@ -96,6 +99,7 @@ export class SimWorld {
     this.customers.update(dt);
     this.service.update(dt);
     this.golden.update(dt);
+    this.cafe.update(dt);
     if (!this.away) this.upgrades.update(dt);
   }
 
@@ -136,7 +140,7 @@ export class SimWorld {
     }
     // jammed machines: stand next to one to fix it
     const bc = ECONOMY.breakdowns;
-    for (const b of this.staff.belts) {
+    for (const b of this.staff.machines) {
       if (!b.broken) continue;
       if (dist(p.x, p.z, b.mx, b.mz) < bc.fixRadius) {
         b.fixT += dt;
@@ -145,10 +149,11 @@ export class SimWorld {
           b.fixT = 0;
           b.breakT = nextBreak(this);
           this.stats.fixes++;
-          this.events.emit('fixed', '', b.mx, b.mz, 0, 0, b.station.index);
+          this.events.emit('fixed', '', b.mx, b.mz, 0, 0, this.staff.machines.indexOf(b));
         }
       } else b.fixT = 0;
     }
+    this.cafe.interact(dt);
     const cash = LAYOUT.shop.cash;
     if (this.cash.value > 0 && dist(p.x, p.z, cash.x, cash.z) < ZONE.cash) {
       const v = this.cash.value, n = this.cash.bills;

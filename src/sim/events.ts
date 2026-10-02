@@ -1,4 +1,4 @@
-import type { ProductId } from '../config/economy';
+import type { ItemId } from '../config/economy';
 
 export type SimEventType =
   | 'pick'      // player picked an item from a pile (n = stack size after)
@@ -19,11 +19,15 @@ export type SimEventType =
   | 'golden'    // a golden animal escaped (id = station)
   | 'goldenCaught' // value = reward
   | 'goldenGone'
-  | 'vip';      // a VIP joined a line (id = customer, n = lane)
+  | 'vip'       // a VIP joined a line (id = customer, n = lane)
+  | 'cooked'    // a converter finished an item (product = dish)
+  | 'cafeTake'  // a café customer took a dish (id = customer)
+  | 'cafePaid'  // a café customer left money on a table (value, id = table)
+  | 'cleaned';  // a table was cleaned (id = table)
 
 export interface SimEvent {
   type: SimEventType;
-  product: ProductId | '';
+  product: ItemId | '';
   x: number; z: number;
   value: number;
   n: number;
@@ -43,7 +47,7 @@ export class EventQueue {
     this.buf = Array.from({ length: cap }, () => ({ type: 'pick', product: '', x: 0, z: 0, value: 0, n: 0, id: 0 }));
   }
 
-  emit(type: SimEventType, product: ProductId | '' = '', x = 0, z = 0, value = 0, n = 0, id = 0): void {
+  emit(type: SimEventType, product: ItemId | '' = '', x = 0, z = 0, value = 0, n = 0, id = 0): void {
     let i: number;
     if (this.length < this.cap) i = (this.start + this.length++) % this.cap;
     else { i = this.start; this.start = (this.start + 1) % this.cap; }

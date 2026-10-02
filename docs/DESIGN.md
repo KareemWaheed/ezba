@@ -36,3 +36,6 @@ This file records the decisions made on top of it.
 - New-farm grace: extra patience that fades over the first 12 upgrades.
 - Only the front customer of each lane shows the full order bubble; others show a mood/patience face.
 - VIPs: crown + gold bubble, toast on arrival, guide arrow points at their lane; only the player serves them.
+- Café (stage 3): stove = generic recipe Converter (bakery/dairy reuse it); kitchen helpers take raw items
+  from piles or from the shop counter's surplus (keeping a reserve), so the shop counter acts as the farm's
+  storeroom. Café money is left on tables; cleaners carry it to the café cash pile. Breakfast rush hits the café.

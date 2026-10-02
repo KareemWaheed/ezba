@@ -43,7 +43,7 @@ export interface Customer {
   gone: boolean;
 }
 
-export function moodOf(c: Customer): Mood {
+export function moodOf(c: { state: string; patience: number; patienceMax: number }): Mood {
   if (c.state === 'angry') return 'angry';
   const f = c.patience / c.patienceMax, p = ECONOMY.patience;
   return f > p.happy ? 'happy' : f > p.bored ? 'bored' : 'angry';

@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { MAT } from './geo';
 import { ITEM_GEO, type ItemKind } from './models';
+import { ITEM_IDS } from '../config/economy';
 
 const CAP = 160;
-const KINDS: ItemKind[] = ['egg', 'milk', 'bill'];
+const KINDS: ItemKind[] = [...ITEM_IDS, 'bill'];
 
 interface Flyer {
   active: boolean;

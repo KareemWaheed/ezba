@@ -1,5 +1,7 @@
 import { ECONOMY } from '../config/economy';
 import { LAYOUT, SOLIDS } from '../config/layout';
+import { CAFE } from '../config/cafe';
+import type { DishId, ProductId } from '../config/economy';
 import { dist, type Box } from './math';
 import type { SimWorld } from './world';
 import type { TileState } from './upgrades';
@@ -13,7 +15,8 @@ import type { TileState } from './upgrades';
  */
 export type BotProfile = 'active' | 'idle';
 
-type Task = 'tile' | 'stepOff' | 'drop' | 'cash' | 'pick' | 'serve' | 'wait' | 'fix' | 'golden' | 'feed';
+type Task = 'tile' | 'stepOff' | 'drop' | 'cash' | 'pick' | 'serve' | 'wait' | 'fix' | 'golden' | 'feed'
+  | 'stoveIn' | 'stoveOut' | 'cafeDrop' | 'cafeServe' | 'clean' | 'tableCash';
 
 /** Clearance kept from obstacles when routing around them. */
 const CLEAR = ECONOMY.player.radius + 0.25;
@@ -59,6 +62,8 @@ export class Bot {
   private lastZ = 0;
   private pickStation = -1;
   private way = { x: 0, z: 0 };
+  /** Current raw-item trip is for the café stove rather than the shop counter. */
+  private supplying = false;
 
   constructor(private w: SimWorld, readonly profile: BotProfile) {}
 
@@ -98,7 +103,7 @@ export class Bot {
     const w = this.w, p = w.player, c = w.carry, shop = LAYOUT.shop;
     if (this.profile === 'active') {
       // player-only jobs first: jammed machines, golden animals, VIPs
-      const jam = w.staff.belts.find((b) => b.broken);
+      const jam = w.staff.machines.find((b) => b.broken);
       if (jam) { this.go('fix', jam.mx, jam.mz); return; }
       const g = w.golden.animal;
       if (g) { this.go('golden', g.x, g.z); return; }
@@ -125,9 +130,14 @@ export class Bot {
       return;
     }
     if (c.n > 0) {
+      const cafe = w.cafe;
+      // dishes go to the café counter
+      if (c.items.some((it) => it in cafe.counter)) { this.go('cafeDrop', CAFE.counter.serve.x, CAFE.counter.serve.z); return; }
       // once a trip has started, fill up while the pile still has items, then unload
       const ps = w.stations[this.pickStation];
       if (ps && !c.full() && ps.pile > 0 && dist(p.x, p.z, ps.def.pile.x, ps.def.pile.z) < 2) { this.go('pick', ps.def.pile.x, ps.def.pile.z); return; }
+      if (this.supplying && c.items.some((it) => cafe.stove.wants(it as ProductId))) { this.go('stoveIn', CAFE.stove.input.x, CAFE.stove.input.z); return; }
+      this.supplying = false;
       for (const s of w.stations) {
         if (s.open && c.has(s.def.product)) { this.go('drop', s.def.counter.dropX, s.def.counter.dropZ); return; }
       }
@@ -137,6 +147,7 @@ export class Bot {
     const fc = ECONOMY.feed;
     const hungry = w.stations.find((s) => s.open && s.boostT < fc.duration * fc.refillBelow);
     if (hungry && c.n === 0) { this.go('feed', hungry.def.trough.x, hungry.def.trough.z + 0.5); return; }
+    if (this.cafeTask()) return;
     // fetch from the fullest pile once it can fill (most of) a trip
     let best = -1, bestN = 0;
     for (const s of w.stations) if (s.open && s.pile > bestN) { best = s.index; bestN = s.pile; }
@@ -157,6 +168,45 @@ export class Bot {
     if (w.cash.value > 0) { this.go('cash', shop.cash.x, shop.cash.z); return; }
     const s0 = w.stations.find((s) => s.open);
     if (s0) this.go('wait', s0.def.pile.x, s0.def.pile.z + 0.6);
+  }
+
+  /** Café chores the player still has to do by hand (staff take them over as they're hired). */
+  private cafeTask(): boolean {
+    const w = this.w, cafe = w.cafe, c = w.carry, up = w.upgrades;
+    if (!cafe.open || c.n > 0) return false;
+    // serve the café line (no café cashier yet) when the front customer can be served
+    const front = cafe.customers.find((x) => x.state === 'queue');
+    const shopFront = this.serveLane() >= 0 ? w.customers.front(this.serveLane()) : null;
+    const cafeUrgent = front && (!shopFront || front.patience / front.patienceMax < shopFront.patience / shopFront.patienceMax);
+    if (!cafe.waiter && front && front.lines.some((l) => l.left > 0 && cafe.counter[l.product] > 0) && cafeUrgent
+      && (front.table >= 0 || cafe.tables.some((t, i) => i < cafe.tableCount && !t.occupant && !t.dirty))) {
+      this.go('cafeServe', CAFE.counter.serve.x, CAFE.counter.serve.z);
+      return true;
+    }
+    // dirty tables (no cleaner) and table money
+    if (up.level('cafe.cleaner') === 0 || front) {
+      for (let i = 0; i < cafe.tableCount; i++) {
+        const t = cafe.tables[i];
+        if ((t.dirty && !t.occupant && up.level('cafe.cleaner') === 0) || t.cash >= 40) { this.go(t.dirty ? 'clean' : 'tableCash', t.x, t.z - 0.9); return true; }
+      }
+    }
+    if (cafe.cash.value >= 60) { this.go('cash', CAFE.cash.x, CAFE.cash.z); return true; }
+    // carry dishes to the counter (no dish belt yet)
+    let low = false;
+    for (const d of Object.keys(cafe.counter) as DishId[]) if (cafe.counter[d] < 3 && cafe.stove.output[d] > 0) low = true;
+    if (cafe.belt.level === 0 && (low || cafe.stove.outputCount >= ECONOMY.cafe.stoveOutputMax - 2)) { this.go('stoveOut', CAFE.stove.output.x, CAFE.stove.output.z); return true; }
+    // keep the stove stocked (no kitchen helper yet)
+    if (up.level('cafe.helper') === 0) {
+      for (const s of w.stations) {
+        if (s.open && s.pile >= 3 && cafe.stove.input[s.def.product] < 6) {
+          this.supplying = true;
+          this.pickStation = s.index;
+          this.go('pick', s.def.pile.x, s.def.pile.z);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**

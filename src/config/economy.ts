@@ -25,10 +25,43 @@ export const ECONOMY = {
     dropInterval: 0.09,
   },
 
-  /** Sale price per item. */
+  /** Raw products: sale price per item at the shop counter. */
   products: {
     egg: { price: 2 },
     milk: { price: 4 },
+  },
+
+  /** Café dishes (made on the stove from raw products, see config/recipes.ts): price per dish. */
+  dishes: {
+    omelette: { price: 18 },
+    milkcup: { price: 10 },
+  },
+
+  /** Farm café. */
+  cafe: {
+    /** Café customers per minute per table (x rating; breakfast rush multiplies it). */
+    perTable: 1.8,
+    /** Dishes per order: 1..maxDishes. */
+    maxDishes: 3,
+    /** Patience while waiting in line or for a free clean table. */
+    patience: 60,
+    /** Seconds a customer sits and eats. */
+    eatTime: 7,
+    /** Seconds the player stands at a dirty table to clean it (cleaners take cleanerSlow x longer). */
+    cleanTime: 1.0,
+    cleanerSlow: 2.2,
+    cleanerSpeed: 2.6,
+    /** Raw items the stove can hold per product, and dishes waiting in its output tray. */
+    stoveInputMax: 24,
+    stoveOutputMax: 16,
+    /** Nicer tables: café prices x (1 + step x level) and patience +20% per level. */
+    niceStep: 0.2,
+    /** Café counter visual stack cap (unlimited storage like the shop counter). */
+    counterVisualMax: 8,
+    /** Café cash register serves this many times slower than the player. */
+    waiterSlow: 2.0,
+    /** Kitchen helpers may take raw items from the shop counter's surplus, leaving this many for shop customers. */
+    counterReserve: 12,
   },
 
   /** Animals / machines that generate items into a pickup pile. */
@@ -239,7 +272,7 @@ export const ECONOMY = {
     /** Egg workers: +1 worker per level. */
     'eggs.worker': { base: 600, growth: 6, max: 2, step: 1 },
     /** Egg belt: level 1 builds it, later levels speed it up. */
-    'eggs.machine': { base: 6000, growth: 2.2, max: 4, step: 1 },
+    'eggs.machine': { base: 20000, growth: 2.2, max: 4, step: 1 },
     /** Open the cow pen (single level): milk station starts with producers.cow.start cows. */
     'milk.unlock': { base: 3000, growth: 1, max: 1, step: 1 },
     /** +1 cow per level. */
@@ -247,13 +280,29 @@ export const ECONOMY = {
     /** Milk workers: +1 worker per level. */
     'milk.worker': { base: 2500, growth: 3, max: 2, step: 1 },
     /** Milk belt: level 1 builds it, later levels speed it up. */
-    'milk.machine': { base: 12000, growth: 2.2, max: 4, step: 1 },
+    'milk.machine': { base: 45000, growth: 2.2, max: 4, step: 1 },
     /** Maintenance: breakdowns.mean x (1 + step x level). Never reaches zero breakdowns. */
     maint: { base: 3000, growth: 2, max: 4, step: 0.6 },
     /** Rush bonus share +step per level. */
     'rush.reward': { base: 2500, growth: 2, max: 4, step: 0.25 },
     /** Rush warning +step seconds per level. */
     'rush.warning': { base: 1500, growth: 2, max: 3, step: 3 },
+    /** Open the farm café: stove, café counter and the first tables. */
+    'cafe.unlock': { base: 9000, growth: 1, max: 1, step: 1 },
+    /** +1 café table per level (2 at unlock). */
+    'cafe.tables': { base: 2500, growth: 1.8, max: 4, step: 1 },
+    /** Nicer tables: café prices and patience up. */
+    'cafe.nice': { base: 8000, growth: 2.5, max: 2, step: 1 },
+    /** Stove cooks faster: time / (1 + step x level). */
+    'cafe.stove': { base: 3000, growth: 2, max: 4, step: 0.4 },
+    /** Kitchen helpers carry eggs/milk from the piles to the stove (+1 per level). */
+    'cafe.helper': { base: 25000, growth: 3, max: 2, step: 1 },
+    /** Dish belt from the stove to the café counter (level 1 builds it, then faster). */
+    'cafe.belt': { base: 120000, growth: 2.2, max: 3, step: 1 },
+    /** Café cashier at the café counter. */
+    'cafe.waiter': { base: 60000, growth: 1, max: 1, step: 1 },
+    /** Cleaners clear dirty tables (+1 per level). */
+    'cafe.cleaner': { base: 15000, growth: 3, max: 2, step: 1 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */
@@ -296,6 +345,19 @@ export const ECONOMY = {
   },
 } as const;
 
+/** Raw products (from animals). */
 export type ProductId = keyof typeof ECONOMY.products;
+/** Café dishes. */
+export type DishId = keyof typeof ECONOMY.dishes;
+/** Anything that can be carried. */
+export type ItemId = ProductId | DishId;
+
+export const PRODUCT_IDS = Object.keys(ECONOMY.products) as ProductId[];
+export const DISH_IDS = Object.keys(ECONOMY.dishes) as DishId[];
+export const ITEM_IDS: ItemId[] = [...PRODUCT_IDS, ...DISH_IDS];
+
+export function priceOf(item: ItemId): number {
+  return item in ECONOMY.products ? ECONOMY.products[item as ProductId].price : ECONOMY.dishes[item as DishId].price;
+}
 export type ProducerKind = keyof typeof ECONOMY.producers;
 export type UpgradeId = keyof typeof ECONOMY.upgrades;

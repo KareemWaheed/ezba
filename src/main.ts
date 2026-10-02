@@ -187,6 +187,7 @@ function frame(now: number): void {
   rig.update(p.x, p.z, real);
   locks.hrYard.visible = sim.upgrades.level('hr.office') === 0;
   locks.pen.visible = !sim.stations.some((s) => s.def.id === 'milk' && s.open);
+  locks.cafe.visible = !sim.cafe.open;
   hud.setMoney(sim.money);
   pressureHud.update(sim);
   goalT -= real;

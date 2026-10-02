@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { HR_WALLS, LAYOUT } from '../config/layout';
+import { CAFE } from '../config/cafe';
 import { EMOJI } from './canvas';
 import type { Box } from '../sim/math';
 import { Rng } from '../sim/rng';
@@ -86,6 +87,39 @@ export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
     part(box, 0x9fd3f0, hx + 1.5, 1.2, h.z1 + 0.01, 0, 0, 0, 0.8, 0.6, 0.04),
   );
 
+  // Farm café: checkered floor, hedges on the far sides, stove with a hood, café counter, awning
+  const cp = CAFE.plot;
+  g.push(ground(cp, 0xf3e6c8, 0.014));
+  for (let x = cp.x0; x < cp.x1 - 0.01; x += 1.2) {
+    for (let z = cp.z0; z < cp.z1 - 0.01; z += 1.2) {
+      if ((Math.round((x - cp.x0) / 1.2) + Math.round((z - cp.z0) / 1.2)) % 2) continue;
+      g.push(part(box, 0xe3cfa4, x + 0.6, 0.016, z + 0.6, 0, 0, 0, 1.2, 0.01, 1.2));
+    }
+  }
+  for (let x = cp.x0 + 0.5; x < cp.x1; x += 1.0) g.push(part(PRIM.sphLo, 0x4f9e3a, x, 0.35, cp.z0 - 0.3, 0, 0, 0, 0.55, 0.45, 0.45));
+  for (let z = cp.z0 + 0.5; z < cp.z1; z += 1.0) g.push(part(PRIM.sphLo, 0x4f9e3a, cp.x1 + 0.3, 0.35, z, 0, 0, 0, 0.45, 0.45, 0.55));
+  const sb = CAFE.stove.box, sx = (sb.x0 + sb.x1) / 2, sz = (sb.z0 + sb.z1) / 2, sw = sb.x1 - sb.x0, sd = sb.z1 - sb.z0;
+  g.push(
+    part(box, 0xd8d8d8, sx, 0.5, sz, 0, 0, 0, sw, 1.0, sd),
+    part(box, 0x3a3a3a, sx, 1.02, sz, 0, 0, 0, sw - 0.1, 0.04, sd - 0.1),
+    part(cyl, 0x222222, sx - 0.6, 1.06, sz, 0, 0, 0, 0.25, 0.03, 0.25),
+    part(cyl, 0x222222, sx + 0.6, 1.06, sz, 0, 0, 0, 0.25, 0.03, 0.25),
+    part(box, 0xbfbfbf, sx, 2.3, sz - 0.1, 0, 0, 0, sw - 0.3, 0.5, sd - 0.2),
+    part(box, 0x9a9a9a, sx, 2.9, sz - 0.2, 0, 0, 0, 0.4, 0.8, 0.4),
+  );
+  const cb = CAFE.counter.box, ccx = (cb.x0 + cb.x1) / 2, ccz = (cb.z0 + cb.z1) / 2, ccw = cb.x1 - cb.x0;
+  g.push(
+    part(box, 0x7a4b2a, ccx, 0.45, ccz, 0, 0, 0, ccw, 0.9, cb.z1 - cb.z0),
+    part(box, 0xf3efe3, ccx, 0.93, ccz, 0, 0, 0, ccw + 0.1, 0.06, cb.z1 - cb.z0 + 0.1),
+    // striped awning strip on posts at the back (kitchen side), so dishes on the counter stay visible
+    part(box, 0x8a5a32, cb.x0 + 0.1, 1.3, cb.z0 - 0.5, 0, 0, 0, 0.08, 2.6, 0.08),
+    part(box, 0x8a5a32, cb.x1 - 0.1, 1.3, cb.z0 - 0.5, 0, 0, 0, 0.08, 2.6, 0.08),
+  );
+  for (let i = 0; i < 6; i++) {
+    const x = cb.x0 + (i + 0.5) * (ccw / 6);
+    g.push(part(box, i % 2 ? 0xffffff : 0xe8554e, x, 2.62, cb.z0 - 0.5, 0.35, 0, 0, ccw / 6, 0.06, 0.7));
+  }
+
   const mesh = new THREE.Mesh(merge(g), MAT);
   mesh.matrixAutoUpdate = false;
   scene.add(mesh);
@@ -95,10 +129,11 @@ export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
   return {
     pen: lockOverlay(scene, L.pen),
     hrYard: lockOverlay(scene, yb, gate),
+    cafe: lockOverlay(scene, cp),
   };
 }
 
-export type LockId = 'pen' | 'hrYard';
+export type LockId = 'pen' | 'hrYard' | 'cafe';
 
 const LOCK_MAT = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false });
 

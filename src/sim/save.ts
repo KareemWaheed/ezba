@@ -1,4 +1,4 @@
-import { ECONOMY, type ProductId, type UpgradeId } from '../config/economy';
+import { ECONOMY, ITEM_IDS, type ItemId, type UpgradeId } from '../config/economy';
 import type { SimWorld } from './world';
 
 /**
@@ -27,6 +27,13 @@ export interface SaveData {
   /** Per station: trough boost seconds left; per belt: jammed. */
   boost?: Record<string, number>;
   broken?: Record<string, boolean>;
+  cafe?: {
+    counter: Record<string, number>;
+    stoveIn: Record<string, number>;
+    stoveOut: Record<string, number>;
+    tables: { dirty: boolean; cash: number; bills: number }[];
+    cash: { value: number; bills: number };
+  };
 }
 
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
@@ -55,7 +62,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
   for (const s of w.stations) {
     // items in workers' hands or on belts are saved as already on the counter
     let moving = w.staff.belts[s.index].inTransit;
-    for (const x of w.staff.workers) if (x.station === s) moving += x.carry.n;
+    for (const x of w.staff.workers) if (x.job.key === s.def.id) moving += x.carry.n;
     stations[s.def.id] = { open: s.open, pile: s.pile + s.pending, counter: s.counter + moving };
   }
   return {
@@ -64,7 +71,15 @@ export function serialize(w: SimWorld, now: number): SaveData {
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
     rating: w.service.rating,
     boost: Object.fromEntries(w.stations.map((s) => [s.def.id, s.boostT])),
-    broken: Object.fromEntries(w.staff.belts.map((b) => [b.station.def.id, b.broken])),
+    broken: Object.fromEntries(w.staff.machines.map((m, i) => [String(i), m.broken])),
+    cafe: {
+      // dishes on the café belt / in customers' hands go back on the counter
+      counter: { ...w.cafe.counter },
+      stoveIn: { ...w.cafe.stove.input },
+      stoveOut: { ...w.cafe.stove.output },
+      tables: w.cafe.tables.map((t) => ({ dirty: t.dirty, cash: t.cash, bills: t.bills })),
+      cash: { value: w.cafe.uncollected - w.cafe.tables.reduce((a, t) => a + t.cash, 0), bills: w.cafe.cash.bills },
+    },
   };
 }
 
@@ -93,13 +108,21 @@ export function restore(w: SimWorld, s: SaveData): void {
   for (const k of Object.keys(w.stats) as (keyof typeof w.stats)[]) w.stats[k] = num(s.stats?.[k]);
   w.service.rating = Math.max(1, Math.min(5, num(s.rating, w.service.rating)));
   for (const st of w.stations) st.boostT = Math.max(0, num(s.boost?.[st.def.id]));
+  const cf = s.cafe, cafe = w.cafe;
+  if (cf) {
+    for (const k of Object.keys(cafe.counter) as (keyof typeof cafe.counter)[]) cafe.counter[k] = Math.max(0, Math.floor(num(cf.counter?.[k])));
+    for (const k of Object.keys(cafe.stove.input) as (keyof typeof cafe.stove.input)[]) cafe.stove.input[k] = Math.max(0, Math.floor(num(cf.stoveIn?.[k])));
+    for (const k of Object.keys(cafe.stove.output) as (keyof typeof cafe.stove.output)[]) cafe.stove.output[k] = Math.max(0, Math.floor(num(cf.stoveOut?.[k])));
+    cafe.tables.forEach((t, i) => { const d = cf.tables?.[i]; if (d) { t.dirty = !!d.dirty; t.cash = num(d.cash); t.bills = Math.floor(num(d.bills)); } });
+    cafe.cash.value = num(cf.cash?.value);
+    cafe.cash.bills = Math.floor(num(cf.cash?.bills));
+  }
   w.cash.value = num(s.cash?.value);
   w.cash.bills = Math.floor(num(s.cash?.bills));
   up.apply();
-  const products = Object.keys(ECONOMY.products);
   w.carry.items.length = 0;
-  for (const p of s.carry ?? []) if (products.includes(p) && !w.carry.full()) w.carry.push(p as ProductId);
-  for (const b of w.staff.belts) b.broken = b.level > 0 && !!s.broken?.[b.station.def.id];
+  for (const p of s.carry ?? []) if ((ITEM_IDS as string[]).includes(p) && !w.carry.full()) w.carry.push(p as ItemId);
+  w.staff.machines.forEach((m, i) => { m.broken = m.running && !!s.broken?.[String(i)]; });
   // rebuild tiles from scratch so one under the restored player position starts disarmed
   up.tiles = [];
   up.refresh();
