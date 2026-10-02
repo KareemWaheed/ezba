@@ -110,8 +110,11 @@ export const ECONOMY = {
   /** Conveyor belts from a pile straight onto its counter slot. */
   machines: {
     belt: {
-      /** Seconds between items at level 1; each further level divides it by speedUp. */
-      interval: 1.4,
+      /**
+       * Seconds between items at level 1; each further level divides it by speedUp.
+       * Must beat a worker (~0.8-1.8 items/s depending on HR upgrades): 2/s at level 1, ~5/s at level 4.
+       */
+      interval: 0.5,
       speedUp: 1.35,
       /** Travel time along the belt. */
       travel: 2.2,
