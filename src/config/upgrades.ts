@@ -89,11 +89,11 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'cafe.stove', icon: '🔥', label: 'بوتاجاز أسرع', msg: 'البوتاجاز بقى أسرع 🔥',
-    pos: { x: 19.6, z: 1.6 }, requires: [{ id: 'cafe.unlock', level: 1 }],
+    pos: { x: 11.0, z: 1.4 }, requires: [{ id: 'cafe.unlock', level: 1 }],
   },
   {
     id: 'cafe.helper', icon: '🧑‍🍳', label: 'مساعد مطبخ زيادة', msg: 'مساعد مطبخ جديد بيجيب البيض واللبن 🧑‍🍳',
-    pos: { x: 19.6, z: 3.8 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+    pos: { x: 11.0, z: -0.8 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
   },
   {
     id: 'cafe.belt', icon: '⚙️', label: 'سير الأطباق', msg: 'سير الأطباق شغال لوحده ⚙️',

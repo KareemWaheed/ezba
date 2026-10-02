@@ -3,16 +3,17 @@ import type { DishId } from './economy';
 
 /**
  * Farm café east of the shop (opened by the cafe.unlock upgrade, which also extends the
- * walkable area to `unlockedX1`). Kitchen at the back, café counter on the left, tables on the right.
+ * walkable area to `unlockedX1`). Kitchen in the back-right corner, café counter on the left, tables
+ * in front of the kitchen.
  */
 export const CAFE = {
   plot: { x0: 12.2, x1: 20.6, z0: 0.4, z1: 12.4 } as Box,
   unlockedX1: 20.2,
   /** Stove body (solid) and its two zones: drop raw items in, pick cooked dishes up. */
   stove: {
-    box: { x0: 15.2, x1: 18.0, z0: 0.8, z1: 1.9 } as Box,
-    input: { x: 15.9, z: 2.7 },
-    output: { x: 17.6, z: 2.7 },
+    box: { x0: 17.2, x1: 20.0, z0: 0.8, z1: 1.9 } as Box,
+    input: { x: 17.8, z: 2.7 },
+    output: { x: 19.5, z: 2.7 },
   },
   /** Café counter (solid). Dishes stack on it; the player drops dishes / serves from the kitchen side. */
   counter: {
