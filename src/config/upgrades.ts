@@ -92,12 +92,12 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 19.6, z: 1.6 }, requires: [{ id: 'cafe.unlock', level: 1 }],
   },
   {
-    id: 'cafe.helper', icon: '🧑‍🍳', label: 'مساعد مطبخ', msg: 'مساعد المطبخ بيجيب البيض واللبن للبوتاجاز 🧑‍🍳',
+    id: 'cafe.helper', icon: '🧑‍🍳', label: 'مساعد مطبخ زيادة', msg: 'مساعد مطبخ جديد بيجيب البيض واللبن 🧑‍🍳',
     pos: { x: 19.6, z: 3.8 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
   },
   {
     id: 'cafe.belt', icon: '⚙️', label: 'سير الأطباق', msg: 'سير الأطباق شغال لوحده ⚙️',
-    pos: { x: 11.0, z: 4.2 }, requires: [{ id: 'cafe.helper', level: 1 }], milestone: true,
+    pos: { x: 11.0, z: 4.2 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
   },
   // HR office: an unlockable walled yard west of the farm, with the staff upgrades inside
   {

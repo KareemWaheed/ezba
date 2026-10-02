@@ -25,6 +25,8 @@ export interface SessionStat {
   autoPerMin: number;
   /** Offline money credited for the following break. */
   offline: number;
+  /** Per-session breakdown for --verbose. */
+  detail: { shopServed: number; cafeServed: number; angry: number; shopSales: number; cafeSales: number; tips: number; rush: number; golden: number; rating: number };
 }
 export interface RunResult {
   profile: string;

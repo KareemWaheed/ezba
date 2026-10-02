@@ -62,6 +62,8 @@ export const ECONOMY = {
     waiterSlow: 2.0,
     /** Kitchen helpers may take raw items from the shop counter's surplus, leaving this many for shop customers. */
     counterReserve: 12,
+    /** Kitchen helpers carry more than farm workers (long walk to the café); HR capacity adds on top. */
+    helperCapacity: 6,
   },
 
   /** Animals / machines that generate items into a pickup pile. */
@@ -295,8 +297,8 @@ export const ECONOMY = {
     'cafe.nice': { base: 8000, growth: 2.5, max: 2, step: 1 },
     /** Stove cooks faster: time / (1 + step x level). */
     'cafe.stove': { base: 3000, growth: 2, max: 4, step: 0.4 },
-    /** Kitchen helpers carry eggs/milk from the piles to the stove (+1 per level). */
-    'cafe.helper': { base: 25000, growth: 3, max: 2, step: 1 },
+    /** Extra kitchen helpers (the café opens with one) carrying eggs/milk to the stove. */
+    'cafe.helper': { base: 30000, growth: 3, max: 2, step: 1 },
     /** Dish belt from the stove to the café counter (level 1 builds it, then faster). */
     'cafe.belt': { base: 120000, growth: 2.2, max: 3, step: 1 },
     /** Café cashier at the café counter. */

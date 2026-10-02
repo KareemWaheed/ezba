@@ -214,7 +214,7 @@ export class StaffSystem {
       if (mt) this.belts[s.index].level = up.level(mt);
     }
     const cap = ECONOMY.staff.worker.capacity + up.level('hr.capacity') * ECONOMY.upgrades['hr.capacity'].step;
-    for (const x of this.workers) x.carry.cap = cap;
+    for (const x of this.workers) x.carry.cap = x.job.key === 'cafe.supply' ? cap - ECONOMY.staff.worker.capacity + ECONOMY.cafe.helperCapacity : cap;
   }
 
   /** Cashier service slowdown vs. the player (1 = player speed). */

@@ -18,6 +18,7 @@ const args = process.argv.slice(2);
 const argVal = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
 const days = Number(argVal('--days') ?? PLAY.days);
 const check = args.includes('--check');
+const verbose = args.includes('--verbose');
 const DT = 1 / 30;
 
 function run(): RunResult {
@@ -27,7 +28,13 @@ function run(): RunResult {
   const sessions: SessionStat[] = [];
   const curve: [number, number][] = [[0, 0]];
   let playSec = 0, offlineEarned = 0, day = 1;
-  const onEvent = (e: { type: string; id: number; n: number }) => {
+  const money = { shopSales: 0, cafeSales: 0, tips: 0, rush: 0, golden: 0 };
+  const onEvent = (e: { type: string; id: number; n: number; value: number }) => {
+    if (e.type === 'paid') money.shopSales += e.value;
+    else if (e.type === 'cafePaid') money.cafeSales += e.value;
+    else if (e.type === 'tip') money.tips += e.value;
+    else if (e.type === 'rushEnd') money.rush += e.value;
+    else if (e.type === 'goldenCaught') money.golden += e.value;
     if (e.type !== 'buy') return;
     const id = UPGRADES[e.id].id;
     purchases.push({ id, level: e.n, cost: upgradeCost(id, e.n - 1), playMin: playSec / 60, day });
@@ -36,6 +43,8 @@ function run(): RunResult {
     for (let s = 0; s < PLAY.sessionsPerDay; s++) {
       const ticks = Math.round((PLAY.sessionMinutes * 60) / DT);
       const earned0 = w.stats.earned;
+      const st0 = { ...w.stats };
+      for (const k in money) money[k as keyof typeof money] = 0;
       let nextSample = Math.ceil(playSec / 30) * 30;
       for (let i = 0; i < ticks; i++) {
         bot.update(DT);
@@ -45,11 +54,15 @@ function run(): RunResult {
         if (playSec >= nextSample) { curve.push([playSec / 60, w.stats.earned]); nextSample += 30; }
       }
       const activePerMin = (w.stats.earned - earned0) / PLAY.sessionMinutes;
+      const detail = {
+        shopServed: w.stats.served - st0.served, cafeServed: w.stats.cafeServed - st0.cafeServed, angry: w.stats.angry - st0.angry,
+        shopSales: money.shopSales, cafeSales: money.cafeSales, tips: money.tips, rush: money.rush, golden: money.golden, rating: w.service.rating,
+      };
       const hours = s === PLAY.sessionsPerDay - 1 ? PLAY.overnightHours : PLAY.breakHours;
       const away = simulateAway(w, hours * 3600);
       offlineEarned += away.earned;
       w.events.drain(onEvent);
-      sessions.push({ day, session: s + 1, endMin: playSec / 60, activePerMin, autoPerMin: away.raw / (away.seconds / 60), offline: away.earned });
+      sessions.push({ day, session: s + 1, endMin: playSec / 60, activePerMin, autoPerMin: away.raw / (away.seconds / 60), offline: away.earned, detail });
     }
   }
   return { profile: 'active', purchases, sessions, curve, playMin: playSec / 60, offlineEarned };
@@ -70,6 +83,13 @@ function printTimeline(r: RunResult): void {
   console.log('\nsession  ends   active/min  automation/min  offline credited');
   for (const s of r.sessions) {
     console.log(`d${s.day} s${s.session}  ${fmtMin(s.endMin).padStart(6)}  ${String(Math.round(s.activePerMin)).padStart(10)}  ${String(Math.round(s.autoPerMin)).padStart(14)}  ${String(Math.round(s.offline)).padStart(16)}`);
+  }
+  if (verbose) {
+    console.log('\nsession  shopServed cafeServed angry  shop$   cafe$   tips  rush$ golden$ rating');
+    for (const s of r.sessions) {
+      const d = s.detail, f = (v: number, n: number) => String(Math.round(v)).padStart(n);
+      console.log(`d${s.day} s${s.session}   ${f(d.shopServed, 8)} ${f(d.cafeServed, 10)} ${f(d.angry, 5)} ${f(d.shopSales, 6)} ${f(d.cafeSales, 7)} ${f(d.tips, 6)} ${f(d.rush, 6)} ${f(d.golden, 7)} ${d.rating.toFixed(1).padStart(6)}`);
+    }
   }
   console.log(`\noffline credited: ${Math.round(r.offlineEarned)}   lifetime earned: ${Math.round(r.curve.at(-1)?.[1] ?? 0)}`);
 }

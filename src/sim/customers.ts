@@ -90,7 +90,8 @@ export class CustomerSystem {
     const w = this.w, rng = w.rng, cfg = ECONOMY.customers;
     const open = w.stations.filter((s) => s.open);
     if (!open.length) return;
-    const rush = w.rush.active;
+    // shop rushes only (café rushes are handled by the café)
+    const rush = w.rush.active && w.rush.kind.target !== 'cafe';
     const vip = this.forceVip || (!w.away && !rush && w.upgrades.bought >= ECONOMY.vip.minUpgrades && rng.chance(ECONOMY.vip.chance));
     this.forceVip = false;
     const featured = rush ? open.find((s) => s.def.product === w.rush.featured) : undefined;

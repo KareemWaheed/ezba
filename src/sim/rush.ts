@@ -58,6 +58,7 @@ export class RushSystem {
         this.phase = 'idle';
         this.t = this.gap();
         for (const c of w.customers.list) c.rush = false;
+        for (const c of w.cafe.customers) c.rush = false;
       }
       return;
     }
@@ -82,8 +83,7 @@ export class RushSystem {
         if (this.t <= 0) this.phase = 'settle';
         break;
       case 'settle': {
-        if (w.customers.list.some((c) => c.rush)) break;
-        if (this.kind.target === 'cafe') this.sales = Math.max(this.sales, 100);
+        if (w.customers.list.some((c) => c.rush) || w.cafe.customers.some((c) => c.rush)) break;
         const ok = this.spawned > 0 && this.angry === 0;
         const share = cfg.bonusShare + w.upgrades.level('rush.reward') * ECONOMY.upgrades['rush.reward'].step;
         const bonus = ok ? Math.round(cfg.bonusFlat + this.sales * share) : 0;

@@ -1,4 +1,5 @@
 import { LAYOUT } from '../config/layout';
+import { CAFE } from '../config/cafe';
 import { UPGRADES, type UpgradeDef } from '../config/upgrades';
 import type { SimWorld } from './world';
 
@@ -27,6 +28,7 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
     if (r <= w.money && r < bestR) { best = t.def; bestR = r; }
   }
   if (best) { out.x = best.pos.x; out.z = best.pos.z; return true; }
+  if (cafeAction(w, out)) return true;
   if (up.bought >= EARLY_UPGRADES) return false;
   return nextAction(w, out);
 }
@@ -55,6 +57,46 @@ export function nextAction(w: SimWorld, out: { x: number; z: number }): boolean 
     for (const s of w.stations) if (s.open && c.has(s.def.product)) { out.x = s.def.counter.dropX; out.z = s.def.counter.dropZ; return true; }
   }
   if (w.cash.value > 0) { out.x = shop.cash.x; out.z = shop.cash.z; return true; }
+  return false;
+}
+
+/** Teaches the café loop until the first few café customers are served. */
+const CAFE_TUTORIAL = 8;
+
+function cafeAction(w: SimWorld, out: { x: number; z: number }): boolean {
+  const cafe = w.cafe, c = w.carry;
+  if (!cafe.open || w.stats.cafeServed >= CAFE_TUTORIAL) return false;
+  const serve = CAFE.counter.serve;
+  const go = (x: number, z: number) => { out.x = x; out.z = z; return true; };
+  // 1) carrying dishes: put them on the café counter
+  if (c.items.some((it) => it in cafe.counter)) return go(serve.x, serve.z);
+  // 2) the first customer can be served right now: stand at the counter
+  const front = cafe.customers.find((x) => x.state === 'queue');
+  let freeTable = false;
+  for (let i = 0; i < cafe.tableCount; i++) if (!cafe.tables[i].occupant && !cafe.tables[i].dirty) freeTable = true;
+  if (front && !cafe.waiter && (front.table >= 0 || freeTable) && front.lines.some((l) => l.left > 0 && cafe.counter[l.product] > 0)) return go(serve.x, serve.z);
+  // 3) no clean table left: clean one
+  if (!freeTable) {
+    for (let i = 0; i < cafe.tableCount; i++) {
+      const t = cafe.tables[i];
+      if (t.dirty && !t.occupant) return go(t.x, t.z);
+    }
+  }
+  // 4) cooked dishes the counter is short of
+  if (!c.full()) for (const r of cafe.stove.active(w)) if (cafe.stove.output[r.output] > 0 && cafe.counter[r.output] < 4) return go(CAFE.stove.output.x, CAFE.stove.output.z);
+  // 5) stove running low on what's missing: bring eggs/milk (carrying some already -> straight to the stove)
+  for (const r of cafe.stove.active(w)) {
+    const raw = r.needs;
+    if (cafe.stove.input[raw] >= 4 || cafe.counter[r.output] >= 4) continue;
+    if (c.items.includes(raw)) return go(CAFE.stove.input.x, CAFE.stove.input.z);
+    const st = w.stations.find((x) => x.def.product === raw && x.open && x.pile > 0);
+    if (st && !c.full()) return go(st.def.pile.x, st.def.pile.z);
+  }
+  // 6) money or mess left on tables
+  for (let i = 0; i < cafe.tableCount; i++) {
+    const t = cafe.tables[i];
+    if (t.dirty || t.cash > 0) return go(t.x, t.z);
+  }
   return false;
 }
 

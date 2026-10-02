@@ -37,6 +37,8 @@ export interface CafeCustomer {
   patienceMax: number;
   playerItems: number;
   away: boolean;
+  /** Arrived during a café rush. */
+  rush: boolean;
   table: number;
   takeT: number;
   servedT: number;
@@ -130,12 +132,20 @@ export class CafeSystem {
     for (const [x, z] of CAFE.tables) this.tables.push({ x, z, occupant: 0, dirty: false, cash: 0, bills: 0, cleanT: 0, claimed: false });
     this.belt = new Belt({
       ax: s.output.x + 0.5, az: s.output.z + 0.3, bx: CAFE.counter.box.x1 + 0.4, bz: CAFE.counter.box.z0 - 0.1,
-      take: () => this.stove.takeAny(),
+      take: () => this.takeNeeded(),
       deliver: (item) => { this.counter[item as DishId]++; },
     }, 100, 1.2);
     this.supply = new SupplyJob(this);
     w.staff.addBelt(this.belt);
     w.staff.machines.push(this.stove);
+  }
+
+  /** Take the cooked dish the café counter is lowest on (keeps every dish on offer). */
+  private takeNeeded(): DishId | null {
+    let best: DishId | null = null;
+    for (const d of DISH_IDS) if (this.stove.output[d] > 0 && (!best || this.counter[d] < this.counter[best])) best = d;
+    if (best) this.stove.output[best]--;
+    return best;
   }
 
   /** Number of tables in use (by upgrade level). */
@@ -155,7 +165,8 @@ export class CafeSystem {
     this.stove.enabled = this.open;
     this.stove.speedMult = 1 + up.level('cafe.stove') * ECONOMY.upgrades['cafe.stove'].step;
     this.belt.level = up.level('cafe.belt');
-    w.staff.ensureWorkers(this.supply, this.open ? up.level('cafe.helper') : 0, 15, 4);
+    // the café opens with one kitchen helper (piles are often drained by belts by then); the track adds more
+    w.staff.ensureWorkers(this.supply, this.open ? 1 + up.level('cafe.helper') : 0, 15, 4);
     while (this.cleaners.length < up.level('cafe.cleaner')) this.cleaners.push(new Cleaner(this.cleaners.length));
   }
 
@@ -187,9 +198,11 @@ export class CafeSystem {
       if (l) { l.qty++; l.left++; } else lines.push({ product: d, qty: 1, left: 1 });
     }
     const pc = cfg.patience * (1 + w.upgrades.level('cafe.nice') * 0.2);
+    const rush = w.rush.active && w.rush.kind.target === 'cafe';
+    if (rush) w.rush.spawned++;
     this.customers.push({
       id: this.nextId++, look: rng.int(1 << 30), x: CAFE.spawn.x + rng.range(-1, 1), z: CAFE.spawn.z, rot: Math.PI, speed: 0,
-      state: 'queue', lines, qty: total, left: total, patience: pc, patienceMax: pc, playerItems: 0, away: w.away,
+      state: 'queue', lines, qty: total, left: total, patience: pc, patienceMax: pc, playerItems: 0, away: w.away, rush,
       table: -1, takeT: 0, servedT: 0, eatT: 0, gone: false,
     });
   }
@@ -323,6 +336,7 @@ export class CafeSystem {
               // return what they took, free the table
               for (const l of c.lines) { this.counter[l.product] += l.qty - l.left; l.left = l.qty; }
               if (c.table >= 0) { this.tables[c.table].occupant = 0; c.table = -1; }
+              if (c.rush) w.rush.angry++;
               w.service.angry(c);
               w.events.emit('angry', '', c.x, c.z, 0, 0, c.id);
             }
@@ -343,6 +357,7 @@ export class CafeSystem {
             for (const l of c.lines) value += l.qty * ECONOMY.dishes[l.product].price;
             value = Math.round(value * this.priceMult);
             // tips/combo/rating go through the shared service system
+            if (c.rush) w.rush.sales += value;
             const tip = w.service.complete(c, value);
             t.cash += value + tip;
             t.bills += Math.min(6, c.qty + (tip > 0 ? 1 : 0));

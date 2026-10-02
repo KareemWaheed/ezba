@@ -4,7 +4,7 @@ import { CAFE } from '../config/cafe';
 import type { SimWorld } from '../sim/world';
 import type { CafeSystem } from '../sim/cafe';
 import { MAT, PRIM, merge, part } from './geo';
-import { CanvasSprite, EMOJI, FONT, groundMarker } from './canvas';
+import { CanvasSprite, EMOJI, FONT, groundMarker, rr } from './canvas';
 import { InstancedStack, easeOutBack, gridSlots } from './stacks';
 import { ITEM_GEO, ITEM_ICON } from './models';
 import { CharacterView } from './character';
@@ -110,7 +110,7 @@ class Label {
       c.direction = 'ltr';
       c.fillStyle = 'rgba(28,38,18,0.78)';
       const tw = c.measureText(text).width + 28;
-      c.beginPath(); c.roundRect((w - tw) / 2, 4, tw, h - 8, 18); c.fill();
+      rr(c, (w - tw) / 2, 4, tw, h - 8, 18); c.fill();
       c.fillStyle = '#fff';
       c.fillText(text, w / 2, h / 2 + 2);
     });
@@ -130,6 +130,9 @@ export class CafeView {
   private customers = new Map<number, CustomerView>();
   private cleaners: { char: CharacterView; stack: CarrierView }[] = [];
   private time = 0;
+  private stoveKey = -1;
+  /** Dish being eaten at each table this frame (rebuilt in one pass). */
+  private diners: (DishId | null)[] = [];
 
   constructor(private scene: THREE.Scene) {
     const s = CAFE.stove, cb = CAFE.counter;
@@ -188,9 +191,15 @@ export class CafeView {
       lb.s.sprite.visible = n > vis.max;
       if (n > vis.max) lb.set(`x${n}`);
     }
-    const parts: string[] = [];
-    for (const k of Object.keys(st.input) as (keyof typeof st.input)[]) parts.push(`${ITEM_ICON[k]} ${st.input[k]}`);
-    this.stoveLabel.set(parts.join('   '));
+    // stove input counts: rebuild the label text only when the numbers change
+    let key = 0;
+    for (const k in st.input) key = key * 100 + st.input[k as keyof typeof st.input];
+    if (key !== this.stoveKey) {
+      this.stoveKey = key;
+      const parts: string[] = [];
+      for (const k of Object.keys(st.input) as (keyof typeof st.input)[]) parts.push(`${ITEM_ICON[k]} ${st.input[k]}`);
+      this.stoveLabel.set(parts.join('   '));
+    }
     this.flame.sprite.visible = !!st.cooking && !st.broken;
     this.flame.sprite.scale.setScalar(0.8 + Math.sin(this.time * 14) * 0.12);
     this.cash.set(cafe.cash.bills);
@@ -198,13 +207,14 @@ export class CafeView {
 
     // tables + who is eating where
     const nice = sim.upgrades.level('cafe.nice');
-    cafe.tables.forEach((_, i) => {
-      const diner = cafe.customers.find((c) => c.table === i && c.state === 'eat');
-      this.tables[i].sync(cafe, i, dt, nice, diner ? diner.lines[0].product : null);
-    });
+    const diners = this.diners;
+    for (let i = 0; i < cafe.tables.length; i++) diners[i] = null;
+    for (const c of cafe.customers) if (c.state === 'eat' && c.table >= 0) diners[c.table] = c.lines[0].product;
+    for (let i = 0; i < cafe.tables.length; i++) this.tables[i].sync(cafe, i, dt, nice, diners[i]);
 
     // café customers (same views/bubbles as the shop)
-    const front = cafe.customers.find((c) => c.state === 'queue');
+    let front = null;
+    for (const c of cafe.customers) if (c.state === 'queue') { front = c; break; }
     for (const c of cafe.customers) {
       let v = this.customers.get(c.id);
       if (!v) { v = new CustomerView(c); this.customers.set(c.id, v); this.scene.add(v.char.root); }
