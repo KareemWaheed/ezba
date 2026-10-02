@@ -50,10 +50,16 @@ html, body {
   font-size: 19px; font-weight: 600; white-space: nowrap; z-index: 5; pointer-events: none; direction: rtl;
 }
 
-#fps {
-  position: fixed; left: 8px; bottom: calc(env(safe-area-inset-bottom, 0px) + 6px); z-index: 5;
-  color: #fff; font: 600 12px/1 system-ui, sans-serif; text-shadow: 0 1px 2px #000; direction: ltr; pointer-events: none;
+#dev {
+  position: fixed; left: 8px; right: 8px; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); z-index: 9;
+  display: flex; gap: 8px; align-items: center; justify-content: center; direction: rtl;
+  background: rgba(20, 24, 16, 0.85); padding: 8px; border-radius: 14px;
 }
+#dev button {
+  font: inherit; font-weight: 800; font-size: 15px; border: 0; border-radius: 12px; padding: 8px 12px; min-height: 40px;
+  background: var(--panel); color: var(--ink);
+}
+#fps { color: #fff; font: 600 12px/1 system-ui, sans-serif; direction: ltr; }
 
 #full {
   position: fixed; z-index: 5; pointer-events: none; transform: translate(-50%, -100%); direction: rtl;
@@ -65,3 +71,24 @@ html, body {
   animation: rise 0.95s ease-out forwards;
 }
 @keyframes rise { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -70px; } }
+
+#toast {
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 118px); transform: translate(-50%, -10px);
+  background: var(--panel); color: var(--ink); border: 3px solid var(--panel-edge); padding: 8px 18px; border-radius: 16px;
+  font-size: 18px; font-weight: 800; z-index: 6; opacity: 0; transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none; direction: rtl; max-width: 90vw; text-align: center; white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+#goal {
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 66px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; direction: rtl; z-index: 5; pointer-events: none;
+  background: rgba(255, 251, 234, 0.92); color: var(--ink); border: 2px solid var(--panel-edge);
+  border-radius: 14px; padding: 4px 10px 4px 12px; min-width: 200px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
+}
+#goal .g-icon { font-size: 22px; line-height: 1; }
+#goal .g-body { flex: 1; min-width: 0; }
+#goal .g-label { font-size: 14px; font-weight: 800; line-height: 1.2; white-space: nowrap; }
+#goal .g-track { height: 7px; border-radius: 4px; background: #e9dfb6; overflow: hidden; margin-top: 2px; direction: ltr; }
+#goal .g-bar { height: 100%; width: 0; background: var(--bill); border-radius: 4px; transition: width 0.3s; }
+#goal .g-price { font-size: 15px; font-weight: 800; direction: ltr; }

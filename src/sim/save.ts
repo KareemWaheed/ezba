@@ -1,0 +1,89 @@
+import { ECONOMY, type ProductId, type UpgradeId } from '../config/economy';
+import type { SimWorld } from './world';
+
+/**
+ * Versioned save format. Bump SAVE_VERSION when the shape changes and add a migration from the
+ * previous version, so updates never wipe progress. Unknown ids (removed upgrades/products) are
+ * ignored on load instead of failing.
+ */
+export const SAVE_VERSION = 1;
+
+export interface SaveData {
+  v: number;
+  /** Wall-clock ms when saved (for offline earnings). */
+  t: number;
+  /** Sim time played (s). */
+  time: number;
+  money: number;
+  rng: number;
+  levels: Record<string, number>;
+  paid: Record<string, number>;
+  stations: Record<string, { open: boolean; pile: number; counter: number }>;
+  carry: string[];
+  cash: { value: number; bills: number };
+  player: { x: number; z: number };
+}
+
+type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
+
+/** MIGRATIONS[n] upgrades a version-n save to version n+1. */
+const MIGRATIONS: Record<number, Migration> = {};
+
+/** Bring any older save up to SAVE_VERSION. Returns null for unreadable/future saves. */
+export function migrate(raw: unknown): SaveData | null {
+  if (!raw || typeof raw !== 'object') return null;
+  let s = raw as Record<string, unknown>;
+  let v = typeof s.v === 'number' ? s.v : 0;
+  if (v > SAVE_VERSION) return null;
+  while (v < SAVE_VERSION) {
+    const m = MIGRATIONS[v];
+    if (!m) return null;
+    s = m(s);
+    v++;
+    s.v = v;
+  }
+  return s as unknown as SaveData;
+}
+
+export function serialize(w: SimWorld, now: number): SaveData {
+  const stations: SaveData['stations'] = {};
+  for (const s of w.stations) stations[s.def.id] = { open: s.open, pile: s.pile + s.pending, counter: s.counter };
+  return {
+    v: SAVE_VERSION, t: now, time: w.time, money: w.money, rng: w.rng.state,
+    levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
+    carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z },
+  };
+}
+
+const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
+
+/** Load a (migrated) save into a fresh world. */
+export function restore(w: SimWorld, s: SaveData): void {
+  w.time = num(s.time);
+  w.money = num(s.money);
+  if (s.rng) w.rng.state = num(s.rng, w.rng.state) >>> 0;
+  const up = w.upgrades;
+  for (const id of Object.keys(up.levels) as UpgradeId[]) {
+    up.levels[id] = Math.min(ECONOMY.upgrades[id].max, Math.max(0, Math.floor(num(s.levels?.[id]))));
+    up.paid[id] = Math.max(0, num(s.paid?.[id]));
+    up.bought += up.levels[id];
+  }
+  for (const st of w.stations) {
+    const d = s.stations?.[st.def.id];
+    if (!d) continue;
+    st.open = st.def.startsOpen || !!d.open;
+    st.pile = Math.min(ECONOMY.pile.max, Math.max(0, Math.floor(num(d.pile))));
+    st.counter = Math.max(0, Math.floor(num(d.counter)));
+  }
+  w.player.x = num(s.player?.x, w.player.x);
+  w.player.z = num(s.player?.z, w.player.z);
+  w.cash.value = num(s.cash?.value);
+  w.cash.bills = Math.floor(num(s.cash?.bills));
+  up.apply();
+  const products = Object.keys(ECONOMY.products);
+  w.carry.items.length = 0;
+  for (const p of s.carry ?? []) if (products.includes(p) && !w.carry.full()) w.carry.push(p as ProductId);
+  // rebuild tiles from scratch so one under the restored player position starts disarmed
+  up.tiles = [];
+  up.refresh();
+}

@@ -6,6 +6,7 @@ import { createPlayer, updatePlayer, type PlayerState } from './player';
 import { Carrier } from './carrier';
 import { Station } from './station';
 import { CustomerSystem } from './customers';
+import { UpgradeSystem } from './upgrades';
 import { EventQueue } from './events';
 import { dist } from './math';
 
@@ -21,6 +22,7 @@ export class SimWorld {
   readonly carry: Carrier;
   readonly stations: Station[];
   readonly customers: CustomerSystem;
+  readonly upgrades: UpgradeSystem;
   readonly cash = { value: 0, bills: 0 };
   readonly events = new EventQueue();
   /** Current stick input, magnitude 0..1. Set by the UI or the simulated player. */
@@ -36,11 +38,10 @@ export class SimWorld {
     this.player = createPlayer(LAYOUT.spawn.x, LAYOUT.spawn.z);
     this.carry = new Carrier(ECONOMY.player.capacity);
     this.stations = STATIONS.map((d, i) => new Station(d, i));
-    for (const s of this.stations) {
-      if (!s.open) continue;
-      for (let i = 0; i < ECONOMY.producers[s.def.producer].start; i++) s.addAnimal(this.rng);
-    }
     this.customers = new CustomerSystem(this);
+    this.upgrades = new UpgradeSystem(this);
+    this.upgrades.apply();
+    this.upgrades.refresh();
   }
 
   /** True when customers can take items right now. */
@@ -56,6 +57,7 @@ export class SimWorld {
     for (const s of this.stations) s.update(dt, this.rng, this.events);
     this.interact(dt);
     this.customers.update(dt, this.canServe);
+    this.upgrades.update(dt);
   }
 
   /** Walk-in zones: piles, counter drop spots, cash pile. */

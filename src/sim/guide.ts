@@ -1,12 +1,30 @@
 import { LAYOUT } from '../config/layout';
+import { UPGRADES, type UpgradeDef } from '../config/upgrades';
 import type { SimWorld } from './world';
 
+/** After this many upgrades the arrow only points at affordable upgrades. */
+const EARLY_UPGRADES = 4;
+
 /**
- * "Next useful action" for the guide arrow. Writes the target into `out` and returns true,
- * or returns false when there's nothing worth pointing at.
+ * Guide arrow target: the cheapest affordable upgrade, else (early game) the next loop step.
+ * Writes the target into `out` and returns true, or false when there's nothing worth pointing at.
  * Pure: also usable by the simulated player.
  */
 export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean {
+  // the cheapest upgrade the player can afford right now
+  const up = w.upgrades;
+  let best: UpgradeDef | null = null, bestR = Infinity;
+  for (const t of up.tiles) {
+    const r = up.remaining(t.def.id);
+    if (r <= w.money && r < bestR) { best = t.def; bestR = r; }
+  }
+  if (best) { out.x = best.pos.x; out.z = best.pos.z; return true; }
+  if (up.bought >= EARLY_UPGRADES) return false;
+  return nextAction(w, out);
+}
+
+/** Early-game hint: the next step of the carry-and-sell loop. */
+export function nextAction(w: SimWorld, out: { x: number; z: number }): boolean {
   const c = w.carry, shop = LAYOUT.shop;
   const front = w.customers.front();
   // cash waiting and nothing urgent in hand
@@ -32,4 +50,25 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
   }
   if (w.cash.value > 0) { out.x = shop.cash.x; out.z = shop.cash.z; return true; }
   return false;
+}
+
+export interface Goal { def: UpgradeDef; cost: number; remaining: number }
+
+/**
+ * The 'next goal' for the HUD card: the first available milestone, otherwise the cheapest
+ * tile the player can't afford yet. Null when every tile is affordable or none exist.
+ */
+export function nextGoal(w: SimWorld): Goal | null {
+  const up = w.upgrades;
+  let pick: UpgradeDef | null = null;
+  for (const d of UPGRADES) if (d.milestone && up.available(d)) { pick = d; break; }
+  if (!pick) {
+    let bestC = Infinity;
+    for (const t of up.tiles) {
+      const r = up.remaining(t.def.id);
+      if (r > w.money && r < bestC) { pick = t.def; bestC = r; }
+    }
+  }
+  if (!pick) return null;
+  return { def: pick, cost: up.cost(pick.id), remaining: up.remaining(pick.id) };
 }

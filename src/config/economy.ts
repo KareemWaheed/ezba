@@ -76,7 +76,37 @@ export const ECONOMY = {
 
   /** How close the player must stand to the counter for customers to be served (no cashier). */
   serveRadius: 2.9,
+
+  /**
+   * Upgrade tracks. Buying level n+1 costs round(base * growth^n). `max` = number of levels.
+   * `step` = effect per level (meaning depends on the track).
+   */
+  upgrades: {
+    /** +1 chicken per level. */
+    'eggs.animals': { base: 15, growth: 1.6, max: 8, step: 1 },
+    /** +step carry capacity per level. */
+    'player.capacity': { base: 30, growth: 1.9, max: 6, step: 2 },
+    /** +step running speed multiplier per level. */
+    'player.speed': { base: 60, growth: 2.0, max: 4, step: 0.08 },
+  },
+
+  /** Paying into an upgrade tile. */
+  tiles: {
+    /** Drain rate = max(minRate, cost * costFraction) coins per second while standing on a tile. */
+    costFraction: 0.9,
+    minRate: 12,
+    /** Standing within this distance of a tile pays into it. */
+    radius: 0.95,
+    /** A tile that appeared under the player only arms after they move this far away. */
+    armDistance: 1.1,
+  },
+
+  save: {
+    /** Autosave interval (s). Also saves on tab hide / page hide. */
+    autosaveEvery: 3,
+  },
 } as const;
 
 export type ProductId = keyof typeof ECONOMY.products;
 export type ProducerKind = keyof typeof ECONOMY.producers;
+export type UpgradeId = keyof typeof ECONOMY.upgrades;

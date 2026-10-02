@@ -13,6 +13,8 @@ import { Flyers } from './flyers';
 import { AnimalHerdView } from './animals';
 import { CustomersView } from './customers';
 import { FLY_SCALE, ITEM_H, ITEM_ICON } from './models';
+import { TilesView } from './tiles';
+import { UPGRADES } from '../config/upgrades';
 
 const _v = new THREE.Vector3();
 
@@ -95,6 +97,10 @@ export class FarmView {
   readonly flyers: Flyers;
   readonly customers: CustomersView;
   readonly arrow: THREE.Mesh;
+  readonly tiles: TilesView;
+  /** True on frames where a coin flew into an upgrade tile (for the coin sound). */
+  coinFlew = false;
+  private payT = 0;
   /** Where collected cash flies to (player's chest); updated each frame. */
   readonly hand = new THREE.Vector3();
   private time = 0;
@@ -115,6 +121,7 @@ export class FarmView {
     cm.position.z = c.z;
     scene.add(cm);
     this.customers = new CustomersView(scene);
+    this.tiles = new TilesView(scene);
     this.arrow = new THREE.Mesh(merge([
       part(PRIM.cone, 0xff8a1f, 0, 0, 0, Math.PI, 0, 0, 0.32, 0.6, 0.32),
       part(PRIM.cyl, 0xff8a1f, 0, 0.5, 0, 0, 0, 0, 0.12, 0.6, 0.12),
@@ -132,6 +139,17 @@ export class FarmView {
     this.cash.set(sim.cash.bills, pop);
     this.cash.update(dt);
     this.customers.update(sim.customers.list, dt);
+    this.tiles.sync(sim, dt, pop);
+
+    // coins fly from the player into the tile being paid
+    this.coinFlew = false;
+    this.payT -= dt;
+    const paying = sim.upgrades.paying;
+    if (paying && this.payT <= 0 && this.tiles.pos(paying, _v)) {
+      this.flyers.launch('bill', this.hand, _v, null, 0.28);
+      this.payT = 0.07;
+      this.coinFlew = true;
+    }
 
     const g = this.guide;
     const show = guideTarget(sim, g) && dist(p.x, p.z, g.x, g.z) > 1.1;
@@ -141,6 +159,7 @@ export class FarmView {
 
   /** Cosmetic reactions to sim events. */
   onEvent(e: SimEvent): void {
+    if (e.type === 'buy') this.tiles.bump(UPGRADES[e.id].id);
     if (e.type === 'collect') {
       const n = Math.min(this.cash.max, e.n);
       for (let i = 0; i < n; i++) {
@@ -158,6 +177,7 @@ export class FarmView {
   /** Redraw canvas text once the web font has loaded. */
   invalidateText(): void {
     this.customers.invalidate();
+    this.tiles.invalidate();
     for (const s of this.stations) s.invalidateLabel();
   }
 }

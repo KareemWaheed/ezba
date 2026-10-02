@@ -17,7 +17,11 @@ import { CarrierView } from './render/stacks';
 import { Input } from './ui/input';
 import { Hud } from './ui/hud';
 import { sfx, unlockAudio } from './audio';
-import { guideTarget } from './sim/guide';
+import { guideTarget, nextGoal } from './sim/guide';
+import { restore, serialize } from './sim/save';
+import { UPGRADES } from './config/upgrades';
+import { clearSave, loadSave, requestPersistence, writeSave } from './storage';
+import { GoalCard, Toast } from './ui/panels';
 
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const uiRoot = document.getElementById('ui')!;
@@ -39,19 +43,39 @@ view.scene.add(player.root);
 const input = new Input(uiRoot);
 input.onGesture = unlockAudio;
 const hud = new Hud(uiRoot);
-hud.showHint(true);
+const toast = new Toast(uiRoot);
+const goalCard = new GoalCard(uiRoot);
 
-// temporary FPS readout until the M9 debug panel: triple-tap the money counter
-const fpsEl = document.createElement('div');
-fpsEl.id = 'fps';
-fpsEl.hidden = true;
-uiRoot.appendChild(fpsEl);
+// ---- save / load ----
+const saved = loadSave();
+if (saved) restore(sim, saved);
+else hud.showHint(true);
+const save = () => writeSave(serialize(sim, Date.now()));
+setInterval(save, ECONOMY.save.autosaveEvery * 1000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+addEventListener('pagehide', save);
+void requestPersistence();
+
+// temporary dev strip until the M9 debug panel: triple-tap the money counter
+uiRoot.insertAdjacentHTML('beforeend', `
+  <div id="dev" data-ui hidden>
+    <span id="fps"></span>
+    <button data-a="money">+500</button>
+    <button data-a="reset">ابدأ من الأول</button>
+  </div>`);
+const devEl = document.getElementById('dev')!;
+const fpsEl = document.getElementById('fps')!;
+devEl.addEventListener('click', (e) => {
+  const a = (e.target as HTMLElement).closest('button')?.dataset.a;
+  if (a === 'money') sim.money += 500;
+  if (a === 'reset') { clearSave(); location.reload(); }
+});
 let taps: number[] = [];
 hud.money.addEventListener('pointerdown', () => {
   const now = performance.now();
   taps = taps.filter((t) => now - t < 700);
   taps.push(now);
-  if (taps.length >= 3) { fpsEl.hidden = !fpsEl.hidden; taps = []; }
+  if (taps.length >= 3) { devEl.hidden = !devEl.hidden; taps = []; }
 });
 
 const _sv = new THREE.Vector3();
@@ -75,6 +99,11 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       break;
     case 'sell': sfx.sell(); break;
     case 'paid': sfx.kaching(); break;
+    case 'buy':
+      sfx.buy();
+      toast.show(UPGRADES[e.id].msg);
+      save();
+      break;
     case 'collect': {
       sfx.kaching();
       const s = toScreen(sim.player.x, 2.6, sim.player.z);
@@ -88,10 +117,12 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
 document.fonts?.ready.then(() => farm.invalidateText());
 
 rig.snap(sim.player.x, sim.player.z);
+farm.sync(sim, 0, false);
 if (import.meta.env.DEV) Object.assign(window, { sim, input, guideTarget });
 
 let last = performance.now();
 let fpsT = 0;
+let goalT = 0;
 function frame(now: number): void {
   const real = Math.min(0.1, Math.max(0, (now - last) / 1000));
   last = now;
@@ -108,9 +139,12 @@ function frame(now: number): void {
   playerStack.update(sim.carry.items, Math.min(1, p.speed / ECONOMY.player.speed), real);
   farm.sync(sim, real);
   farm.endFrame(real);
+  if (farm.coinFlew) sfx.coin();
   dust.update(real);
   rig.update(p.x, p.z, real);
   hud.setMoney(sim.money);
+  goalT -= real;
+  if (goalT <= 0) { goalT = 0.25; goalCard.update(nextGoal(sim), sim.money); }
   if (sim.carry.full()) {
     const s = toScreen(p.x, 0.78 + playerStack.height + 0.5, p.z);
     hud.setFull(s.x, s.y, true);
@@ -118,7 +152,7 @@ function frame(now: number): void {
 
   view.measure(real);
   fpsT += real;
-  if (!fpsEl.hidden && fpsT > 0.5) { fpsT = 0; fpsEl.textContent = `${Math.round(view.fps)} fps · ${view.pixelRatio.toFixed(2)}x`; }
+  if (!devEl.hidden && fpsT > 0.5) { fpsT = 0; fpsEl.textContent = `${Math.round(view.fps)} fps · ${view.pixelRatio.toFixed(2)}x`; }
 
   view.render();
   requestAnimationFrame(frame);
