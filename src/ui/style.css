@@ -13,8 +13,9 @@ html, body {
   margin: 0; height: 100%; overflow: hidden; background: #8fd14f;
   touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent; overscroll-behavior: none;
-  font-family: var(--font);
+  font-family: var(--font); -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
 }
+#c, #ui, #ui * { touch-action: none; }
 [hidden] { display: none !important; }
 #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 

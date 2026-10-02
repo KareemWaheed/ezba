@@ -22,7 +22,9 @@ import { restore, serialize } from './sim/save';
 import { UPGRADES } from './config/upgrades';
 import { clearSave, loadSave, requestPersistence, writeSave } from './storage';
 import { GoalCard, Toast } from './ui/panels';
+import { preventZoom } from './ui/noZoom';
 
+preventZoom();
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const uiRoot = document.getElementById('ui')!;
 
