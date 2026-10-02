@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { LAYOUT } from '../config/layout';
+import { HR_WALLS, LAYOUT } from '../config/layout';
+import { EMOJI } from './canvas';
 import type { Box } from '../sim/math';
 import { Rng } from '../sim/rng';
 import { MAT, PRIM, Q4, merge, part } from './geo';
@@ -35,8 +36,8 @@ function barn(x: number, z: number, out: THREE.BufferGeometry[]): void {
   );
 }
 
-/** Static scenery merged into a single mesh. */
-export function buildWorld(scene: THREE.Scene): void {
+/** Static scenery merged into a single mesh. Returns the lock overlays of not-yet-unlocked areas. */
+export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
   const g: THREE.BufferGeometry[] = [];
   const L = LAYOUT;
   g.push(part(box, 0x8fd14f, 0, -0.05, 0, 0, 0, 0, 160, 0.1, 160));
@@ -67,27 +68,58 @@ export function buildWorld(scene: THREE.Scene): void {
     ...Q4.map(([a, b]) => part(box, 0x7a3b2a, cx + a * (cw / 2 - 0.2), 0.4, cz + b * 0.38, 0, 0, 0, 0.14, 0.8, 0.14)),
   );
 
-  // HR office: small house with a blue roof
-  const h = L.hr, hx = (h.x0 + h.x1) / 2, hz = (h.z0 + h.z1) / 2, hw = h.x1 - h.x0, hd = h.z1 - h.z0;
+  // HR yard: paved ground, low brick walls with a gap for the gate, office building
+  const y = L.hrYard, yb = y.box;
+  g.push(ground(yb, 0xd8c8a0, 0.013));
+  for (const s of HR_WALLS) {
+    g.push(part(box, 0xb5653f, (s.x0 + s.x1) / 2, 0.5, (s.z0 + s.z1) / 2, 0, 0, 0, s.x1 - s.x0, 1.0, s.z1 - s.z0));
+    g.push(part(box, 0xe0d4b8, (s.x0 + s.x1) / 2, 1.04, (s.z0 + s.z1) / 2, 0, 0, 0, s.x1 - s.x0 + 0.06, 0.08, s.z1 - s.z0 + 0.06));
+  }
+  for (const z of [y.gate.z0, y.gate.z1]) g.push(part(box, 0x8e4a2c, yb.x1 - 0.15, 0.7, z, 0, 0, 0, 0.4, 1.4, 0.4));
+  const h = y.building, hx = (h.x0 + h.x1) / 2, hz = (h.z0 + h.z1) / 2, hw = h.x1 - h.x0, hd = h.z1 - h.z0;
   g.push(
-    part(box, 0xf3e3c3, hx, 0.9, hz, 0, 0, 0, hw, 1.8, hd),
-    part(box, 0x3d6fb6, hx, 1.95, hz, 0, 0, 0, hw + 0.3, 0.3, hd + 0.3),
-    part(box, 0x2f5893, hx, 2.25, hz, 0, 0, 0, hw - 0.6, 0.3, hd - 0.4),
-    part(box, 0x8a5a32, hx, 0.7, h.z1 + 0.01, 0, 0, 0, 0.8, 1.4, 0.04),
-    part(box, 0x9fd3f0, hx - 1.05, 1.1, h.z1 + 0.01, 0, 0, 0, 0.6, 0.5, 0.04),
-    part(box, 0x9fd3f0, hx + 1.05, 1.1, h.z1 + 0.01, 0, 0, 0, 0.6, 0.5, 0.04),
+    part(box, 0xf3e3c3, hx, 1.0, hz, 0, 0, 0, hw, 2.0, hd),
+    part(box, 0x3d6fb6, hx, 2.15, hz, 0, 0, 0, hw + 0.3, 0.3, hd + 0.3),
+    part(box, 0x2f5893, hx, 2.45, hz, 0, 0, 0, hw - 0.8, 0.3, hd - 0.4),
+    part(box, 0x8a5a32, hx, 0.75, h.z1 + 0.01, 0, 0, 0, 0.9, 1.5, 0.04),
+    part(box, 0x9fd3f0, hx - 1.5, 1.2, h.z1 + 0.01, 0, 0, 0, 0.8, 0.6, 0.04),
+    part(box, 0x9fd3f0, hx + 1.5, 1.2, h.z1 + 0.01, 0, 0, 0, 0.8, 0.6, 0.04),
   );
 
   const mesh = new THREE.Mesh(merge(g), MAT);
   mesh.matrixAutoUpdate = false;
   scene.add(mesh);
 
-  // locked pen overlay (removed when cows unlock in M6)
-  const p = L.pen;
-  const lock = new THREE.Mesh(
-    new THREE.PlaneGeometry(p.x1 - p.x0, p.z1 - p.z0).rotateX(-Math.PI / 2),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }),
-  );
-  lock.position.set((p.x0 + p.x1) / 2, 0.03, (p.z0 + p.z1) / 2);
-  scene.add(lock);
+  // locked areas: shaded overlay + padlock (+ a closed gate for the HR yard)
+  const gate = new THREE.Mesh(merge([part(box, 0x9a6233, yb.x1 - 0.15, 0.55, (y.gate.z0 + y.gate.z1) / 2, 0, 0, 0, 0.12, 0.9, y.gate.z1 - y.gate.z0 - 0.4)]), MAT);
+  return {
+    pen: lockOverlay(scene, L.pen),
+    hrYard: lockOverlay(scene, yb, gate),
+  };
+}
+
+export type LockId = 'pen' | 'hrYard';
+
+const LOCK_MAT = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false });
+
+function lockOverlay(scene: THREE.Scene, r: Box, extra?: THREE.Object3D): THREE.Group {
+  const grp = new THREE.Group();
+  const shade = new THREE.Mesh(new THREE.PlaneGeometry(r.x1 - r.x0, r.z1 - r.z0).rotateX(-Math.PI / 2), LOCK_MAT);
+  shade.position.set((r.x0 + r.x1) / 2, 0.03, (r.z0 + r.z1) / 2);
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const c = cv.getContext('2d')!;
+  c.font = `96px ${EMOJI}`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText('🔒', 64, 70);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.NoColorSpace;
+  const pad = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+  pad.scale.set(1.8, 1.8, 1);
+  pad.position.set((r.x0 + r.x1) / 2, 1.6, (r.z0 + r.z1) / 2);
+  grp.add(shade, pad);
+  if (extra) grp.add(extra);
+  scene.add(grp);
+  return grp;
 }

@@ -14,8 +14,12 @@ export class Worker {
   private t = 0;
   private wait = 0;
 
+  /** +1/-1: direction from the counter end toward the middle of the shop. */
+  private inner: number;
+
   constructor(readonly station: Station, readonly slot: number) {
     const d = station.def.pile;
+    this.inner = -Math.sign(station.def.counter.x) || 1;
     this.x = d.x + 1.2 + slot * 0.5;
     this.z = d.z + 1.4;
     this.carry = new Carrier(ECONOMY.staff.worker.capacity);
@@ -32,7 +36,7 @@ export class Worker {
     this.speed = 0;
     switch (this.state) {
       case 'toPile':
-        if (moveToward(this, d.pile.x + off, d.pile.z + 1.0, speed, dt, 0.15)) { this.state = 'load'; this.wait = 0; }
+        if (moveToward(this, d.pile.x + this.inner * off, d.pile.z + 1.0, speed, dt, 0.15)) { this.state = 'load'; this.wait = 0; }
         break;
       case 'load':
         this.wait += dt;
@@ -45,7 +49,8 @@ export class Worker {
         if (this.carry.full() || (this.carry.n > 0 && this.wait > cfg.maxWait)) this.state = 'toCounter';
         break;
       case 'toCounter':
-        if (moveToward(this, d.counter.dropX + 0.15 + off, d.counter.dropZ - 0.1, speed, dt, 0.15)) this.state = 'unload';
+        // unload on the inner side of the slot (the belt, if any, comes in on the outer side)
+        if (moveToward(this, d.counter.dropX + this.inner * (0.6 + off), d.counter.dropZ - 0.1, speed, dt, 0.15)) this.state = 'unload';
         break;
       case 'unload':
         this.rot = turnToward(this.rot, 0, 1, 12, dt);

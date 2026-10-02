@@ -31,13 +31,13 @@ export const STATIONS: readonly StationDef[] = [
     id: 'eggs', product: 'egg', producer: 'chicken', area: LAYOUT.coop, animalTrack: 'eggs.animals',
     workerTrack: 'eggs.worker', machineTrack: 'eggs.machine',
     pile: { x: -3, z: -0.8, cols: 2, rows: 2 },
-    counter: { x: -1.2, z: 4, dropX: -1.2, dropZ: 2.9 },
+    counter: { x: -4.4, z: 4, dropX: -4.4, dropZ: 2.9 },
     startsOpen: true,
   },
   {
     id: 'milk', product: 'milk', producer: 'cow', area: LAYOUT.pen,
     pile: { x: 6.5, z: -0.8, cols: 2, rows: 2 },
-    counter: { x: 1.2, z: 4, dropX: 1.2, dropZ: 2.9 },
+    counter: { x: 4.4, z: 4, dropX: 4.4, dropZ: 2.9 },
     startsOpen: false,
   },
 ];

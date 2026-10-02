@@ -31,7 +31,7 @@ const uiRoot = document.getElementById('ui')!;
 const sim = new SimWorld(Date.now() & 0x7fffffff);
 const view = new Renderer(canvas);
 const rig = new CameraRig(view.camera);
-buildWorld(view.scene);
+const locks = buildWorld(view.scene);
 const farm = new FarmView(view.scene, sim);
 
 const dust = new DustFx();
@@ -144,6 +144,8 @@ function frame(now: number): void {
   if (farm.coinFlew) sfx.coin();
   dust.update(real);
   rig.update(p.x, p.z, real);
+  locks.hrYard.visible = sim.upgrades.level('hr.office') === 0;
+  locks.pen.visible = !sim.stations.some((s) => s.def.id === 'milk' && s.open);
   hud.setMoney(sim.money);
   goalT -= real;
   if (goalT <= 0) { goalT = 0.25; goalCard.update(nextGoal(sim), sim.money); }

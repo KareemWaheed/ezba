@@ -127,13 +127,15 @@ export const ECONOMY = {
     /** +step running speed multiplier per level. */
     'player.speed': { base: 120, growth: 1.8, max: 4, step: 0.08 },
     /** Egg workers: +1 worker per level. */
-    'eggs.worker': { base: 1200, growth: 3.5, max: 2, step: 1 },
+    'eggs.worker': { base: 600, growth: 6, max: 2, step: 1 },
     /** Egg belt: level 1 builds it, later levels speed it up. */
     'eggs.machine': { base: 6000, growth: 2.2, max: 4, step: 1 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */
     cashier: { base: 2500, growth: 2.2, max: 3, step: 1 },
+    /** Build the HR office (opens the walled HR yard). */
+    'hr.office': { base: 1000, growth: 1, max: 1, step: 1 },
     /** HR office: worker speed +step per level. */
     'hr.speed': { base: 900, growth: 1.8, max: 5, step: 0.15 },
     /** HR office: worker capacity +step per level. */

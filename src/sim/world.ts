@@ -29,6 +29,8 @@ export class SimWorld {
   /** Lifetime counters (daily tasks, album and the simulator read these). */
   readonly stats = { earned: 0, served: 0, sold: 0 };
   readonly events = new EventQueue();
+  /** Walkable area; grows when walled plots are unlocked. */
+  readonly bounds = { ...LAYOUT.bounds };
   /** Current stick input, magnitude 0..1. Set by the UI or the simulated player. */
   readonly input = { x: 0, z: 0 };
   /** True while simulating time away: the player can't carry, serve or pay. */
@@ -74,7 +76,7 @@ export class SimWorld {
   /** Advance the simulation. Callers keep dt <= MAX_STEP. */
   tick(dt: number): void {
     this.time += dt;
-    if (!this.away) updatePlayer(this.player, this.input.x, this.input.z, dt, SOLIDS, LAYOUT.bounds);
+    if (!this.away) updatePlayer(this.player, this.input.x, this.input.z, dt, SOLIDS, this.bounds);
     for (const s of this.stations) s.update(dt, this.rng, this.events);
     if (!this.away) this.interact(dt);
     this.staff.update(dt);

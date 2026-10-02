@@ -1,5 +1,6 @@
 import { ECONOMY, type UpgradeId } from '../config/economy';
 import { UPGRADES, type UpgradeDef } from '../config/upgrades';
+import { LAYOUT } from '../config/layout';
 import { dist } from './math';
 import type { SimWorld } from './world';
 
@@ -69,6 +70,7 @@ export class UpgradeSystem {
       while (s.animals.length < want) s.addAnimal(w.rng);
     }
     w.staff.sync();
+    w.bounds.x0 = this.level('hr.office') > 0 ? LAYOUT.hrYard.unlockedX0 : LAYOUT.bounds.x0;
   }
 
   private purchase(t: TileState): void {

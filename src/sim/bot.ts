@@ -34,8 +34,8 @@ function segHitsBox(ax: number, az: number, bx: number, bz: number, s: Box, r: n
   return true;
 }
 
-/** Large obstacles worth routing around (fences, counter, buildings); trees/hay sit at the edges. */
-const ROUTE_SOLIDS = SOLIDS.filter((b) => (b.x1 - b.x0) * (b.z1 - b.z0) > 2);
+/** Large obstacles worth routing around (fences, counter, walls, buildings); trees/hay sit at the edges. */
+const ROUTE_SOLIDS = SOLIDS.filter((b) => Math.max(b.x1 - b.x0, b.z1 - b.z0) > 1.5);
 
 function clear(ax: number, az: number, bx: number, bz: number, r: number): boolean {
   for (const s of ROUTE_SOLIDS) if (segHitsBox(ax, az, bx, bz, s, r)) return false;
