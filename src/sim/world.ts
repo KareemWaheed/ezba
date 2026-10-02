@@ -24,11 +24,15 @@ export class SimWorld {
   readonly customers: CustomerSystem;
   readonly upgrades: UpgradeSystem;
   readonly cash = { value: 0, bills: 0 };
+  /** Lifetime counters (daily tasks, album and the simulator read these). */
+  readonly stats = { earned: 0, served: 0, sold: 0 };
   readonly events = new EventQueue();
   /** Current stick input, magnitude 0..1. Set by the UI or the simulated player. */
   readonly input = { x: 0, z: 0 };
   /** Whether a cashier serves customers without the player present (M5). */
   cashier = false;
+  /** True while simulating time away: the player can't carry, serve or pay. */
+  away = false;
 
   private pickT = 0;
   private dropT = 0;
@@ -47,17 +51,17 @@ export class SimWorld {
   /** True when customers can take items right now. */
   get canServe(): boolean {
     const sp = LAYOUT.shop.servePoint;
-    return this.cashier || dist(this.player.x, this.player.z, sp.x, sp.z) < ECONOMY.serveRadius;
+    return this.cashier || (!this.away && dist(this.player.x, this.player.z, sp.x, sp.z) < ECONOMY.serveRadius);
   }
 
   /** Advance the simulation. Callers keep dt <= MAX_STEP. */
   tick(dt: number): void {
     this.time += dt;
-    updatePlayer(this.player, this.input.x, this.input.z, dt, SOLIDS, LAYOUT.bounds);
+    if (!this.away) updatePlayer(this.player, this.input.x, this.input.z, dt, SOLIDS, LAYOUT.bounds);
     for (const s of this.stations) s.update(dt, this.rng, this.events);
-    this.interact(dt);
+    if (!this.away) this.interact(dt);
     this.customers.update(dt, this.canServe);
-    this.upgrades.update(dt);
+    if (!this.away) this.upgrades.update(dt);
   }
 
   /** Walk-in zones: piles, counter drop spots, cash pile. */
@@ -85,6 +89,7 @@ export class SimWorld {
     if (this.cash.value > 0 && dist(p.x, p.z, cash.x, cash.z) < ZONE.cash) {
       const v = this.cash.value, n = this.cash.bills;
       this.money += v;
+      this.stats.earned += v;
       this.cash.value = 0;
       this.cash.bills = 0;
       this.events.emit('collect', '', cash.x, cash.z, v, n);

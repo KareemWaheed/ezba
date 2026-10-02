@@ -22,6 +22,7 @@ export interface SaveData {
   carry: string[];
   cash: { value: number; bills: number };
   player: { x: number; z: number };
+  stats?: { earned: number; served: number; sold: number };
 }
 
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
@@ -51,7 +52,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
   return {
     v: SAVE_VERSION, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
-    carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z },
+    carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
   };
 }
 
@@ -77,6 +78,9 @@ export function restore(w: SimWorld, s: SaveData): void {
   }
   w.player.x = num(s.player?.x, w.player.x);
   w.player.z = num(s.player?.z, w.player.z);
+  w.stats.earned = num(s.stats?.earned);
+  w.stats.served = num(s.stats?.served);
+  w.stats.sold = num(s.stats?.sold);
   w.cash.value = num(s.cash?.value);
   w.cash.bills = Math.floor(num(s.cash?.bills));
   up.apply();

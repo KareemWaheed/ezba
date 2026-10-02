@@ -35,7 +35,7 @@ export const ECONOMY = {
   producers: {
     chicken: {
       /** Seconds per item per animal. */
-      interval: 3.0,
+      interval: 5.0,
       /** Animals at the start of the stage. */
       start: 2,
       /** Wander speed (visual only, but simulated deterministically). */
@@ -83,11 +83,11 @@ export const ECONOMY = {
    */
   upgrades: {
     /** +1 chicken per level. */
-    'eggs.animals': { base: 15, growth: 1.6, max: 8, step: 1 },
+    'eggs.animals': { base: 40, growth: 1.55, max: 8, step: 1 },
     /** +step carry capacity per level. */
-    'player.capacity': { base: 30, growth: 1.9, max: 6, step: 2 },
+    'player.capacity': { base: 60, growth: 1.7, max: 6, step: 2 },
     /** +step running speed multiplier per level. */
-    'player.speed': { base: 60, growth: 2.0, max: 4, step: 0.08 },
+    'player.speed': { base: 120, growth: 1.8, max: 4, step: 0.08 },
   },
 
   /** Paying into an upgrade tile. */
@@ -99,6 +99,13 @@ export const ECONOMY = {
     radius: 0.95,
     /** A tile that appeared under the player only arms after they move this far away. */
     armDistance: 1.1,
+  },
+
+  offline: {
+    /** Max time away that earns money (s). */
+    capSeconds: 2 * 60 * 60,
+    /** Minimum time away before the welcome-back popup shows (s). */
+    minSeconds: 30,
   },
 
   save: {

@@ -78,10 +78,12 @@ export class CustomerSystem {
           if (canServe && st.counter > 0 && c.takeT <= 0) {
             st.counter--;
             c.left--;
+            w.stats.sold++;
             c.takeT = cfg.takeInterval;
             w.events.emit('sell', c.product, c.x, c.z, 0, c.qty - c.left, c.id);
             if (c.left <= 0) {
               c.state = 'leave';
+              w.stats.served++;
               const value = c.qty * ECONOMY.products[c.product].price;
               w.cash.value += value;
               w.cash.bills += c.qty;
