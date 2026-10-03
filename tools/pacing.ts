@@ -26,7 +26,7 @@ export interface SessionStat {
   /** Offline money credited for the following break. */
   offline: number;
   /** Per-session breakdown for --verbose. */
-  detail: { shopServed: number; cafeServed: number; angry: number; shopSales: number; cafeSales: number; tips: number; rush: number; golden: number; rating: number };
+  detail: { shopServed: number; cafeServed: number; angry: number; shopSales: number; cafeSales: number; tips: number; rush: number; golden: number; trucks: number; rating: number };
 }
 export interface RunResult {
   profile: string;
@@ -43,51 +43,49 @@ export interface TargetResult { name: string; ok: boolean; detail: string; pendi
 
 const first = (r: RunResult, id: UpgradeId, level = 1) => r.purchases.find((p) => p.id === id && p.level === level);
 
-/** Targets for the active profile. Add stage targets as stages land (worker, cows, café...). */
-export function checkTargets(active: RunResult): TargetResult[] {
+const fmt = (x?: Purchase) => (x ? `${x.playMin.toFixed(0)} min (day ${x.day})` : 'never');
+
+/** When every worker/cashier/machine step of stages 1-3 has been bought at least once. */
+const AUTO: UpgradeId[] = ['eggs.worker', 'eggs.machine', 'cashier', 'milk.worker', 'milk.machine', 'cafe.helper', 'cafe.belt', 'cafe.waiter', 'cafe.cleaner'];
+function automated(r: RunResult): Purchase | undefined {
+  const last = AUTO.map((id) => first(r, id));
+  if (!last.every(Boolean)) return undefined;
+  let done: Purchase | undefined;
+  for (const x of last as Purchase[]) if (!done || x.playMin > done.playMin) done = x;
+  return done;
+}
+
+/**
+ * Two-sided targets: the efficient bot must not race through (lower bounds), and a casual player
+ * must not find it too slow (upper bounds). Times are minutes of play; a day = 80 min of play.
+ */
+export function checkTargets(eff: RunResult, casual: RunResult): TargetResult[] {
   const out: TargetResult[] = [];
-  const p = active.purchases;
-  const t1 = p[0]?.playMin ?? Infinity;
-  out.push({ name: 'first upgrade within ~1 min', ok: t1 <= 1.5, detail: `${t1.toFixed(1)} min` });
+  const add = (name: string, ok: boolean, detail: string) => out.push({ name, ok, detail });
 
+  // early game (casual player): quick first win, steady stream of upgrades
+  const c1 = casual.purchases[0];
+  add('casual: first upgrade within ~1.5 min', !!c1 && c1.playMin <= 1.5, fmt(c1));
   let maxGap = 0, at = 0, prev = 0;
-  for (const x of p) {
-    if (x.playMin > 30) break;
-    if (x.playMin - prev > maxGap) { maxGap = x.playMin - prev; at = prev; }
-    prev = x.playMin;
-  }
-  out.push({ name: 'something new every few minutes (first 30 min, gap <= 5 min)', ok: maxGap <= 5, detail: `max gap ${maxGap.toFixed(1)} min after minute ${at.toFixed(1)}` });
+  for (const x of casual.purchases) { if (x.playMin > 30) break; if (x.playMin - prev > maxGap) { maxGap = x.playMin - prev; at = prev; } prev = x.playMin; }
+  add('casual: something new every few minutes (first 30 min, gap <= 5)', maxGap <= 5, `max gap ${maxGap.toFixed(1)} after minute ${at.toFixed(1)}`);
 
-  const stage1Done = p.filter((x) => x.playMin <= 20).length;
-  const total1 = p.length;
-  out.push({ name: 'stage 1 not exhausted before 20 min', ok: total1 === 0 || stage1Done < total1 || p[p.length - 1].playMin >= 20, detail: `${stage1Done}/${total1} purchases by minute 20` });
+  // milestones: efficient not before X, casual not after Y
+  const span = (label: string, id: UpgradeId, effMin: number, casualMax: number) => {
+    const e = first(eff, id), c = first(casual, id);
+    add(`${label}: efficient >= ${effMin} min, casual <= ${casualMax} min`, !!e && e.playMin >= effMin && !!c && c.playMin <= casualMax, `efficient ${fmt(e)}, casual ${fmt(c)}`);
+  };
+  span('first worker', 'eggs.worker', 15, 35);
+  span('cows', 'milk.unlock', 45, 160);
+  span('egg belt', 'eggs.machine', 70, 240);
+  span('café', 'cafe.unlock', 80, 320);
 
-  const w = first(active, 'eggs.animals', 8);
-  if (w) out.push({ name: 'chicken track not maxed before ~15 min', ok: w.playMin >= 15, detail: `maxed at ${w.playMin.toFixed(1)} min` });
-
-  const wk = first(active, 'eggs.worker');
-  out.push({ name: 'first worker around 20-30 min', ok: !!wk && wk.playMin >= 18 && wk.playMin <= 32, detail: wk ? `${wk.playMin.toFixed(1)} min` : 'never' });
-
-  const cows = first(active, 'milk.unlock');
-  out.push({ name: 'cows around the end of day 1 (60-120 min of play)', ok: !!cows && cows.playMin >= 60 && cows.playMin <= 120, detail: cows ? `${cows.playMin.toFixed(1)} min, day ${cows.day}` : 'never' });
-
-  const cafe = first(active, 'cafe.unlock');
-  out.push({ name: 'café around day 2-3', ok: !!cafe && cafe.day >= 2 && cafe.day <= 3, detail: cafe ? `${cafe.playMin.toFixed(0)} min, day ${cafe.day}` : 'never' });
-
-  // stages 1-3 fully automated: every worker/cashier/machine step bought at least once
-  const auto: UpgradeId[] = ['eggs.worker', 'eggs.machine', 'cashier', 'milk.worker', 'milk.machine', 'cafe.helper', 'cafe.belt', 'cafe.waiter', 'cafe.cleaner'];
-  const last = auto.map((id) => first(active, id));
-  let done: Purchase | null = null;
-  if (last.every(Boolean)) for (const x of last as Purchase[]) if (!done || x.playMin > done.playMin) done = x;
-  out.push({ name: 'stages 1-3 fully automated around day 5-7', ok: !!done && done.day >= 5 && done.day <= 7, detail: done ? `${done.playMin.toFixed(0)} min, day ${done.day} (last: ${done.id})` : `missing: ${auto.filter((_, i) => !last[i]).join(', ')}` });
+  const ea = automated(eff), ca = automated(casual);
+  add('stages 1-3 automated: efficient from day 4, casual by day 7', !!ea && ea.day >= 4 && !!ca && ca.day <= 7, `efficient ${fmt(ea)}${ea ? ' last ' + ea.id : ''}, casual ${fmt(ca)}${ca ? ' last ' + ca.id : ''}`);
 
   // active play must beat automation alone; checked on every session once automation exists
-  const autoS = active.sessions.filter((s) => s.autoPerMin > 0);
+  const autoS = eff.sessions.filter((s) => s.autoPerMin > 0);
   const worst = autoS.reduce((m, s) => Math.min(m, s.activePerMin / s.autoPerMin), Infinity);
-  out.push({
-    name: 'active player earns noticeably more than automation alone (>= 1.5x)',
-    ok: autoS.length === 0 || worst >= 1.5,
-    detail: autoS.length ? `worst ratio ${worst.toFixed(2)}x` : 'no automation yet',
-  });
+  add('active player earns noticeably more than automation alone (>= 1.5x)', autoS.length === 0 || worst >= 1.5, autoS.length ? `worst ratio ${worst.toFixed(2)}x` : 'no automation yet');
   return out;
 }

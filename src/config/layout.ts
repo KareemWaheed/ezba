@@ -27,7 +27,7 @@ export const LAYOUT = {
     queueZ: 5.45,
     queueGap: 1.15,
     spawn: { x0: -3, x1: -1.5, z: 14.5 },
-    exit: { x: 10.5, z: 15 },
+    exit: { x: 2.8, z: 15.5 },
     cash: { x: 6.6, z: 4.6 },
   },
   /**
@@ -51,15 +51,23 @@ export const LAYOUT = {
     drop: { x: -6.4, z: 10.1 },
     entry: { x: -11.5, z: 13.4 },
   },
+  /** Loading dock for company trucks (bottom right). The player loads at `load`; trucks park at `bay`. */
+  dock: {
+    load: { x: 8.4, z: 10.4 },
+    bay: { x: 9.8, z: 12.6 },
+    /** Where trucks come from / leave to. */
+    road: { x: 9.8, z: 22 },
+    platform: { x0: 7.2, x1: 11.2, z0: 10.9, z1: 11.5 } as Box,
+  },
   /** Sell counter body. */
   counter: { x0: -5.4, x1: 5.4, z0: 3.55, z1: 4.45 } as Box,
 
   /** Decorative trees around the edge (x, z). */
   trees: [
-    [-10, -11], [-10.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 13], [-16.5, 12.5], [-14, -1], [13.5, -10], [14, -3], [22.5, 4],
+    [-10, -11], [-17.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 13], [-16.5, 12.5], [-14, -1], [13.5, -11.5], [21.5, -3], [22.5, 4],
     [22.5, 11], [-4, -13], [2, -12.5], [9, -13], [4, 17], [-5, 17.5],
   ] as const,
-  hay: [[11.3, -7.6], [11.3, -6.0], [11.3, -4.4], [12.5, -6.8]] as const,
+  hay: [[19.6, -7.6], [19.6, -6.0], [19.6, -4.4], [20.8, -6.8]] as const,
 } as const;
 
 /** Yard walls (0.3 thick) with a gap for the gate in the east wall. */
@@ -75,10 +83,18 @@ function hrWalls(): Box[] {
 }
 export const HR_WALLS = hrWalls();
 
+/** Fence solids per station; mutated in place when a pen grows (see fenceFor). */
+export const FENCES: Record<string, Box> = {
+  eggs: { x0: LAYOUT.coop.x0 - 0.1, x1: LAYOUT.coop.x1 + 0.1, z0: LAYOUT.coop.z0 - 0.5, z1: LAYOUT.coop.z1 + 0.1 },
+  milk: { x0: LAYOUT.pen.x0 - 0.1, x1: LAYOUT.pen.x1 + 0.1, z0: LAYOUT.pen.z0 - 0.5, z1: LAYOUT.pen.z1 + 0.1 },
+};
+/** Bumped whenever solids change, so cached routing can rebuild. */
+export const SOLIDS_VERSION = { v: 0 };
+
 /** Things the player can't walk through. Fence boxes are padded slightly at the back. */
 export const SOLIDS: Box[] = [
-  { x0: LAYOUT.coop.x0 - 0.1, x1: LAYOUT.coop.x1 + 0.1, z0: LAYOUT.coop.z0 - 0.5, z1: LAYOUT.coop.z1 + 0.1 },
-  { x0: LAYOUT.pen.x0 - 0.1, x1: LAYOUT.pen.x1 + 0.1, z0: LAYOUT.pen.z0 - 0.5, z1: LAYOUT.pen.z1 + 0.1 },
+  FENCES.eggs,
+  FENCES.milk,
   { ...LAYOUT.counter },
   ...hrWalls(),
   { ...LAYOUT.hrYard.building },

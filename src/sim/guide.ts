@@ -31,6 +31,7 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
   }
   if (best) { out.x = best.pos.x; out.z = best.pos.z; return true; }
   if (cafeAction(w, out)) return true;
+  if (dockAction(w, out)) return true;
   if (up.bought >= EARLY_UPGRADES) return false;
   return nextAction(w, out);
 }
@@ -59,6 +60,16 @@ export function nextAction(w: SimWorld, out: { x: number; z: number }): boolean 
     for (const s of w.stations) if (s.open && c.has(s.def.product)) { out.x = s.def.counter.dropX; out.z = s.def.counter.dropZ; return true; }
   }
   if (w.cash.value > 0) { out.x = shop.cash.x; out.z = shop.cash.z; return true; }
+  return false;
+}
+
+/** Teaches truck loading for the first few trucks (until dock workers take over). */
+function dockAction(w: SimWorld, out: { x: number; z: number }): boolean {
+  const ct = w.contracts, c = w.carry;
+  if (!ct.open || ct.truck.state !== 'loading' || w.stats.trucks >= 3 || w.upgrades.level('dock.worker') > 0) return false;
+  if (c.items.some((it) => ct.stillNeeds(it as never) > -1)) { out.x = LAYOUT.dock.load.x; out.z = LAYOUT.dock.load.z; return true; }
+  if (c.full()) return false;
+  for (const s of w.stations) if (s.open && s.pile >= 2 && ct.stillNeeds(s.def.product) > 0) { out.x = s.def.pile.x; out.z = s.def.pile.z; return true; }
   return false;
 }
 

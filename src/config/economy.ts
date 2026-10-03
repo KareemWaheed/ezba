@@ -31,6 +31,12 @@ export const ECONOMY = {
     milk: { price: 4 },
   },
 
+  /**
+   * Market prices rise as the farm grows: every upgrade bought adds this much to all sale prices
+   * (eggs, milk, dishes, contracts, rewards). Keeps big upgrades reachable as costs climb.
+   */
+  market: { growthPerUpgrade: 0.02 },
+
   /** Café dishes (made on the stove from raw products, see config/recipes.ts): price per dish. */
   dishes: {
     omelette: { price: 18 },
@@ -274,9 +280,13 @@ export const ECONOMY = {
     /** Egg workers: +1 worker per level. */
     'eggs.worker': { base: 750, growth: 5, max: 2, step: 1 },
     /** Egg belt: level 1 builds it, later levels speed it up. */
-    'eggs.machine': { base: 20000, growth: 2.2, max: 4, step: 1 },
+    'eggs.machine': { base: 12000, growth: 2.2, max: 4, step: 1 },
     /** Open the cow pen (single level): milk station starts with producers.cow.start cows. */
-    'milk.unlock': { base: 3000, growth: 1, max: 1, step: 1 },
+    'milk.unlock': { base: 3800, growth: 1, max: 1, step: 1 },
+    /** Bigger coop: fence moves out, +step chickens allowed per level. */
+    'eggs.expand': { base: 5000, growth: 3.5, max: 2, step: 6 },
+    /** Bigger cow pen: fence moves out, +step cows allowed per level. */
+    'milk.expand': { base: 14000, growth: 3.2, max: 2, step: 4 },
     /** +1 cow per level. */
     'milk.animals': { base: 350, growth: 1.6, max: 6, step: 1 },
     /** Milk workers: +1 worker per level. */
@@ -305,6 +315,12 @@ export const ECONOMY = {
     'cafe.waiter': { base: 60000, growth: 1, max: 1, step: 1 },
     /** Cleaners clear dirty tables (+1 per level). */
     'cafe.cleaner': { base: 15000, growth: 3, max: 2, step: 1 },
+    /** Loading dock: company trucks with supply contracts. */
+    'dock.unlock': { base: 7000, growth: 1, max: 1, step: 1 },
+    /** Dock workers load trucks from the shop counter's surplus (+1 per level). */
+    'dock.worker': { base: 18000, growth: 3, max: 2, step: 1 },
+    /** Bigger trucks / bigger deals: contract sizes x (1 + step x level). */
+    'dock.size': { base: 12000, growth: 2.4, max: 3, step: 0.4 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */

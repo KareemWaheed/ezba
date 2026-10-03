@@ -71,7 +71,8 @@ void requestPersistence();
 uiRoot.insertAdjacentHTML('beforeend', `
   <div id="dev" data-ui hidden>
     <span id="fps"></span>
-    <button data-a="money">+500</button>
+    <button data-a="close" class="close">✕</button>
+    <button data-a="money">+500 (اضغط مطوّل)</button>
     <button data-a="rush">زحمة</button>
     <button data-a="break">عطل</button>
     <button data-a="vip">VIP</button>
@@ -81,9 +82,22 @@ uiRoot.insertAdjacentHTML('beforeend', `
   </div>`);
 const devEl = document.getElementById('dev')!;
 const fpsEl = document.getElementById('fps')!;
+// "+500": tap adds 500; hold to keep adding, faster and faster
+const moneyBtn = devEl.querySelector('[data-a="money"]') as HTMLElement;
+let moneyHold = 0;
+let moneyStep = 500;
+const stopMoney = () => { window.clearInterval(moneyHold); moneyHold = 0; };
+moneyBtn.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  sim.money += 500;
+  moneyStep = 500;
+  stopMoney();
+  moneyHold = window.setInterval(() => { sim.money += moneyStep; moneyStep = Math.round(moneyStep * 1.25); }, 120);
+});
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) moneyBtn.addEventListener(ev, stopMoney);
 devEl.addEventListener('click', (e) => {
   const a = (e.target as HTMLElement).closest('button')?.dataset.a;
-  if (a === 'money') sim.money += 500;
+  if (a === 'close') devEl.hidden = true;
   if (a === 'rush') sim.rush.trigger();
   if (a === 'break') for (const b of sim.staff.belts) if (b.level > 0) b.breakT = 0.01;
   if (a === 'vip') sim.customers.forceVip = true;
@@ -133,6 +147,16 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       break;
     }
     case 'rushWarn': sfx.alarm(); break;
+    case 'truck': {
+      const t = sim.contracts.truck;
+      sfx.sparkle();
+      toast.show(`🚚 عربية ${t.company.name} جاية${e.n ? ' (طلبية مستعجلة!)' : ''}، حمّلها من الرصيف`);
+      break;
+    }
+    case 'truckDone':
+      if (e.value > 0) { sfx.kaching(); toast.show(`${sim.contracts.truck.company.name} دفعت +${e.value.toLocaleString('en-US')} ${e.n ? '👍' : ''}`); }
+      else toast.show(`العربية مشيت فاضية 😕`);
+      break;
     case 'vip':
       if (e.id === -1) { sfx.sparkle(); toast.show(`${sim.scenario.def.guest?.name ?? ''} طلب! هات الطلب بنفسك للمنصة ⭐`); }
       else { sfx.sparkle(); toast.show('زبون VIP وصل! خدمه بنفسك ⭐'); }

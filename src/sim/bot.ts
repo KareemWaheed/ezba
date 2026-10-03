@@ -1,11 +1,12 @@
 import { ECONOMY } from '../config/economy';
-import { LAYOUT, SOLIDS } from '../config/layout';
+import { LAYOUT, SOLIDS, SOLIDS_VERSION } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import type { DishId, ProductId } from '../config/economy';
 import { dist, type Box } from './math';
 import type { SimWorld } from './world';
 import type { TileState } from './upgrades';
 import { vipDelivery } from './guide';
+import { Rng } from './rng';
 
 /**
  * Simulated players for the pacing simulator.
@@ -14,10 +15,14 @@ import { vipDelivery } from './guide';
  * - 'idle': never carries or serves; only collects cash and buys upgrades.
  * The bot only steers the joystick input, so travel times, collisions and pickup rates are real.
  */
-export type BotProfile = 'active' | 'idle';
+/**
+ * - 'casual': a relaxed real-life player: reacts slower, stands around a lot (~45%), skips troughs
+ *   and golden animals. Used to check the game isn't too slow for normal play.
+ */
+export type BotProfile = 'active' | 'idle' | 'casual';
 
 type Task = 'tile' | 'stepOff' | 'drop' | 'cash' | 'pick' | 'serve' | 'wait' | 'fix' | 'golden' | 'feed'
-  | 'stoveIn' | 'stoveOut' | 'cafeDrop' | 'cafeServe' | 'clean' | 'tableCash';
+  | 'stoveIn' | 'stoveOut' | 'cafeDrop' | 'cafeServe' | 'clean' | 'tableCash' | 'dock';
 
 /** Clearance kept from obstacles when routing around them. */
 const CLEAR = ECONOMY.player.radius + 0.25;
@@ -48,10 +53,18 @@ function clear(ax: number, az: number, bx: number, bz: number, r: number): boole
 
 const inside = (x: number, z: number) => ROUTE_SOLIDS.some((s) => x > s.x0 - CLEAR + 0.01 && x < s.x1 + CLEAR - 0.01 && z > s.z0 - CLEAR + 0.01 && z < s.z1 + CLEAR - 0.01);
 
-/** Walkable corners just outside each big obstacle. */
-const NODES: [number, number][] = ROUTE_SOLIDS.flatMap((s) => [
-  [s.x0 - CLEAR, s.z0 - CLEAR], [s.x1 + CLEAR, s.z0 - CLEAR], [s.x0 - CLEAR, s.z1 + CLEAR], [s.x1 + CLEAR, s.z1 + CLEAR],
-] as [number, number][]).filter(([x, z]) => !inside(x, z));
+/** Walkable corners just outside each big obstacle; rebuilt when fences move (pens grow). */
+let NODES: [number, number][] = [];
+let nodesVersion = -1;
+function nodes(): [number, number][] {
+  if (nodesVersion !== SOLIDS_VERSION.v) {
+    nodesVersion = SOLIDS_VERSION.v;
+    NODES = ROUTE_SOLIDS.flatMap((s) => [
+      [s.x0 - CLEAR, s.z0 - CLEAR], [s.x1 + CLEAR, s.z0 - CLEAR], [s.x0 - CLEAR, s.z1 + CLEAR], [s.x1 + CLEAR, s.z1 + CLEAR],
+    ] as [number, number][]).filter(([x, z]) => !inside(x, z));
+  }
+  return NODES;
+}
 
 export class Bot {
   task: Task = 'wait';
@@ -66,6 +79,8 @@ export class Bot {
   private vip = { x: 0, z: 0 };
   /** Current raw-item trip is for the café stove rather than the shop counter. */
   private supplying = false;
+  /** Current raw-item trip is for the truck at the loading dock. */
+  private toDock = false;
 
   constructor(private w: SimWorld, readonly profile: BotProfile) {}
 
@@ -103,12 +118,12 @@ export class Bot {
   /** Pick what to do this tick. */
   private decide(): void {
     const w = this.w, p = w.player, c = w.carry, shop = LAYOUT.shop;
-    if (this.profile === 'active') {
+    if (this.profile !== 'idle') {
       // player-only jobs first: jammed machines, golden animals, VIPs
       const jam = w.staff.machines.find((b) => b.broken);
       if (jam) { this.go('fix', jam.mx, jam.mz); return; }
       const g = w.golden.animal;
-      if (g) { this.go('golden', g.x, g.z); return; }
+      if (g && this.profile === 'active') { this.go('golden', g.x, g.z); return; }
       if (vipDelivery(w, this.vip)) { this.go('serve', this.vip.x, this.vip.z); return; }
       for (let i = 0; i < w.lanes; i++) {
         const f = w.customers.front(i);
@@ -139,6 +154,8 @@ export class Bot {
       // once a trip has started, fill up while the pile still has items, then unload
       const ps = w.stations[this.pickStation];
       if (ps && !c.full() && ps.pile > 0 && dist(p.x, p.z, ps.def.pile.x, ps.def.pile.z) < 2) { this.go('pick', ps.def.pile.x, ps.def.pile.z); return; }
+      if (this.toDock && c.items.some((it) => w.contracts.stillNeeds(it as ProductId) > -1)) { this.go('dock', LAYOUT.dock.load.x, LAYOUT.dock.load.z); return; }
+      this.toDock = false;
       if (this.supplying && c.items.some((it) => cafe.stove.wants(it as ProductId))) { this.go('stoveIn', CAFE.stove.input.x, CAFE.stove.input.z); return; }
       this.supplying = false;
       for (const s of w.stations) {
@@ -148,8 +165,9 @@ export class Bot {
     if (w.cash.value > 0 && (cashNeeded || w.cash.bills >= 20)) { this.go('cash', shop.cash.x, shop.cash.z); return; }
     // keep the troughs full (player-only production boost)
     const fc = ECONOMY.feed;
-    const hungry = w.stations.find((s) => s.open && s.boostT < fc.duration * fc.refillBelow);
+    const hungry = this.profile === 'active' ? w.stations.find((s) => s.open && s.boostT < fc.duration * fc.refillBelow) : undefined;
     if (hungry && c.n === 0) { this.go('feed', hungry.def.trough.x, hungry.def.trough.z + 0.5); return; }
+    if (this.dockTask()) return;
     if (this.cafeTask()) return;
     // fetch from the fullest pile once it can fill (most of) a trip
     let best = -1, bestN = 0;
@@ -171,6 +189,21 @@ export class Bot {
     if (w.cash.value > 0) { this.go('cash', shop.cash.x, shop.cash.z); return; }
     const s0 = w.stations.find((s) => s.open);
     if (s0) this.go('wait', s0.def.pile.x, s0.def.pile.z + 0.6);
+  }
+
+  /** Load the waiting truck by hand while there are no dock workers. */
+  private dockTask(): boolean {
+    const w = this.w, ct = w.contracts, c = w.carry;
+    if (!ct.open || ct.truck.state !== 'loading' || w.upgrades.level('dock.worker') > 0 || c.n > 0) return false;
+    for (const s of w.stations) {
+      if (s.open && s.pile >= 4 && ct.stillNeeds(s.def.product) > 0) {
+        this.toDock = true;
+        this.pickStation = s.index;
+        this.go('pick', s.def.pile.x, s.def.pile.z);
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Café chores the player still has to do by hand (staff take them over as they're hired). */
@@ -220,6 +253,7 @@ export class Bot {
     const way = this.way, r = ECONOMY.player.radius * 0.95;
     way.x = this.tx; way.z = this.tz;
     if (clear(px, pz, this.tx, this.tz, r)) return way;
+    const NODES = nodes();
     // Dijkstra over [start, ...corners, goal]
     const n = NODES.length + 2, G = n - 1;
     const nx = (i: number) => (i === 0 ? px : i === G ? this.tx : NODES[i - 1][0]);
@@ -248,9 +282,20 @@ export class Bot {
   private prev = new Int32Array(64);
   private done = new Uint8Array(64);
 
+  /** Casual play: own RNG so the world's randomness stays the same per profile. */
+  private casualRng = new Rng(4242);
+  private pauseT = 0;
+  private decideT = 0;
+
   update(dt: number): void {
     const w = this.w, p = w.player;
-    this.decide();
+    if (this.profile === 'casual') {
+      // stand around now and then (~30% of the time), and react with a short delay
+      if (this.pauseT > 0) { this.pauseT -= dt; w.input.x = w.input.z = 0; return; }
+      if (this.casualRng.next() < dt * 0.25) { this.pauseT = this.casualRng.range(2, 5); return; }
+      this.decideT -= dt;
+      if (this.decideT <= 0) { this.decide(); this.decideT = 1.0; }
+    } else this.decide();
     const dT = dist(p.x, p.z, this.tx, this.tz);
     const stop = this.task === 'tile' ? 0.3 : 0.45;
     if (dT < stop) { w.input.x = w.input.z = 0; this.stuckT = 0; return; }

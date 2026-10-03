@@ -26,7 +26,9 @@ export type SimEventType =
   | 'cleaned'   // a table was cleaned (id = table)
   | 'scenarioWarn'  // a scenario event is coming (n = seconds)
   | 'scenarioStart'
-  | 'scenarioEnd'; // value = reward, n = 1 if every goal passed
+  | 'scenarioEnd' // value = reward, n = 1 if every goal passed
+  | 'truck'       // a company truck is on its way (n = 1 for a rush order)
+  | 'truckDone';  // a truck left (value = payment, n = 1 if the company was happy)
 
 export interface SimEvent {
   type: SimEventType;

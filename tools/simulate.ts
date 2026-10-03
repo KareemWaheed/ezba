@@ -9,7 +9,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { UPGRADES } from '../src/config/upgrades';
 import { SimWorld } from '../src/sim/world';
-import { Bot } from '../src/sim/bot';
+import { Bot, type BotProfile } from '../src/sim/bot';
 import { simulateAway } from '../src/sim/offline';
 import { upgradeCost } from '../src/sim/upgrades';
 import { PLAY, checkTargets, type Purchase, type RunResult, type SessionStat } from './pacing';
@@ -21,20 +21,21 @@ const check = args.includes('--check');
 const verbose = args.includes('--verbose');
 const DT = 1 / 30;
 
-function run(): RunResult {
+function run(profile: BotProfile): RunResult {
   const w = new SimWorld(PLAY.seed);
-  const bot = new Bot(w, 'active');
+  const bot = new Bot(w, profile);
   const purchases: Purchase[] = [];
   const sessions: SessionStat[] = [];
   const curve: [number, number][] = [[0, 0]];
   let playSec = 0, offlineEarned = 0, day = 1;
-  const money = { shopSales: 0, cafeSales: 0, tips: 0, rush: 0, golden: 0 };
+  const money = { shopSales: 0, cafeSales: 0, tips: 0, rush: 0, golden: 0, trucks: 0 };
   const onEvent = (e: { type: string; id: number; n: number; value: number }) => {
     if (e.type === 'paid') money.shopSales += e.value;
     else if (e.type === 'cafePaid') money.cafeSales += e.value;
     else if (e.type === 'tip') money.tips += e.value;
     else if (e.type === 'rushEnd') money.rush += e.value;
     else if (e.type === 'goldenCaught') money.golden += e.value;
+    else if (e.type === 'truckDone') money.trucks += e.value;
     if (e.type !== 'buy') return;
     const id = UPGRADES[e.id].id;
     purchases.push({ id, level: e.n, cost: upgradeCost(id, e.n - 1), playMin: playSec / 60, day });
@@ -56,7 +57,7 @@ function run(): RunResult {
       const activePerMin = (w.stats.earned - earned0) / PLAY.sessionMinutes;
       const detail = {
         shopServed: w.stats.served - st0.served, cafeServed: w.stats.cafeServed - st0.cafeServed, angry: w.stats.angry - st0.angry,
-        shopSales: money.shopSales, cafeSales: money.cafeSales, tips: money.tips, rush: money.rush, golden: money.golden, rating: w.service.rating,
+        shopSales: money.shopSales, cafeSales: money.cafeSales, tips: money.tips, rush: money.rush, golden: money.golden, trucks: money.trucks, rating: w.service.rating,
       };
       const hours = s === PLAY.sessionsPerDay - 1 ? PLAY.overnightHours : PLAY.breakHours;
       const away = simulateAway(w, hours * 3600);
@@ -65,13 +66,13 @@ function run(): RunResult {
       sessions.push({ day, session: s + 1, endMin: playSec / 60, activePerMin, autoPerMin: away.raw / (away.seconds / 60), offline: away.earned, detail });
     }
   }
-  return { profile: 'active', purchases, sessions, curve, playMin: playSec / 60, offlineEarned };
+  return { profile, purchases, sessions, curve, playMin: playSec / 60, offlineEarned };
 }
 
 const fmtMin = (m: number) => `${Math.floor(m)}:${String(Math.floor((m % 1) * 60)).padStart(2, '0')}`;
 
 function printTimeline(r: RunResult): void {
-  console.log(`\n=== Efficient player: ${r.purchases.length} purchases in ${fmtMin(r.playMin)} play (${days} days) ===`);
+  console.log(`\n=== ${r.profile === 'casual' ? 'Casual' : 'Efficient'} player: ${r.purchases.length} purchases in ${fmtMin(r.playMin)} play (${days} days) ===`);
   console.log(' #   play   day  upgrade              lvl    cost    gap');
   let prev = 0;
   r.purchases.forEach((p, i) => {
@@ -88,7 +89,7 @@ function printTimeline(r: RunResult): void {
     console.log('\nsession  shopServed cafeServed angry  shop$   cafe$   tips  rush$ golden$ rating');
     for (const s of r.sessions) {
       const d = s.detail, f = (v: number, n: number) => String(Math.round(v)).padStart(n);
-      console.log(`d${s.day} s${s.session}   ${f(d.shopServed, 8)} ${f(d.cafeServed, 10)} ${f(d.angry, 5)} ${f(d.shopSales, 6)} ${f(d.cafeSales, 7)} ${f(d.tips, 6)} ${f(d.rush, 6)} ${f(d.golden, 7)} ${d.rating.toFixed(1).padStart(6)}`);
+      console.log(`d${s.day} s${s.session}   ${f(d.shopServed, 8)} ${f(d.cafeServed, 10)} ${f(d.angry, 5)} ${f(d.shopSales, 6)} ${f(d.cafeSales, 7)} ${f(d.tips, 6)} ${f(d.rush, 6)} ${f(d.golden, 7)} ${f(d.trucks, 6)} ${d.rating.toFixed(1).padStart(6)}`);
     }
   }
   console.log(`\noffline credited: ${Math.round(r.offlineEarned)}   lifetime earned: ${Math.round(r.curve.at(-1)?.[1] ?? 0)}`);
@@ -111,10 +112,13 @@ function chartHtml(r: RunResult): string {
 }
 
 const t0 = Date.now();
-const result = run();
-printTimeline(result);
+const efficient = run('active');
+const casual = run('casual');
+printTimeline(efficient);
+printTimeline(casual);
+const result = casual;
 
-const results = checkTargets(result);
+const results = checkTargets(efficient, casual);
 console.log('\n=== Targets ===');
 for (const r of results) console.log(`${r.ok ? 'PASS' : r.pending ? 'TODO' : 'FAIL'}  ${r.name}  (${r.detail})${!r.ok && r.pending ? ` [pending: ${r.pending}]` : ''}`);
 

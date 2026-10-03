@@ -172,7 +172,8 @@ export class CustomerSystem {
     w.stats.served++;
     if (c.kind === 'vip') w.stats.vips++;
     let value = 0;
-    for (const l of c.lines) value += l.qty * ECONOMY.products[l.product].price;
+    for (const l of c.lines) value += l.qty * ECONOMY.products[l.product].price * w.priceMult;
+    value = Math.round(value);
     if (c.kind === 'vip') value *= ECONOMY.vip.payMult;
     const sc = w.scenario, inEvent = c.scenario && sc.phase !== 'idle';
     if (c.rush) w.rush.sales += value;

@@ -18,12 +18,20 @@ export interface UpgradeDef {
   milestone?: boolean;
   /** Level can't exceed 1 + this track's level (e.g. one cashier per open lane). */
   capBy?: UpgradeId;
+  /** Only offered while this track is at its (current) max, e.g. "expand the coop" once it's full. */
+  requiresMaxed?: UpgradeId;
+  /** This track's max grows by `per` for every level of `by` (e.g. more chickens after expanding). */
+  maxBonus?: { by: UpgradeId; per: number };
 }
 
 export const UPGRADES: readonly UpgradeDef[] = [
   {
     id: 'eggs.animals', icon: '🐔', label: 'فرخة جديدة', msg: 'فرخة جديدة في العشة 🐔',
-    pos: { x: -7.6, z: -0.2 }, requires: [],
+    pos: { x: -7.6, z: -0.2 }, requires: [], maxBonus: { by: 'eggs.expand', per: 6 },
+  },
+  {
+    id: 'eggs.expand', icon: '🏗️', label: 'كبّر العشة', msg: 'العشة كبرت! مكان لفراخ أكتر 🏗️',
+    pos: { x: -7.6, z: -0.2 }, requires: [{ id: 'eggs.worker', level: 1 }], requiresMaxed: 'eggs.animals', milestone: true,
   },
   {
     id: 'player.capacity', icon: '🎒', label: 'شيل أكتر', msg: 'بقيت تشيل أكتر 💪',
@@ -34,11 +42,11 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: -7.6, z: 4.2 }, requires: [{ id: 'player.capacity', level: 1 }],
   },
   {
-    id: 'eggs.worker', icon: '👷', label: 'عامل للبيض', msg: 'العامل بيلم البيض بدالك 👷',
+    id: 'eggs.worker', icon: '👷', label: 'وظّف عامل بيض', msg: 'العامل بيلم البيض بدالك 👷',
     pos: { x: -0.6, z: 0.6 }, requires: [{ id: 'eggs.animals', level: 4 }], milestone: true,
   },
   {
-    id: 'cashier', icon: '🧾', label: 'كاشير', msg: 'الكاشير بيبيع بدالك دلوقتي 🧾',
+    id: 'cashier', icon: '🧾', label: 'وظّف كاشير', msg: 'الكاشير بيبيع بدالك دلوقتي 🧾',
     pos: { x: 1.6, z: 1.0 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true, capBy: 'shop.lanes',
   },
   {
@@ -56,10 +64,14 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'milk.animals', icon: '🐄', label: 'بقرة جديدة', msg: 'بقرة جديدة في الحظيرة 🐄',
-    pos: { x: 9.8, z: 2.0 }, requires: [{ id: 'milk.unlock', level: 1 }],
+    pos: { x: 9.8, z: 2.0 }, requires: [{ id: 'milk.unlock', level: 1 }], maxBonus: { by: 'milk.expand', per: 4 },
   },
   {
-    id: 'milk.worker', icon: '👷', label: 'عامل للبن', msg: 'العامل بيلم اللبن بدالك 👷',
+    id: 'milk.expand', icon: '🏗️', label: 'كبّر الحظيرة', msg: 'الحظيرة كبرت! مكان لبقر أكتر 🏗️',
+    pos: { x: 9.8, z: 2.0 }, requires: [{ id: 'milk.worker', level: 1 }], requiresMaxed: 'milk.animals', milestone: true,
+  },
+  {
+    id: 'milk.worker', icon: '👷', label: 'وظّف عامل لبن', msg: 'العامل بيلم اللبن بدالك 👷',
     pos: { x: 4.0, z: 0.6 }, requires: [{ id: 'milk.animals', level: 2 }], milestone: true,
   },
   {
@@ -80,11 +92,11 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 15.0, z: 12.0 }, requires: [{ id: 'cafe.tables', level: 2 }],
   },
   {
-    id: 'cafe.cleaner', icon: '🧹', label: 'عامل نظافة', msg: 'عامل النظافة بيمسح الترابيزات 🧹',
+    id: 'cafe.cleaner', icon: '🧹', label: 'وظّف عامل نظافة', msg: 'عامل النظافة بيمسح الترابيزات 🧹',
     pos: { x: 17.0, z: 12.0 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
   },
   {
-    id: 'cafe.waiter', icon: '💁', label: 'كاشير الكافيه', msg: 'كاشير الكافيه بيخدم الزباين 💁',
+    id: 'cafe.waiter', icon: '💁', label: 'وظّف كاشير الكافيه', msg: 'كاشير الكافيه بيخدم الزباين 💁',
     pos: { x: 19.0, z: 12.0 }, requires: [{ id: 'cafe.cleaner', level: 1 }], milestone: true,
   },
   {
@@ -92,12 +104,25 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 11.0, z: 1.4 }, requires: [{ id: 'cafe.unlock', level: 1 }],
   },
   {
-    id: 'cafe.helper', icon: '🧑‍🍳', label: 'مساعد مطبخ زيادة', msg: 'مساعد مطبخ جديد بيجيب البيض واللبن 🧑‍🍳',
-    pos: { x: 11.0, z: -0.8 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+    id: 'cafe.helper', icon: '🧑‍🍳', label: 'وظّف مساعد مطبخ', msg: 'مساعد مطبخ جديد بيجيب البيض واللبن 🧑‍🍳',
+    pos: { x: 13.0, z: 10.0 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
   },
   {
     id: 'cafe.belt', icon: '⚙️', label: 'سير الأطباق', msg: 'سير الأطباق شغال لوحده ⚙️',
     pos: { x: 11.0, z: 4.2 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+  },
+  // Loading dock: company contracts with trucks
+  {
+    id: 'dock.unlock', icon: '🚚', label: 'رصيف التحميل', msg: 'الشركات هتبعت عربيات تاخد منك بالجملة 🚚',
+    pos: { x: 6.2, z: 9.0 }, requires: [{ id: 'milk.unlock', level: 1 }, { id: 'cashier', level: 1 }], milestone: true,
+  },
+  {
+    id: 'dock.worker', icon: '🦺', label: 'وظّف عامل تحميل', msg: 'عامل التحميل بيحمّل العربيات بدالك 🦺',
+    pos: { x: 6.2, z: 12.6 }, requires: [{ id: 'dock.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'dock.size', icon: '📈', label: 'صفقات أكبر', msg: 'الشركات بقت تطلب كميات أكبر 📈',
+    pos: { x: 4.4, z: 12.4 }, requires: [{ id: 'dock.unlock', level: 1 }],
   },
   // HR office: an unlockable walled yard west of the farm, with the staff upgrades inside
   {

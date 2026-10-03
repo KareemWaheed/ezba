@@ -5,6 +5,8 @@ export class PressureHud {
   private stars: HTMLElement;
   private starsIcons: HTMLElement;
   private starsVal: HTMLElement;
+  private priceEl: HTMLElement;
+  private shownPrice = '';
   private combo: HTMLElement;
   private banner: HTMLElement;
   private shownRating = '';
@@ -13,12 +15,13 @@ export class PressureHud {
 
   constructor(root: HTMLElement) {
     root.insertAdjacentHTML('beforeend', `
-      <div id="stars"><span class="st"></span><span class="sv"></span></div>
+      <div id="stars"><span class="st"></span><span class="sv"></span><span class="pm"></span></div>
       <div id="combo" hidden></div>
       <div id="rush" hidden></div>`);
     this.stars = root.querySelector('#stars')!;
     this.starsIcons = this.stars.querySelector('.st')!;
     this.starsVal = this.stars.querySelector('.sv')!;
+    this.priceEl = this.stars.querySelector('.pm')!;
     this.combo = root.querySelector('#combo')!;
     this.banner = root.querySelector('#rush')!;
   }
@@ -31,6 +34,8 @@ export class PressureHud {
       this.starsIcons.textContent = '★'.repeat(full) + '☆'.repeat(5 - full);
       this.starsVal.textContent = key;
     }
+    const pm = `💹 x${sim.priceMult.toFixed(2)}`;
+    if (pm !== this.shownPrice) { this.shownPrice = pm; this.priceEl.textContent = pm; }
     const c = sim.service.combo;
     if (c !== this.shownCombo) {
       this.shownCombo = c;

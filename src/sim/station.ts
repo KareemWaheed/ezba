@@ -1,5 +1,6 @@
 import { ECONOMY } from '../config/economy';
 import type { StationDef } from '../config/stations';
+import type { Box } from './math';
 import type { Rng } from './rng';
 import { moveToward } from './math';
 import type { EventQueue } from './events';
@@ -36,14 +37,18 @@ export class Station {
   /** Pooled flights; inactive entries are reused. */
   readonly flights: Flight[] = [];
 
+  /** Where the animals live; grows when the pen is expanded. */
+  readonly area: Box;
+
   constructor(readonly def: StationDef, readonly index: number) {
     this.open = def.startsOpen;
+    this.area = { ...def.area };
   }
 
   get pileFull(): boolean { return this.pile + this.pending >= ECONOMY.pile.max; }
 
   addAnimal(rng: Rng): Animal {
-    const a = this.def.area;
+    const a = this.area;
     const x = rng.range(a.x0 + 0.6, a.x1 - 0.6), z = rng.range(a.z0 + 0.8, a.z1 - 0.6);
     const animal: Animal = { x, z, rot: rng.range(0, 6.28), speed: 0, tx: x, tz: z, pause: rng.range(0, 2), t: rng.range(0, 2), hop: 0 };
     this.animals.push(animal);
@@ -60,7 +65,7 @@ export class Station {
   update(dt: number, rng: Rng, events: EventQueue): void {
     if (!this.open) return;
     const cfg = ECONOMY.producers[this.def.producer];
-    const area = this.def.area;
+    const area = this.area;
     const interval = this.boostT > 0 ? cfg.interval / ECONOMY.feed.mult : cfg.interval;
     if (this.boostT > 0) this.boostT = Math.max(0, this.boostT - dt);
     for (const a of this.animals) {

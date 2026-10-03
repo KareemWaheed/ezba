@@ -27,6 +27,7 @@ export interface SaveData {
   /** Per station: trough boost seconds left; per belt: jammed. */
   boost?: Record<string, number>;
   broken?: Record<string, boolean>;
+  trust?: Record<string, number>;
   cafe?: {
     counter: Record<string, number>;
     stoveIn: Record<string, number>;
@@ -70,6 +71,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
     rating: w.service.rating,
+    trust: { ...w.contracts.trust },
     boost: Object.fromEntries(w.stations.map((s) => [s.def.id, s.boostT])),
     broken: Object.fromEntries(w.staff.machines.map((m, i) => [String(i), m.broken])),
     cafe: {
@@ -92,7 +94,7 @@ export function restore(w: SimWorld, s: SaveData): void {
   if (s.rng) w.rng.state = num(s.rng, w.rng.state) >>> 0;
   const up = w.upgrades;
   for (const id of Object.keys(up.levels) as UpgradeId[]) {
-    up.levels[id] = Math.min(ECONOMY.upgrades[id].max, Math.max(0, Math.floor(num(s.levels?.[id]))));
+    up.levels[id] = Math.min(ECONOMY.upgrades[id].max + 50, Math.max(0, Math.floor(num(s.levels?.[id]))));
     up.paid[id] = Math.max(0, num(s.paid?.[id]));
     up.bought += up.levels[id];
   }
@@ -107,6 +109,7 @@ export function restore(w: SimWorld, s: SaveData): void {
   w.player.z = num(s.player?.z, w.player.z);
   for (const k of Object.keys(w.stats) as (keyof typeof w.stats)[]) w.stats[k] = num(s.stats?.[k]);
   w.service.rating = Math.max(1, Math.min(5, num(s.rating, w.service.rating)));
+  for (const k of Object.keys(w.contracts.trust)) w.contracts.trust[k] = Math.max(0, Math.min(5, num(s.trust?.[k])));
   for (const st of w.stations) st.boostT = Math.max(0, num(s.boost?.[st.def.id]));
   const cf = s.cafe, cafe = w.cafe;
   if (cf) {

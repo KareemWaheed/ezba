@@ -156,7 +156,7 @@ export class ScenarioSystem {
         g.t = ENJOY_TIME;
         this.guestServed = true;
         let value = 0;
-        for (const x of g.lines) value += x.qty * ECONOMY.products[x.product].price;
+        for (const x of g.lines) value += x.qty * ECONOMY.products[x.product].price * w.priceMult;
         value = Math.round(value * (this.def.guest?.payMult ?? 1));
         this.sales += value;
         w.cash.value += value;
@@ -219,7 +219,7 @@ export class ScenarioSystem {
     let reward = 0;
     if (won) {
       let perSec = 0;
-      for (const st of w.stations) if (st.open) perSec += (st.animals.length / ECONOMY.producers[st.def.producer].interval) * ECONOMY.products[st.def.product].price;
+      for (const st of w.stations) if (st.open) perSec += (st.animals.length / ECONOMY.producers[st.def.producer].interval) * ECONOMY.products[st.def.product].price * w.priceMult;
       reward = Math.round(d.rewardSeconds * perSec + this.sales * d.rewardShare);
       w.cash.value += reward;
       w.cash.bills += 16;

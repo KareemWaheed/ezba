@@ -8,11 +8,11 @@ import { MAT, PRIM, Q4, merge, part } from './geo';
 
 const { box, cyl, cone } = PRIM;
 
-function ground(r: Box, color: number, y: number): THREE.BufferGeometry {
+export function ground(r: Box, color: number, y: number): THREE.BufferGeometry {
   return part(box, color, (r.x0 + r.x1) / 2, y - 0.01, (r.z0 + r.z1) / 2, 0, 0, 0, r.x1 - r.x0, 0.02, r.z1 - r.z0);
 }
 
-function fence(r: Box, out: THREE.BufferGeometry[]): void {
+export function fence(r: Box, out: THREE.BufferGeometry[]): void {
   const post = 0x9a6233, rail = 0xb87a45;
   for (let x = r.x0; x <= r.x1 + 0.01; x += 1) {
     out.push(part(box, post, x, 0.45, r.z0, 0, 0, 0, 0.14, 0.9, 0.14), part(box, post, x, 0.45, r.z1, 0, 0, 0, 0.14, 0.9, 0.14));
@@ -29,7 +29,7 @@ function fence(r: Box, out: THREE.BufferGeometry[]): void {
   }
 }
 
-function barn(x: number, z: number, out: THREE.BufferGeometry[]): void {
+export function barn(x: number, z: number, out: THREE.BufferGeometry[]): void {
   out.push(
     part(box, 0xc8463c, x, 1.0, z, 0, 0, 0, 3.2, 2.0, 1.8),
     part(cyl, 0x7a3b2a, x, 2.0, z, 0, 0, Math.PI / 2, 1.12, 3.4, 1.12),
@@ -43,12 +43,7 @@ export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
   const L = LAYOUT;
   g.push(part(box, 0x8fd14f, 0, -0.05, 0, 0, 0, 0, 160, 0.1, 160));
   g.push(ground(L.yard, 0xe9b06a, 0.005));
-  g.push(ground(L.coop, 0xe6d07c, 0.012));
-  g.push(ground(L.pen, 0x7cc044, 0.012));
-  fence(L.coop, g);
-  fence(L.pen, g);
-  barn((L.coop.x0 + L.coop.x1) / 2, L.coop.z0 - 1.2, g);
-  barn((L.pen.x0 + L.pen.x1) / 2, L.pen.z0 - 1.2, g);
+  // coop/pen ground, fences and barns are drawn by PenView (they grow with expansions)
 
   const rng = new Rng(7);
   for (const [x, z] of L.trees) {

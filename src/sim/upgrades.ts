@@ -1,6 +1,6 @@
 import { ECONOMY, type UpgradeId } from '../config/economy';
-import { UPGRADES, type UpgradeDef } from '../config/upgrades';
-import { LAYOUT } from '../config/layout';
+import { UPGRADES, UPGRADE_BY_ID, type UpgradeDef } from '../config/upgrades';
+import { FENCES, LAYOUT, SOLIDS_VERSION } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import { dist } from './math';
 import type { SimWorld } from './world';
@@ -35,7 +35,13 @@ export class UpgradeSystem {
   }
 
   level(id: UpgradeId): number { return this.levels[id] ?? 0; }
-  maxed(id: UpgradeId): boolean { return this.level(id) >= ECONOMY.upgrades[id].max; }
+  /** Current max level, including bonuses from other tracks (e.g. bigger coop -> more chickens). */
+  maxOf(id: UpgradeId): number {
+    const def = UPGRADE_BY_ID.get(id);
+    const bonus = def?.maxBonus ? this.level(def.maxBonus.by) * def.maxBonus.per : 0;
+    return ECONOMY.upgrades[id].max + bonus;
+  }
+  maxed(id: UpgradeId): boolean { return this.level(id) >= this.maxOf(id); }
   cost(id: UpgradeId): number { return upgradeCost(id, this.level(id)); }
   remaining(id: UpgradeId): number { return Math.max(0, this.cost(id) - this.paid[id]); }
 
@@ -43,6 +49,7 @@ export class UpgradeSystem {
   available(def: UpgradeDef): boolean {
     if (this.maxed(def.id)) return false;
     if (def.capBy && this.level(def.id) >= 1 + this.level(def.capBy)) return false;
+    if (def.requiresMaxed && !this.maxed(def.requiresMaxed)) return false;
     for (const r of def.requires) if (this.level(r.id) < r.level) return false;
     return true;
   }
@@ -66,6 +73,17 @@ export class UpgradeSystem {
     w.player.speedMult = 1 + this.level('player.speed') * U['player.speed'].step;
     for (const s of w.stations) {
       if (s.def.unlockTrack) s.open = this.level(s.def.unlockTrack) > 0;
+      // bigger pens: move the fence out and update its solid
+      const ex = s.def.expand;
+      if (ex) {
+        const n = this.level(ex.track), a = s.def.area, f = FENCES[s.def.id];
+        const x0 = a.x0 + ex.dx0 * n, x1 = a.x1 + ex.dx1 * n;
+        if (s.area.x0 !== x0 || s.area.x1 !== x1) {
+          s.area.x0 = x0;
+          s.area.x1 = x1;
+          if (f) { f.x0 = x0 - 0.1; f.x1 = x1 + 0.1; SOLIDS_VERSION.v++; }
+        }
+      }
       const track = s.def.animalTrack;
       if (!s.open || !track) continue;
       const want = ECONOMY.producers[s.def.producer].start + this.level(track) * U[track].step;
@@ -74,6 +92,7 @@ export class UpgradeSystem {
     w.staff.sync();
     w.bounds.x0 = this.level('hr.office') > 0 ? LAYOUT.hrYard.unlockedX0 : LAYOUT.bounds.x0;
     w.cafe.sync();
+    w.contracts.sync();
     w.bounds.x1 = w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
   }
 

@@ -61,6 +61,7 @@ html, body {
   background: var(--panel); color: var(--ink);
 }
 #fps { color: #fff; font: 600 12px/1 system-ui, sans-serif; direction: ltr; }
+#dev button.close { background: #e8554e; color: #fff; min-width: 44px; }
 
 #full {
   position: fixed; z-index: 5; pointer-events: none; transform: translate(-50%, -100%); direction: rtl;
@@ -101,6 +102,7 @@ html, body {
 }
 #stars .st { font-size: 14px; letter-spacing: 1px; }
 #stars .sv { font-size: 12px; color: #fff; font-weight: 800; }
+#stars .pm { font-size: 11px; color: #9ff09a; font-weight: 800; margin-top: 1px; }
 #combo {
   position: fixed; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 18px); z-index: 5; pointer-events: none;
   background: #ff8a1f; color: #fff; font-weight: 800; font-size: 20px; border-radius: 12px; padding: 2px 10px; direction: ltr;

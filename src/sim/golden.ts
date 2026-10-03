@@ -27,7 +27,7 @@ export class GoldenSystem {
   /** Cash for catching a golden animal of this station right now. */
   reward(station: number): number {
     const st = this.w.stations[station], p = ECONOMY.producers[st.def.producer];
-    const perSec = (st.animals.length / p.interval) * ECONOMY.products[st.def.product].price;
+    const perSec = (st.animals.length / p.interval) * ECONOMY.products[st.def.product].price * this.w.priceMult;
     return Math.round(Math.max(50, perSec * ECONOMY.golden.rewardSeconds));
   }
 

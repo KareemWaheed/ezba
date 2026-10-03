@@ -13,6 +13,7 @@ import { RushSystem } from './rush';
 import { GoldenSystem } from './golden';
 import { CafeSystem } from './cafe';
 import { ScenarioSystem } from './scenario';
+import { ContractSystem } from './contracts';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
@@ -36,11 +37,12 @@ export class SimWorld {
   readonly golden: GoldenSystem;
   readonly cafe: CafeSystem;
   readonly scenario: ScenarioSystem;
+  readonly contracts: ContractSystem;
   /** Real-world clock for seasonal events (the UI updates it; the simulator keeps the default). */
   clock: Clock = { weekday: 1, hour: 12, ramadan: false };
   readonly cash = { value: 0, bills: 0 };
   /** Lifetime counters (daily tasks, album and the simulator read these). */
-  readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0, tables: 0, cafeServed: 0, scenariosWon: 0 };
+  readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0, tables: 0, cafeServed: 0, scenariosWon: 0, trucks: 0 };
   readonly events = new EventQueue();
   /** Walkable area; grows when walled plots are unlocked. */
   readonly bounds = { ...LAYOUT.bounds };
@@ -64,10 +66,14 @@ export class SimWorld {
     this.golden = new GoldenSystem(this);
     this.cafe = new CafeSystem(this);
     this.scenario = new ScenarioSystem(this);
+    this.contracts = new ContractSystem(this);
     this.upgrades = new UpgradeSystem(this);
     this.upgrades.apply();
     this.upgrades.refresh();
   }
+
+  /** Sale price multiplier from farm growth (see ECONOMY.market). */
+  get priceMult(): number { return 1 + this.upgrades.bought * ECONOMY.market.growthPerUpgrade; }
 
   /** Open checkout lanes (1 at the start). */
   get lanes(): number { return 1 + this.upgrades.level('shop.lanes'); }
@@ -100,6 +106,7 @@ export class SimWorld {
     this.staff.update(dt);
     this.rush.update(dt);
     this.scenario.update(dt);
+    this.contracts.update(dt);
     this.customers.update(dt);
     this.service.update(dt);
     this.golden.update(dt);
@@ -167,6 +174,7 @@ export class SimWorld {
     }
     this.cafe.interact(dt);
     this.scenario.deliver(dt);
+    this.contracts.interact(dt);
     const cash = LAYOUT.shop.cash;
     if (this.cash.value > 0 && dist(p.x, p.z, cash.x, cash.z) < ZONE.cash) {
       const v = this.cash.value, n = this.cash.bills;

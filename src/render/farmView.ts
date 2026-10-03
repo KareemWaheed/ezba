@@ -17,6 +17,9 @@ import { TilesView } from './tiles';
 import { StaffView } from './staffView';
 import { PressureView } from './pressureView';
 import { CafeView } from './cafeView';
+import { PenView } from './penView';
+import { SignsView } from './signs';
+import { DockView } from './dockView';
 import { UPGRADES } from '../config/upgrades';
 
 const _v = new THREE.Vector3();
@@ -104,6 +107,9 @@ export class FarmView {
   readonly staff: StaffView;
   readonly pressure: PressureView;
   readonly cafe: CafeView;
+  readonly pens: PenView;
+  readonly signs: SignsView;
+  readonly dock: DockView;
   /** True on frames where a coin flew into an upgrade tile (for the coin sound). */
   coinFlew = false;
   private payT = 0;
@@ -131,6 +137,9 @@ export class FarmView {
     this.staff = new StaffView(scene);
     this.pressure = new PressureView(scene, sim);
     this.cafe = new CafeView(scene);
+    this.pens = new PenView(scene, sim);
+    this.signs = new SignsView(scene, sim);
+    this.dock = new DockView(scene);
     this.arrow = new THREE.Mesh(merge([
       part(PRIM.cone, 0xff8a1f, 0, 0, 0, Math.PI, 0, 0, 0.32, 0.6, 0.32),
       part(PRIM.cyl, 0xff8a1f, 0, 0.5, 0, 0, 0, 0, 0.12, 0.6, 0.12),
@@ -152,6 +161,9 @@ export class FarmView {
     this.staff.sync(sim, dt, this.flyers, pop);
     this.pressure.sync(sim, dt);
     this.cafe.sync(sim, dt);
+    this.pens.sync(dt);
+    this.signs.sync(sim, dt);
+    this.dock.sync(sim);
 
     // coins fly from the player into the tile being paid
     this.coinFlew = false;

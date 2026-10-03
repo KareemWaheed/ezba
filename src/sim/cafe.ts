@@ -354,7 +354,7 @@ export class CafeSystem {
           if (c.eatT <= 0) {
             const t = this.tables[c.table];
             let value = 0;
-            for (const l of c.lines) value += l.qty * ECONOMY.dishes[l.product].price;
+            for (const l of c.lines) value += l.qty * ECONOMY.dishes[l.product].price * w.priceMult;
             value = Math.round(value * this.priceMult);
             // tips/combo/rating go through the shared service system
             if (c.rush) w.rush.sales += value;
