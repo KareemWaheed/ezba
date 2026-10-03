@@ -100,3 +100,27 @@ This file records the decisions made on top of it.
   tied by the player at the tie spot or by a river worker). Fish stall / grill become solid only once built
   (addSolid). Vehicles only take over east of the dock (FIELDS.driveX0) — the combine's radius made the dock
   unworkable. Per the user, late stages may be overpowered: the "active beats automation" check covers days 1–4.
+- Events redesign (playtest: "dull and repetitive", every event was serve-the-guest + nobody-angry): each scenario
+  has a `mechanic` (sim/scenarios/*.ts, a small `Mechanic` interface: warn/start/update/goal/progress/bonus/
+  botTarget/teardown plus optional hooks — onSell, onPlayerFeed, canDeliver/deliverVia, crowdStyle, tipMult, busy,
+  hudText/hudMeter/hudMode) and its own visuals (render/scenarios/*.ts, built when the event goes live, disposed at
+  the end). ScenarioSystem keeps the phases, owns `checkGoals()` (HUD and the final check share it), twists, star
+  grades (1 = all goals, 2 = also nobody angry and the guest served with ≥25% patience, 3 = also the mechanic's
+  perfect-run bonus; reward ×1/×1.5/×2) and the debug "win" flag. The guide arrow and the active bot both follow
+  `mechanic.botTarget`. Entrance: camera pan + letterbox + 1.2 s slow-down that scales how much real time the sim
+  advances (like debug speed), never the step. `npm run eventcheck` drives every event headless: unattended fails,
+  doing the objective passes, time away and save mid-event lose nothing.
+- Event mechanics: presidents = timed delivery (Sisi: through the security gate on the carpet; Macron: stand in the
+  official photo; Trump: changes his order twice); Salah = penalties past a moving keeper; Messi = dribble through
+  4 cones then score (goals raise fan tips); Amr Diab = dance pads lit on the beat (combo); storm = dark + flashlight,
+  herd escaped animals (their pen pauses); inspector = walks a checklist route (troughs fed, jam fixed, table clean,
+  pile not overflowing); wedding / Japanese tour = a group walking a route, hand each walker their item (tour stops,
+  then a group photo); influencer = comment requests filled by selling yourself; army = bulk order announced in a
+  40 s warning, delivered at the truck. New: Ahly–Zamalek derby (fans split red/white by look seed; a meter leans to
+  the side with more fans waiting, 4 s over the line = clash), film shoot with "the boss" (freeze on "action!",
+  0.6 s reaction grace), thief (chase and tag; stolen money only lost if he escapes when the event ends), cook-off
+  (recipe cards: feed the café machine yourself, full trays still accept), Ramadan iftar table (12 plates before
+  the Maghrib cannon; only during Ramadan), khamaseen (sandy haze; stand on piles to tarp them before gusts take items).
+- Event square (user: "widen the world"): paved square south of the yard (z 14–27.6, walkable bounds extended):
+  VIP stage + carpet + fans, football pitch, dance floor, procession route, army truck and iftar table live there so
+  events don't crowd the shop. layoutcheck keeps tiles and solids off the pitch and dance pads.
