@@ -77,7 +77,7 @@ export function checkTargets(eff: RunResult, casual: RunResult): TargetResult[] 
   };
   span('first worker', 'eggs.worker', 15, 35);
   span('cows', 'milk.unlock', 45, 160);
-  span('egg belt', 'eggs.machine', 20, 40);
+  span('egg belt', 'eggs.machine', 15, 33);
   span('café', 'cafe.unlock', 80, 320);
   span('corn field', 'field.unlock', 110, 400);
 

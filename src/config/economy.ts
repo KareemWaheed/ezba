@@ -312,7 +312,7 @@ export const ECONOMY = {
     /** Egg workers: +1 worker per level. */
     'eggs.worker': { base: 750, growth: 5, max: 2, step: 1 },
     /** Egg belt: level 1 builds it, later levels speed it up. */
-    'eggs.machine': { base: 1000, growth: 3, max: 4, step: 1 },
+    'eggs.machine': { base: 500, growth: 3, max: 4, step: 1 },
     /** Open the cow pen (single level): milk station starts with producers.cow.start cows. */
     'milk.unlock': { base: 3800, growth: 1, max: 1, step: 1 },
     /** Bigger coop: fence moves out, +step chickens allowed per level. */

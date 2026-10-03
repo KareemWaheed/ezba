@@ -52,7 +52,7 @@ This file records the decisions made on top of it.
   longer need a clean table to be served: with none free they take it to go and pay at the café cash (no tip);
   sit-down customers tip and tables raise arrivals. The counter caps at 12 per dish so the kitchen stops eating
   farm stock nobody buys. `npm run cafeflow -- [casual|active]` checks the first 10 café minutes (0 angry).
-- Egg belt costs 1000 so a casual player gets it in ~30–40 min; café cashier raised to 150k to keep full
+- Egg belt costs 500 so a casual player gets it at ~28 min (right after the first worker); café cashier raised to 150k to keep full
   automation at day 4+.
 - Café layout v2 (screenshot review): kitchen line on the back wall — egg spot | egg pan + belt | serve |
   coffee belt + machine | milk spot — both conveyors run straight down onto the counter; café tiles in the
