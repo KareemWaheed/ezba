@@ -15,6 +15,12 @@ import type { CommentsMechanic } from '../src/sim/scenarios/comments';
 import type { StageMechanic } from '../src/sim/scenarios/stage';
 import type { ProcessionMechanic } from '../src/sim/scenarios/procession';
 import type { BulkMechanic } from '../src/sim/scenarios/bulk';
+import type { DerbyMechanic } from '../src/sim/scenarios/derby';
+import type { FilmingMechanic } from '../src/sim/scenarios/filming';
+import type { ChaseMechanic } from '../src/sim/scenarios/chase';
+import type { CookoffMechanic } from '../src/sim/scenarios/cookoff';
+import type { IftarMechanic } from '../src/sim/scenarios/iftar';
+import type { KhamaseenMechanic } from '../src/sim/scenarios/khamaseen';
 import { LAYOUT } from '../src/config/layout';
 
 const DT = 1 / 30;
@@ -383,6 +389,79 @@ if (!only || only === 'army') {
     w.player.x = drop.x; w.player.z = drop.z;
   });
   ok(goalOk(w, 'bulkOrder') === true, 'army: delivering everything passes');
+}
+
+// ---- the new events ----
+/** Every tick, stand where the event points (fails quietly when it points nowhere). */
+const follow = (w: SimWorld): void => { const t = w.scenario.mech.botTarget?.(w); if (t) { w.player.x = t.x; w.player.z = t.z; } };
+
+if (!only || only === 'derby') {
+  const a = fresh(); a.scenario.trigger('derby'); runUntilIdle(a);
+  ok(goalOk(a, 'balance') === false, 'derby unattended: the fans clash');
+  const b = fresh(); b.scenario.trigger('derby'); runUntilIdle(b, follow);
+  ok(goalOk(b, 'balance') === true, `derby: serving the side that waits longer keeps the peace (clashes ${(b.scenario.mech as DerbyMechanic).clash ?? '-'})`);
+}
+if (!only || only === 'filming') {
+  // keeps walking in a circle the whole time
+  const a = fresh(); a.scenario.trigger('filming');
+  let t = 0;
+  runUntilIdle(a, (w) => { t += DT; w.input.x = Math.cos(t); w.input.z = Math.sin(t); });
+  a.input.x = a.input.z = 0;
+  ok(goalOk(a, 'takes') === false, 'filming: moving through the takes ruins them');
+  const b = fresh(); b.scenario.trigger('filming');
+  t = 0;
+  runUntilIdle(b, (w) => { const m = w.scenario.mech as FilmingMechanic; t += DT; const still = m.take; w.input.x = still ? 0 : Math.cos(t); w.input.z = still ? 0 : Math.sin(t); });
+  b.input.x = b.input.z = 0;
+  ok(goalOk(b, 'takes') === true, 'filming: freezing on "action" gets the takes');
+}
+if (!only || only === 'thief') {
+  const a = fresh(); a.scenario.trigger('thief');
+  const m0 = a.scenario.mech as ChaseMechanic;
+  runUntilIdle(a);
+  ok(goalOk(a, 'catch') === false && m0.lost > 0, `thief unattended: he gets away with the money (${m0.lost})`);
+  const b = fresh(); b.scenario.trigger('thief');
+  const before = b.money + b.cash.value;
+  runUntilIdle(b, follow);
+  ok(goalOk(b, 'catch') === true && b.money + b.cash.value >= before, 'thief: caught, the money comes back');
+}
+if (!only || only === 'cookoff') {
+  const a = fresh(); a.scenario.trigger('cookoff'); runUntilIdle(a);
+  ok(goalOk(a, 'recipes') === false, 'cookoff unattended: no recipes');
+  const b = fresh(); b.scenario.trigger('cookoff');
+  runUntilIdle(b, (w) => {
+    const m = w.scenario.mech as CookoffMechanic, c = m.card;
+    if (!c) return;
+    if (!w.carry.has(c.raw)) { w.carry.items.length = 0; for (let k = 0; k < 6; k++) w.carry.push(c.raw); }
+    follow(w);
+  });
+  ok(goalOk(b, 'recipes') === true, 'cookoff: feeding the machine each card asks for passes');
+}
+if (!only || only === 'iftar') {
+  const a = fresh(); a.clock = { ...a.clock, ramadan: true }; a.scenario.trigger('iftar'); runUntilIdle(a);
+  ok(goalOk(a, 'plates') === false, 'iftar unattended: empty plates at Maghrib');
+  const b = fresh(); b.clock = { ...b.clock, ramadan: true }; b.scenario.trigger('iftar');
+  runUntilIdle(b, (w) => {
+    const m = w.scenario.mech as IftarMechanic;
+    const i = m.plates?.findIndex((p) => !p.filled) ?? -1;
+    if (i < 0) return;
+    const p = m.plates[i];
+    if (!w.carry.has(p.want)) { w.carry.items.length = 0; w.carry.push(p.want); }
+    w.player.x = p.x; w.player.z = p.z;
+  });
+  ok(goalOk(b, 'plates') === true, 'iftar: every plate filled before Maghrib');
+  const c = new SimWorld(3); c.upgrades.bought = 99; c.clock = { ...c.clock, ramadan: false };
+  const pick = (c.scenario as unknown as { pick(): ScenarioDef | null }).pick.bind(c.scenario);
+  let seen = false;
+  for (let i = 0; i < 300; i++) if (pick()?.id === 'iftar') seen = true;
+  ok(!seen, 'iftar never comes outside Ramadan');
+}
+if (!only || only === 'khamaseen') {
+  const a = fresh(); a.scenario.trigger('khamaseen'); runUntilIdle(a);
+  const ma = a.scenario.mech as KhamaseenMechanic;
+  ok(goalOk(a, 'covered') === false, `khamaseen unattended: piles blow away`);
+  const b = fresh(); b.scenario.trigger('khamaseen'); runUntilIdle(b, follow);
+  ok(goalOk(b, 'covered') === true, 'khamaseen: covering every pile passes');
+  void ma;
 }
 
 // ---- availability: never pick an event whose area is locked ----

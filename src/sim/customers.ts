@@ -128,7 +128,7 @@ export class CustomerSystem {
       id: this.nextId++, kind: vip ? 'vip' : 'normal', look, type: vip ? 'vip' : pickType(w, look),
       x: rng.range(sp.x0, sp.x1), z: sp.z, rot: Math.PI, speed: 0,
       state: 'queue', lines, lane, qty, left: qty, patience, patienceMax: patience, playerItems: 0,
-      rush, scenario: inScenario, style: crowd && sc.def.crowd ? sc.def.crowd : '', away: w.away, takeT: 0, servedT: 0, gone: false,
+      rush, scenario: inScenario, style: crowd ? (sc.mech.crowdStyle?.(look) ?? sc.def.crowd ?? '') : '', away: w.away, takeT: 0, servedT: 0, gone: false,
     });
     if (rush) w.rush.spawned++;
     if (vip) w.events.emit('vip', '', 0, 0, 0, lane, this.nextId - 1);

@@ -155,6 +155,20 @@ function cueSound(mech: string | undefined, n: number, v = 0): void {
     else if (n === 3) { sfx.fanfare(); toast.show('Cheese! صورة حلوة 📸'); }
     else if (n === 4) toast.show('الصورة اتاخدت من غيرك 😅');
   }
+  if (mech === 'derby' && n === 1) { sfx.angry(); toast.show('الجمهورين اشتبكوا بالهتافات! 📣 اخدم الناحية التانية'); }
+  if (mech === 'filming') {
+    if (n === 1) { sfx.alarm(); toast.show('🎬 أكشن! اتجمّد مكانك'); }
+    else if (n === 2) { sfx.fixed(); toast.show(`كات! مشهد ${v} تمام 👏`); }
+    else if (n === 3) { sfx.angry(); toast.show('المخرج: كات كات! إنت دخلت في الكادر 🤦 تاني!'); }
+  }
+  if (mech === 'chase' && n === 1) { sfx.fanfare(); toast.show(`مسكته! 🚓 الفلوس رجعت ومعاها مكافأة ${v}`); }
+  if (mech === 'cookoff') {
+    if (n === 1) { sfx.sparkle(); toast.show('الشيف: الوصفة الجاية! 📜'); }
+    else if (n === 2) { sfx.fanfare(); toast.show('الشيف: الله عليك! 👨‍🍳👌'); }
+    else if (n === 3) toast.show('الوقت خلص على الوصفة دي 😕');
+  }
+  if (mech === 'iftar' && n === 2) { sfx.clunk(); sfx.fanfare(); toast.show('مدفع الإفطار! 🌙💥 كل سنة وانت طيب'); }
+  if (mech === 'khamaseen') { if (n === 1) sfx.fixed(); else sfx.swish(); }
   if (mech === 'bulk' && n === 1) { sfx.fanfare(); toast.show('تمام يا فندم! الطلبية كاملة 🪖✅'); }
   if (mech === 'stage') { if (n === 1) sfx.tip(); else sfx.angry(); }
   if (mech === 'comments') { if (n === 1) sfx.sell(); else sfx.tip(); }

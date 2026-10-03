@@ -273,9 +273,12 @@ export class CafeSystem {
     // raw items into whichever machine the player stands at (each takes its own raw item)
     if (this.dropT <= 0) {
       for (const m of this.machines) {
-        if (dist(p.x, p.z, m.input.x, m.input.z) >= R.machineIn || !c.has(m.raw) || !m.conv.wants(m.raw)) continue;
+        const forced = w.scenario.active && !!w.scenario.mech.feedAnyway?.(m.id);
+        if (dist(p.x, p.z, m.input.x, m.input.z) >= R.machineIn || !c.has(m.raw) || !(m.conv.wants(m.raw) || forced)) continue;
         c.take(m.raw);
+        // a full tray during the cook-off: the chef takes it straight to his pan
         m.conv.accept(m.raw);
+        if (w.scenario.active) w.scenario.mech.onPlayerFeed?.(w, m.id);
         this.dropT = cfg.dropInterval;
         w.events.emit('drop', m.raw, m.input.x, m.input.z, 0, c.n);
         break;

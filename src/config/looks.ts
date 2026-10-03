@@ -65,6 +65,14 @@ export const GUEST_LOOKS = {
     shirt: 0xf2b33d, pants: 0x5a4632, skin: 0xd9a074, hair: 0x3b2414, hat: { kind: 'cap', color: 0xe8554e }, holds: 'flower',
     entourage: { shirt: 0xffffff, pants: 0x2e2e2e, skin: 0xf1d9b8, hair: 0x111111, hat: { kind: 'cap', color: 0xffffff } },
   },
+  adelemam: {
+    shirt: 0x8a8f99, pants: 0x5a5f69, skin: 0xd9a074, hair: 0x9a9a9a, glasses: 0x2a2a2a, tie: 0x7a1f2b,
+    entourage: { shirt: 0x111111, pants: 0x2e2e2e, skin: 0xc8916a, hair: 0x1d1d1d, hat: { kind: 'cap', color: 0x111111 } },
+  },
+  sherbini: {
+    shirt: 0xffffff, pants: 0x2e2e2e, skin: 0xd9a074, hair: 0x1d1d1d, beard: 0x1d1d1d, hat: { kind: 'chef', color: 0xffffff },
+    entourage: { shirt: 0xffffff, pants: 0x444444, skin: 0xf1c7a0, hair: 0x3b2414, hat: { kind: 'chef', color: 0xffffff } },
+  },
   influencer: {
     shirt: 0xff6fb5, pants: 0x2e2e2e, skin: 0xf1c7a0, hair: 0xe0b04a, hat: { kind: 'cap', color: 0x111111 }, holds: 'phone',
     entourage: { shirt: 0x444444, pants: 0x222222, skin: 0xd9a074, hair: 0x1d1d1d },
@@ -88,6 +96,10 @@ export const CROWD_LOOKS = {
   press: { shirts: [0x2e2e2e, 0x445566, 0xdddddd], pants: [0x222222, 0x333333] },
   concert: { shirts: [0xffffff, 0x111111, 0xd96aa7, 0x4a90d9], pants: [0x2e3b5a, 0x111111] },
   tourists: { shirts: [0xffffff, 0xf2b33d, 0x6cb6e0, 0xe8554e], pants: [0x2e2e2e, 0xf3e6c8], hat: { kind: 'cap', color: 0xffffff } },
+  /** Zamalek supporters (the derby's other half wears fanRed). */
+  fanWhite: { shirts: [0xffffff, 0xf3f3f3, 0xc8102e], pants: [0xffffff, 0x222222] },
+  film: { shirts: [0x222222, 0x3b3b3b, 0xf2b33d], pants: [0x222222, 0x2e3b5a], hat: { kind: 'cap', color: 0x222222 } },
+  iftar: { shirts: [0xf3efe3, 0x2a6b4a, 0x8a6a4a, 0xffffff], pants: [0x5a4632, 0x2e2e2e] },
 } satisfies Record<string, CrowdLook>;
 
 export type CrowdStyle = keyof typeof CROWD_LOOKS;

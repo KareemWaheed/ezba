@@ -12,6 +12,12 @@ import { StageMechanic } from './scenarios/stage';
 import { MotorcadeMechanic } from './scenarios/motorcade';
 import { ProcessionMechanic } from './scenarios/procession';
 import { BulkMechanic } from './scenarios/bulk';
+import { DerbyMechanic } from './scenarios/derby';
+import { FilmingMechanic } from './scenarios/filming';
+import { ChaseMechanic } from './scenarios/chase';
+import { CookoffMechanic } from './scenarios/cookoff';
+import { IftarMechanic } from './scenarios/iftar';
+import { KhamaseenMechanic } from './scenarios/khamaseen';
 
 /** Mechanic per id; ids without their own module yet fall back to BASIC. */
 const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
@@ -23,6 +29,12 @@ const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
   motorcade: () => new MotorcadeMechanic(),
   procession: () => new ProcessionMechanic(),
   bulk: () => new BulkMechanic(),
+  derby: () => new DerbyMechanic(),
+  filming: () => new FilmingMechanic(),
+  chase: () => new ChaseMechanic(),
+  cookoff: () => new CookoffMechanic(),
+  iftar: () => new IftarMechanic(),
+  khamaseen: () => new KhamaseenMechanic(),
 };
 
 export interface GoalState { goal: ScenarioGoal; ok: boolean; progress: number }

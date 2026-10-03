@@ -81,6 +81,8 @@ export const LAYOUT = {
     path: [{ x: -10.5, z: 26.4 }, { x: 5.2, z: 26.4 }, { x: 7.5, z: 24.0 }, { x: 7.5, z: 15.2 }, { x: 9.4, z: 14.4 }],
     stops: [{ x: -4.5, z: 26.4 }, { x: 2.5, z: 26.4 }, { x: 7.5, z: 20.0 }],
   },
+  /** Ramadan iftar table in the event square: `places` seats per side, `gap` apart, starting at x0. */
+  iftarTable: { x0: -0.5, z: 18.6, places: 6, gap: 1.2 },
   /** Where the army truck parks and the player hands over the bulk order. */
   army: { drop: { x: -7.4, z: 16.9 }, truck: { x: -10.0, z: 16.9 } },
   /** Where the health inspector walks in from (the yard's west side). */

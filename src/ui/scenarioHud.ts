@@ -17,6 +17,9 @@ export class ScenarioHud {
   private intro: HTMLElement;
   private tint: HTMLElement;
   private result: HTMLElement;
+  private tug: HTMLElement;
+  private tugMark: HTMLElement;
+  private rec: HTMLElement;
   private key = '';
   private shownPhase = 'idle';
   private resultTimer = 0;
@@ -29,7 +32,9 @@ export class ScenarioHud {
         <div class="sc-hint"></div>
         <div class="sc-goals"></div>
         <div class="sc-likes" hidden><span>❤️</span><div class="sc-track"><div class="sc-bar"></div></div></div>
+        <div class="sc-tug" hidden><span>🔴</span><div class="sc-tug-track"><div class="sc-tug-mark"></div></div><span>⚪</span></div>
       </div>
+      <div id="sc-rec" hidden><span class="rec-dot"></span> REC <b>أكشن! اتجمّد</b></div>
       <div id="sc-intro" hidden></div>
       <div id="sc-result" hidden></div>`);
     this.banner = root.querySelector('#sc-banner')!;
@@ -41,6 +46,9 @@ export class ScenarioHud {
     this.intro = root.querySelector('#sc-intro')!;
     this.tint = root.querySelector('#sc-tint')!;
     this.result = root.querySelector('#sc-result')!;
+    this.tug = this.banner.querySelector('.sc-tug')!;
+    this.tugMark = this.banner.querySelector('.sc-tug-mark')!;
+    this.rec = root.querySelector('#sc-rec')!;
   }
 
   /** Called by main on scenarioStart / scenarioEnd events. */
@@ -83,6 +91,15 @@ export class ScenarioHud {
         this.likes.hidden = !d.likesTarget;
       }
     }
+    // every frame: the derby tug meter and the film set's REC frame
+    const meter = on ? sc.mech.hudMeter?.() : undefined;
+    this.tug.hidden = meter === undefined;
+    if (meter !== undefined) {
+      // white on the left, red on the right: the mark leans toward the side with more fans kept waiting
+      this.tugMark.style.left = `${50 + meter * 46}%`;
+      this.tugMark.classList.toggle('hot', Math.abs(meter) > 0.75);
+    }
+    this.rec.hidden = !(on && sc.mech.hudMode?.() === 'rec');
     if (!on) return;
     const secs = sc.phase === 'warn' ? Math.ceil(sc.t) : sc.phase === 'active' ? Math.ceil(sc.t) : 0;
     const extra = sc.mech.hudText?.(sim) ?? '';

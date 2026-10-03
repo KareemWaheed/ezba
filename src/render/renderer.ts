@@ -24,6 +24,9 @@ export class Renderer {
   private mood = 1;
   private moodTarget = 1;
   private flash = 0;
+  private haze = 0;
+  private hazeTarget = 0;
+  private hazeColor = new THREE.Color();
   private fAcc = 0; private fN = 0; private slowStreak = 0;
   private adaptLocked = false;
   private trial: { pr: number; fps: number; wait: number } | null = null;
@@ -91,6 +94,8 @@ export class Renderer {
   setMood(target: number): void { this.moodTarget = target; }
   /** A lightning flash. */
   lightning(): void { this.flash = 1; }
+  /** Haze over the scene (e.g. a sandstorm): sky and fog blend toward `color` and the fog closes in. 0 = off. */
+  setHaze(color: number, amount: number): void { this.hazeColor.setHex(color); this.hazeTarget = amount; }
 
   private applyMood(dt: number): void {
     this.mood += (this.moodTarget - this.mood) * Math.min(1, dt * 2);
@@ -98,13 +103,17 @@ export class Renderer {
     const k = Math.min(1.6, this.mood + this.flash * 1.2);
     this.hemi.intensity = 2.45 * k;
     this.sun.intensity = 1.73 * k;
-    const bg = this.scene.background as THREE.Color;
-    bg.copy(this.sky).multiplyScalar(0.35 + 0.65 * Math.min(1, k));
-    (this.scene.fog as THREE.Fog).color.copy(bg);
+    this.haze += (this.hazeTarget - this.haze) * Math.min(1, dt * 1.5);
+    if (Math.abs(this.haze - this.hazeTarget) < 0.002) this.haze = this.hazeTarget;
+    const bg = this.scene.background as THREE.Color, fog = this.scene.fog as THREE.Fog;
+    bg.copy(this.sky).multiplyScalar(0.35 + 0.65 * Math.min(1, k)).lerp(this.hazeColor, this.haze);
+    fog.color.copy(bg);
+    fog.near = 40 - 32 * this.haze;
+    fog.far = 80 - 52 * this.haze;
   }
 
   render(dt = 0): void {
-    if (this.mood !== this.moodTarget || this.flash > 0) this.applyMood(dt);
+    if (this.mood !== this.moodTarget || this.flash > 0 || this.haze !== this.hazeTarget) this.applyMood(dt);
     this.gl.render(this.scene, this.camera);
   }
 }
