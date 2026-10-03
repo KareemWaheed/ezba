@@ -32,7 +32,7 @@ export const CAFE = {
   /** Café cash pile (cleaners bring table money here too). */
   cash: { x: 12.7, z: 4.8 },
   /** Table spots in unlock order. */
-  tables: [[17.8, 7.3], [19.5, 7.3], [17.8, 9.3], [19.5, 9.3], [17.8, 11.3], [19.5, 11.3]] as const,
+  tables: [[17.8, 7.7], [19.5, 7.7], [17.8, 9.55], [19.5, 9.55], [17.8, 11.4], [19.5, 11.4]] as const,
   /** Where idle cleaners wait (between the line and the tables). */
   cleanerIdle: { x: 16.5, z: 12.0 },
   /** Where new kitchen helpers appear. */

@@ -312,7 +312,7 @@ export const ECONOMY = {
     /** Extra kitchen helpers (the café opens with one) carrying eggs/milk to the stove. */
     'cafe.helper': { base: 30000, growth: 3, max: 2, step: 1 },
     /** Café cashier at the café counter. */
-    'cafe.waiter': { base: 150000, growth: 1, max: 1, step: 1 },
+    'cafe.waiter': { base: 160000, growth: 1, max: 1, step: 1 },
     /** Cleaners clear dirty tables (+1 per level). */
     'cafe.cleaner': { base: 15000, growth: 3, max: 2, step: 1 },
     /** Loading dock: company trucks with supply contracts. */

@@ -7,29 +7,39 @@ import { UPGRADES } from '../src/config/upgrades';
 import { STATIONS } from '../src/config/stations';
 import { LAYOUT, SOLIDS } from '../src/config/layout';
 import { CAFE } from '../src/config/cafe';
+import { ECONOMY } from '../src/config/economy';
+import { ZONE } from '../src/sim/world';
 
 /** Tile cards are 1.8 squares (render/tiles.ts); keep at least this much floor between two. */
 const TILE = 1.8, TILE_GAP = 0.15;
-/** A tile closer than this to a work spot gets stepped on while working there. */
-const ZONE_GAP = 1.6;
+/** Tiles pay while the player stands within this of their center (ECONOMY.tiles.radius). */
+const TILE_R = ECONOMY.tiles.radius;
+/** Extra floor between a work zone's edge and a tile's pay radius. */
+const ZONE_MARGIN = 0.05;
+/** Players stand near a zone's marker; forgiving radii (shop lanes 1.9) don't mean they stand at the edge. */
+const STAND_MAX = 1.3;
 
 const problems: string[] = [];
 const d = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.hypot(a.x - b.x, a.z - b.z);
 
-/** `owner`: the zone only exists once that tile is bought (so they never show together). */
-const zones: { name: string; x: number; z: number; owner?: string }[] = [
+/**
+ * Work zones with the radius the sim uses for them (the player stands anywhere inside while working).
+ * `owner`: the zone only exists once that tile is bought (so they never show together).
+ */
+const zones: { name: string; x: number; z: number; r: number; owner?: string }[] = [
   ...STATIONS.flatMap((s) => [
-    { name: `${s.product} pile`, x: s.pile.x, z: s.pile.z, owner: s.unlockTrack },
-    { name: `${s.product} counter drop`, x: s.counter.dropX, z: s.counter.dropZ, owner: s.unlockTrack },
+    { name: `${s.product} pile`, x: s.pile.x, z: s.pile.z, r: ZONE.pile, owner: s.unlockTrack },
+    { name: `${s.product} counter drop`, x: s.counter.dropX, z: s.counter.dropZ, r: ZONE.drop, owner: s.unlockTrack },
+    { name: `${s.product} trough`, ...s.trough, r: ECONOMY.feed.radius, owner: s.unlockTrack },
   ]),
-  ...LAYOUT.shop.lanes.map((l, i) => ({ name: `shop lane ${i}`, x: l.x, z: LAYOUT.shop.serveZ })),
-  { name: 'shop cash', ...LAYOUT.shop.cash },
-  { name: 'VIP drop', ...LAYOUT.vipStage.drop },
-  { name: 'dock load', ...LAYOUT.dock.load },
-  ...CAFE.kitchen.map((k) => ({ name: `${k.id} input`, ...k.input })),
-  { name: 'café serve', ...CAFE.counter.serve },
-  { name: 'café cash', ...CAFE.cash },
-  ...CAFE.tables.map(([x, z], i) => ({ name: `café table ${i}`, x, z })),
+  ...LAYOUT.shop.lanes.map((l, i) => ({ name: `shop lane ${i}`, x: l.x, z: LAYOUT.shop.serveZ, r: ECONOMY.serveRadius })),
+  { name: 'shop cash', ...LAYOUT.shop.cash, r: ZONE.cash },
+  { name: 'VIP drop', ...LAYOUT.vipStage.drop, r: 1.5 },
+  { name: 'dock load', ...LAYOUT.dock.load, r: 1.4 },
+  ...CAFE.kitchen.map((k) => ({ name: `${k.id} input`, ...k.input, r: 1.2 })),
+  { name: 'café serve', ...CAFE.counter.serve, r: 1.6 },
+  { name: 'café cash', ...CAFE.cash, r: 1.3 },
+  ...CAFE.tables.map(([x, z], i) => ({ name: `café table ${i}`, x, z, r: 1.15 })),
 ];
 
 for (let i = 0; i < UPGRADES.length; i++) {
@@ -43,7 +53,8 @@ for (let i = 0; i < UPGRADES.length; i++) {
   for (const z of zones) {
     if (z.owner === a.id) continue;
     const g = d(a.pos, z);
-    if (g < ZONE_GAP) problems.push(`tile on a work spot: ${a.id} & ${z.name} (${g.toFixed(2)} apart)`);
+    const need = TILE_R + Math.min(z.r, STAND_MAX) + ZONE_MARGIN;
+    if (g < need) problems.push(`tile pays while working at ${z.name}: ${a.id} (${g.toFixed(2)} apart, need ${need.toFixed(2)})`);
   }
   for (const s of SOLIDS) {
     if (a.pos.x > s.x0 - 0.5 && a.pos.x < s.x1 + 0.5 && a.pos.z > s.z0 - 0.5 && a.pos.z < s.z1 + 0.5) {

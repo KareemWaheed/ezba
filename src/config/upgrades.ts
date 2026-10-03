@@ -47,7 +47,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'cashier', icon: '🧾', label: 'وظّف كاشير', msg: 'الكاشير بيبيع بدالك دلوقتي 🧾',
-    pos: { x: 1.6, z: 1.0 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true, capBy: 'shop.lanes',
+    pos: { x: 1.4, z: 0.6 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true, capBy: 'shop.lanes',
   },
   {
     id: 'shop.lanes', icon: '🛒', label: 'خط دفع جديد', msg: 'فتحت خط دفع جديد، زباين أكتر 🛒',
@@ -97,15 +97,15 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'cafe.waiter', icon: '💁', label: 'وظّف كاشير الكافيه', msg: 'كاشير الكافيه بيخدم الزباين 💁',
-    pos: { x: 19.4, z: 5.4 }, requires: [{ id: 'cafe.cleaner', level: 1 }], milestone: true,
+    pos: { x: 19.4, z: 5.3 }, requires: [{ id: 'cafe.cleaner', level: 1 }], milestone: true,
   },
   {
     id: 'cafe.stove', icon: '🔥', label: 'مطبخ أسرع', msg: 'المطبخ بقى أسرع 🔥',
-    pos: { x: 19.4, z: 1.4 }, requires: [{ id: 'cafe.unlock', level: 1 }],
+    pos: { x: 19.4, z: 1.3 }, requires: [{ id: 'cafe.unlock', level: 1 }],
   },
   {
     id: 'cafe.helper', icon: '🧑‍🍳', label: 'وظّف مساعد مطبخ', msg: 'مساعد مطبخ جديد بيجيب البيض واللبن 🧑‍🍳',
-    pos: { x: 19.4, z: 3.4 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+    pos: { x: 19.4, z: 3.3 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
   },
   // Loading dock: company contracts with trucks
   {
