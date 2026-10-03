@@ -1,7 +1,7 @@
 import { LAYOUT } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import { FIELDS } from '../config/fields';
-import { CROP_IDS, type CropId } from '../config/economy';
+import type { FieldCrop } from '../config/fields';
 import { UPGRADES, type UpgradeDef } from '../config/upgrades';
 import type { SimWorld } from './world';
 
@@ -84,15 +84,18 @@ const FIELD_TUTORIAL = 40;
 function fieldAction(w: SimWorld, out: { x: number; z: number }): boolean {
   const f = w.field, c = w.carry;
   if (!f.open || w.stats.crops >= FIELD_TUTORIAL) return false;
-  const crops = c.items.some((it) => (CROP_IDS as string[]).includes(it));
-  // full (or the field is bare): go sell
-  if (crops && (c.full() || f.ready === 0)) { out.x = FIELDS.stall.drop.x; out.z = FIELDS.stall.drop.z; return true; }
+  // full (or the field is bare): wheat to the stall, corn to its shop counter slot
+  if (c.n > 0 && (c.full() || f.ready === 0)) {
+    if (c.has('wheat')) { out.x = FIELDS.stall.drop.x; out.z = FIELDS.stall.drop.z; return true; }
+    const corn = w.stations.find((s) => s.def.product === 'corn');
+    if (corn && c.has('corn')) { out.x = corn.def.counter.dropX; out.z = corn.def.counter.dropZ; return true; }
+  }
   if (c.full()) return false;
   return nearestStalk(w, out);
 }
 
 /** Nearest grown stalk in any open plot (for the guide and the bot). */
-export function nearestStalk(w: SimWorld, out: { x: number; z: number }, crop?: CropId): boolean {
+export function nearestStalk(w: SimWorld, out: { x: number; z: number }, crop?: FieldCrop): boolean {
   const p0 = w.player;
   let best = Infinity;
   for (const p of w.field.plots) {

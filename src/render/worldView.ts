@@ -92,7 +92,8 @@ export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
     }
   }
   for (let x = cp.x0 + 0.5; x < cp.x1; x += 1.0) g.push(part(PRIM.sphLo, 0x4f9e3a, x, 0.35, cp.z0 - 0.3, 0, 0, 0, 0.55, 0.45, 0.45));
-  for (let z = cp.z0 + 0.5; z < cp.z1; z += 1.0) g.push(part(PRIM.sphLo, 0x4f9e3a, cp.x1 + 0.3, 0.35, z, 0, 0, 0, 0.45, 0.45, 0.55));
+  // east hedge with an opening (z 2.4..4.4) through to the factory yard
+  for (let z = cp.z0 + 0.5; z < cp.z1; z += 1.0) if (z < 2.4 || z > 4.4) g.push(part(PRIM.sphLo, 0x4f9e3a, cp.x1 + 0.3, 0.35, z, 0, 0, 0, 0.45, 0.45, 0.55));
   for (const k of CAFE.kitchen) {
     const sb = k.box, sx = (sb.x0 + sb.x1) / 2, sz = (sb.z0 + sb.z1) / 2, sw = sb.x1 - sb.x0, sd = sb.z1 - sb.z0;
     if (k.id === 'stove') {

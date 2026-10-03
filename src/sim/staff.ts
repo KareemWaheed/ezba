@@ -20,6 +20,10 @@ export interface WorkerJob {
   unloadAt(w: SimWorld, slot: number, out: { x: number; z: number }): void;
   /** Hand one item over; false if the target can't take it right now. */
   give(w: SimWorld, item: ItemId): boolean;
+  /** How many more the target can take right now (workers never load more than this). */
+  room?(w: SimWorld, slot: number): number;
+  /** Put an item back where it came from (target stayed full / went away). */
+  putBack?(w: SimWorld, item: ItemId, slot: number): void;
 }
 
 /** Station job: pile -> counter slot (unloads on the inner side; belts use the outer side). */
@@ -51,6 +55,25 @@ export class StationJob implements WorkerJob {
   }
 }
 
+/** The pens fill the strip between the yard (south) and the farmland (north); the gap between them is the way through. */
+const GAP_X = 1.5, NORTH_Z = -9.95, SOUTH_Z = -1.9;
+
+/**
+ * Next point toward (tx, tz) for walkers that don't collide (staff): crossing between the yard and the
+ * farmland goes through the gap between the pens instead of through them. Writes into `out`.
+ */
+export function farmRoute(x: number, z: number, tx: number, tz: number, out: { x: number; z: number }): { x: number; z: number } {
+  out.x = tx;
+  out.z = tz;
+  const north = z < NORTH_Z, tNorth = tz < NORTH_Z;
+  if (north === tNorth) return out;
+  out.x = GAP_X;
+  // not lined up with the gap yet: go to its mouth on this side; in it: walk through to the far side
+  if (Math.abs(x - GAP_X) > 0.9) out.z = north ? NORTH_Z - 0.4 : SOUTH_Z + 0.4;
+  else out.z = tNorth ? NORTH_Z - 0.6 : SOUTH_Z + 0.6;
+  return out;
+}
+
 /** A hired hand running a WorkerJob. Worse than the player (smaller stack, slower transfers). */
 export class Worker {
   x: number; z: number; rot = 0; speed = 0;
@@ -58,7 +81,17 @@ export class Worker {
   readonly carry: Carrier;
   private t = 0;
   private wait = 0;
+  /** Seconds the target has refused items while unloading. */
+  private stuck = 0;
   private spot = { x: 0, z: 0 };
+  private way = { x: 0, z: 0 };
+
+  /** Walk toward the spot (through the gap if needed); true once actually there. */
+  private walk(s: { x: number; z: number }, speed: number, dt: number): boolean {
+    const r = farmRoute(this.x, this.z, s.x, s.z, this.way);
+    const there = moveToward(this, r.x, r.z, speed, dt, 0.15);
+    return there && r.x === s.x && r.z === s.z;
+  }
 
   constructor(readonly job: WorkerJob, readonly slot: number, x: number, z: number) {
     this.x = x;
@@ -78,28 +111,36 @@ export class Worker {
     switch (this.state) {
       case 'toLoad':
         this.job.loadAt(w, this.slot, s);
-        if (moveToward(this, s.x, s.z, speed, dt, 0.15)) { this.state = 'load'; this.wait = 0; }
+        if (this.walk(s, speed, dt)) { this.state = 'load'; this.wait = 0; }
         break;
       case 'load': {
         this.wait += dt;
         this.rot = turnToward(this.rot, 0, -1, 12, dt);
-        if (this.t <= 0 && !this.carry.full()) {
+        // never load more than the target can take (no standing around with a full stack)
+        const room = this.job.room ? this.job.room(w, this.slot) : Infinity;
+        if (this.t <= 0 && !this.carry.full() && this.carry.n < room) {
           const it = this.job.take(w);
           if (it) { this.carry.push(it); this.t = interval; }
         }
-        if (this.carry.full() || (this.carry.n > 0 && this.wait > cfg.maxWait)) this.state = 'toUnload';
+        if (this.carry.full() || (this.carry.n > 0 && (this.carry.n >= room || this.wait > cfg.maxWait))) { this.state = 'toUnload'; this.stuck = 0; }
         break;
       }
       case 'toUnload':
         this.job.unloadAt(w, this.slot, s);
-        if (moveToward(this, s.x, s.z, speed, dt, 0.15)) this.state = 'unload';
+        if (this.walk(s, speed, dt)) this.state = 'unload';
         break;
       case 'unload':
         this.rot = turnToward(this.rot, 0, 1, 12, dt);
         if (this.t <= 0 && this.carry.n > 0) {
           const it = this.carry.items[this.carry.n - 1];
-          if (this.job.give(w, it)) { this.carry.items.pop(); this.t = interval; }
-          else if (this.wait > 0) this.wait -= dt; // target full: wait a little
+          if (this.job.give(w, it)) { this.carry.items.pop(); this.t = interval; this.stuck = 0; }
+          else this.stuck += dt;
+        }
+        // target stayed full (or the truck left): put the rest back and go again
+        if (this.stuck > 3 && this.job.putBack) {
+          for (const it of this.carry.items) this.job.putBack(w, it, this.slot);
+          this.carry.items.length = 0;
+          this.stuck = 0;
         }
         if (this.carry.n === 0) this.state = 'toLoad';
         break;

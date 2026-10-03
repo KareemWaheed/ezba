@@ -10,9 +10,11 @@ import { ITEM_GEO, ITEM_ICON } from './models';
 import { CharacterView } from './character';
 import { CarrierView } from './stacks';
 import { CustomerView, typedCustomerView } from './customers';
+import { hatGeo } from './accessories';
 
 const { box, cyl } = PRIM;
 const CLEANER = { shirt: 0x6cb6e0, pants: 0x2e2e2e, skin: 0xd9a074, hair: 0x3b2414 };
+const WAITER = { shirt: 0xffffff, pants: 0x2e2e2e, skin: 0xc8916a, hair: 0x1d1d1d };
 
 /** Round table + one chair on the customer side (+z), in plain and "nice" variants. */
 function tableGeo(nice: boolean): THREE.BufferGeometry {
@@ -163,11 +165,12 @@ export class CafeView {
     this.counter = {} as Record<DishId, InstancedStack>;
     this.counterLabel = {} as Record<DishId, Label>;
     DISH_IDS.forEach((d) => {
-      const ct = new InstancedStack(d, ECONOMY.cafe.counterVisualMax, gridSlots(d, 2, 1, 0.42), cb.slots[d].x, 0.96, cb.slotZ);
+      const sl = cb.slots[d];
+      const ct = new InstancedStack(d, ECONOMY.cafe.counterVisualMax, gridSlots(d, sl.cols, 1, 0.42), sl.x, 0.96, sl.z);
       this.root.add(ct.group);
       this.counter[d] = ct;
       const lb = new Label(160, 1.0);
-      lb.s.sprite.position.set(cb.slots[d].x, 2.4, cb.slotZ);
+      lb.s.sprite.position.set(sl.x, 2.4, sl.z);
       this.root.add(lb.s.sprite);
       this.counterLabel[d] = lb;
     });
@@ -248,7 +251,20 @@ export class CafeView {
       const v = this.cleaners[i];
       v.char.update(cl.x, cl.z, cl.rot, cl.speed, dt, cl.carryCash > 0);
     });
+
+    // café cashier: stands behind the counter next to the serve spot, facing the line
+    if (cafe.waiter && !this.waiter) {
+      this.waiter = new CharacterView(WAITER);
+      this.waiter.attach(merge(hatGeo({ kind: 'chef', color: 0xffffff })));
+      this.scene.add(this.waiter.root);
+    }
+    if (this.waiter) {
+      const s = CAFE.counter.serve, front = cafe.customers.some((c) => c.state === 'queue');
+      this.waiter.update(s.x - 0.55, s.z + 0.15, 0, 0, dt, front);
+    }
   }
+
+  private waiter: CharacterView | null = null;
 
   /** World position of the café cash pile (for collect flyers). */
   cashSlot(i: number, out: THREE.Vector3): THREE.Vector3 { return this.cash.slotWorld(i, out); }

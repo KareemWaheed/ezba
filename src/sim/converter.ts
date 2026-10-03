@@ -1,4 +1,4 @@
-import type { DishId, ProductId } from '../config/economy';
+import type { DishId, ItemId } from '../config/economy';
 import type { Recipe } from '../config/recipes';
 import type { SimWorld } from './world';
 
@@ -21,7 +21,7 @@ export interface Breakable {
  * wait in an output tray. Data-driven so the stage-5 bakery/dairy reuse it.
  */
 export class Converter implements Breakable {
-  readonly input = {} as Record<ProductId, number>;
+  readonly input = {} as Record<ItemId, number>;
   readonly output = {} as Record<DishId, number>;
   cooking: Recipe | null = null;
   /** Seconds left on the current recipe. */
@@ -41,23 +41,23 @@ export class Converter implements Breakable {
   ) {
     for (const r of recipes) {
       this.output[r.output] = 0;
-      for (const k of Object.keys(r.inputs) as ProductId[]) this.input[k] = 0;
+      for (const k of Object.keys(r.inputs) as ItemId[]) this.input[k] = 0;
     }
   }
 
   get running(): boolean { return this.enabled; }
 
-  /** Recipes whose raw product is on the farm right now. */
+  /** Recipes whose raw product is on the farm right now (no `needs` = always). */
   active(w: SimWorld): Recipe[] {
-    return this.recipes.filter((r) => w.stations.some((s) => s.open && s.def.product === r.needs));
+    return this.recipes.filter((r) => !r.needs || w.stations.some((s) => s.open && s.def.product === r.needs));
   }
 
   /** Can this raw item be dropped in? */
-  wants(p: ProductId): boolean {
+  wants(p: ItemId): boolean {
     return this.enabled && p in this.input && this.input[p] < this.inputMax;
   }
 
-  accept(p: ProductId): boolean {
+  accept(p: ItemId): boolean {
     if (!this.wants(p)) return false;
     this.input[p]++;
     return true;
@@ -85,11 +85,11 @@ export class Converter implements Breakable {
       for (const r of this.recipes) {
         if (this.output[r.output] >= this.outputMax) continue;
         let ok = true;
-        for (const [k, n] of Object.entries(r.inputs) as [ProductId, number][]) if (this.input[k] < n) { ok = false; break; }
+        for (const [k, n] of Object.entries(r.inputs) as [ItemId, number][]) if (this.input[k] < n) { ok = false; break; }
         if (ok && (!pick || this.output[r.output] < this.output[pick.output])) pick = r;
       }
       if (!pick) return;
-      for (const [k, n] of Object.entries(pick.inputs) as [ProductId, number][]) this.input[k] -= n;
+      for (const [k, n] of Object.entries(pick.inputs) as [ItemId, number][]) this.input[k] -= n;
       this.cooking = pick;
       this.t = pick.time / this.speedMult;
       return;

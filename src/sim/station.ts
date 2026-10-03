@@ -46,8 +46,11 @@ export class Station {
 
   constructor(readonly def: StationDef, readonly index: number) {
     this.open = def.startsOpen;
-    this.area = { ...def.area };
+    this.area = { ...(def.area ?? { x0: 0, x1: 0, z0: 0, z1: 0 }) };
   }
+
+  /** Has animals (eggs, milk); corn doesn't (golden animals, troughs, rushes and pens skip it). */
+  get farmed(): boolean { return !!this.def.producer; }
 
   get pileFull(): boolean { return this.pile + this.pending >= ECONOMY.pile.max; }
 
@@ -67,7 +70,8 @@ export class Station {
   }
 
   update(dt: number, rng: Rng, events: EventQueue): void {
-    if (!this.open) return;
+    if (this.open) for (const f of this.flights) if (f.active) { f.t += dt; if (f.t >= f.dur) { f.active = false; this.pending--; this.pile++; } }
+    if (!this.open || !this.def.producer) return;
     const cfg = ECONOMY.producers[this.def.producer];
     const area = this.area;
     const interval = this.boostT > 0 ? cfg.interval / ECONOMY.feed.mult : cfg.interval;
@@ -89,11 +93,6 @@ export class Station {
         } else a.t = interval; // wait until the pile has room
       }
       a.hop = Math.max(0, a.hop - dt * 3);
-    }
-    for (const f of this.flights) {
-      if (!f.active) continue;
-      f.t += dt;
-      if (f.t >= f.dur) { f.active = false; this.pending--; this.pile++; }
     }
   }
 }

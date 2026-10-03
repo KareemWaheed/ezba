@@ -26,17 +26,17 @@ export class GoldenSystem {
 
   /** Cash for catching a golden animal of this station right now. */
   reward(station: number): number {
-    const st = this.w.stations[station], p = ECONOMY.producers[st.def.producer];
+    const st = this.w.stations[station], p = ECONOMY.producers[st.def.producer ?? 'chicken'];
     const perSec = (st.animals.length / p.interval) * ECONOMY.products[st.def.product].price * this.w.priceMult;
     return Math.round(Math.max(50, perSec * ECONOMY.golden.rewardSeconds));
   }
 
   /** Spawn one now (debug panel). */
   spawn(): void {
-    const w = this.w, open = w.stations.filter((s) => s.open);
+    const w = this.w, open = w.stations.filter((s) => s.open && s.farmed);
     if (!open.length || this.animal) return;
     const st = w.rng.pick(open), d = st.def;
-    this.animal = { station: st.index, x: d.trough.x, z: d.trough.z + 0.8, rot: 0, speed: 0, tx: d.pile.x, tz: 1.5, t: ECONOMY.golden.lifetime };
+    this.animal = { station: st.index, x: d.trough!.x, z: d.trough!.z + 0.8, rot: 0, speed: 0, tx: d.pile.x, tz: 1.5, t: ECONOMY.golden.lifetime };
     w.events.emit('golden', d.product, this.animal.x, this.animal.z, 0, 0, st.index);
   }
 

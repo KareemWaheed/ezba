@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
-import type { CropId, ItemId, ProducerKind } from '../config/economy';
+import type { ItemId, ProducerKind } from '../config/economy';
+import type { FieldCrop } from '../config/fields';
 import { PRIM, Q4, merge, part } from './geo';
 
 const { box, sph, sphLo, cyl, cylLo, cone } = PRIM;
@@ -31,6 +32,20 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
     part(cylLo, 0xffffff, -0.1, 0.32, 0, 0, 0, 0, 0.08, 0.04, 0.08),
     part(cylLo, 0xffffff, 0.1, 0.32, 0, 0, 0, 0, 0.08, 0.04, 0.08),
   ]),
+  // round layer cake on a plate: sponge, cream band, strawberries on top
+  cake: merge([
+    part(cyl, 0xffffff, 0, 0.03, 0, 0, 0, 0, 0.34, 0.05, 0.34),
+    part(cyl, 0xe0a060, 0, 0.13, 0, 0, 0, 0, 0.27, 0.16, 0.27),
+    part(cyl, 0xfff3e0, 0, 0.23, 0, 0, 0, 0, 0.28, 0.05, 0.28),
+    ...[0, 1, 2, 3].map((i) => part(sphLo, 0xe8354a, Math.cos(i * 1.57) * 0.15, 0.28, Math.sin(i * 1.57) * 0.15, 0, 0, 0, 0.05, 0.05, 0.05)),
+  ]),
+  // cheese sandwich on a paper tray: bread, cheese slice peeking out, bread
+  cheese: merge([
+    part(box, 0xf3efe3, 0, 0.02, 0, 0, 0, 0, 0.5, 0.04, 0.34),
+    part(box, 0xe8b860, 0, 0.08, 0, 0, 0, 0, 0.42, 0.07, 0.28),
+    part(box, 0xf6d24a, 0.02, 0.13, 0.02, 0, 0, 0, 0.44, 0.03, 0.3),
+    part(box, 0xe8b860, 0, 0.18, 0, 0, 0, 0, 0.42, 0.07, 0.28),
+  ]),
   // three cobs in green husks, tied with straw
   corn: merge([
     ...[-0.15, 0, 0.15].map((x) => part(cylLo, 0x6fae3a, x, 0.12, 0, Math.PI / 2, 0, 0, 0.09, 0.56, 0.09)),
@@ -50,12 +65,12 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
 };
 
 /** Stacking height of one item. */
-export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, omelette: 0.17, coffee: 0.36, corn: 0.24, wheat: 0.28, bill: 0.11 };
+export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, omelette: 0.17, coffee: 0.36, cake: 0.32, cheese: 0.22, corn: 0.24, wheat: 0.28, bill: 0.11 };
 
-export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', omelette: '🍳', coffee: '☕', corn: '🌽', wheat: '🌾' };
+export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', omelette: '🍳', coffee: '☕', cake: '🍰', cheese: '🥪', corn: '🌽', wheat: '🌾' };
 
 /** Standing crop stalks (one instance per stalk; scaled down to a stub when cut). */
-export const STALK_GEO: Record<CropId, THREE.BufferGeometry> = {
+export const STALK_GEO: Record<FieldCrop, THREE.BufferGeometry> = {
   corn: merge([
     part(cylLo, 0x5f9e35, 0, 0.55, 0, 0, 0, 0, 0.05, 1.1, 0.05),
     part(box, 0x6fb83f, 0.12, 0.6, 0, 0, 0, -0.7, 0.3, 0.03, 0.08),

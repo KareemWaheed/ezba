@@ -16,6 +16,7 @@ import { ScenarioSystem } from './scenario';
 import { ContractSystem } from './contracts';
 import { FieldSystem } from './field';
 import { AlbumSystem, DailySystem } from './meta';
+import { FactorySystem } from './factory';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
@@ -41,6 +42,7 @@ export class SimWorld {
   readonly scenario: ScenarioSystem;
   readonly contracts: ContractSystem;
   readonly field: FieldSystem;
+  readonly factory: FactorySystem;
   readonly album: AlbumSystem;
   readonly daily: DailySystem;
   /** Real-world clock for seasonal events (the UI updates it; the simulator keeps the default). */
@@ -73,6 +75,7 @@ export class SimWorld {
     this.scenario = new ScenarioSystem(this);
     this.contracts = new ContractSystem(this);
     this.field = new FieldSystem(this);
+    this.factory = new FactorySystem(this);
     this.album = new AlbumSystem(this);
     this.daily = new DailySystem(this);
     this.upgrades = new UpgradeSystem(this);
@@ -84,7 +87,7 @@ export class SimWorld {
   get perSec(): number {
     let v = 0;
     for (const st of this.stations) {
-      if (st.open) v += (st.animals.length / ECONOMY.producers[st.def.producer].interval) * ECONOMY.products[st.def.product].price * this.priceMult;
+      if (st.open && st.def.producer) v += (st.animals.length / ECONOMY.producers[st.def.producer].interval) * ECONOMY.products[st.def.product].price * this.priceMult;
     }
     return v;
   }
@@ -129,6 +132,7 @@ export class SimWorld {
     this.golden.update(dt);
     this.cafe.update(dt);
     this.field.update(dt);
+    this.factory.update(dt);
     if (!this.away) this.upgrades.update(dt);
   }
 
@@ -165,6 +169,7 @@ export class SimWorld {
     const fc = ECONOMY.feed;
     for (const s of this.stations) {
       const t = s.def.trough;
+      if (!t) continue;
       if (s.open && s.boostT < fc.duration * fc.refillBelow && dist(p.x, p.z, t.x, t.z) < fc.radius) {
         s.refillT += dt;
         if (s.refillT >= fc.refillTime) {
@@ -203,6 +208,7 @@ export class SimWorld {
       this.events.emit('collect', '', cash.x, cash.z, v, n);
     }
     this.field.interact(dt);
+    this.factory.interact(dt);
   }
 
   /** Advance by any amount of time in safe sub-steps. */

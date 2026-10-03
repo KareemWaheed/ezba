@@ -1,6 +1,7 @@
 import type { Box } from '../sim/math';
 import { CAFE } from './cafe';
 import { FIELDS } from './fields';
+import { FACTORY } from './factories';
 
 /**
  * Static farm layout (world units, +x right, +z toward the camera).
@@ -61,12 +62,12 @@ export const LAYOUT = {
     platform: { x0: 7.2, x1: 11.2, z0: 10.9, z1: 11.5 } as Box,
   },
   /** Sell counter body. */
-  counter: { x0: -5.4, x1: 5.4, z0: 3.55, z1: 4.45 } as Box,
+  counter: { x0: -7.6, x1: 5.4, z0: 3.55, z1: 4.45 } as Box,
 
   /** Decorative trees around the edge (x, z). */
   trees: [
-    [-10, -11], [-17.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 13], [-16.5, 12.5], [-14, -1], [17.5, -12.5], [21.5, -3], [22.5, 4],
-    [22.5, 11], [-6.5, -21.5], [2, -22], [11, -22], [4, 17], [-5, 17.5],
+    [-10, -11], [-17.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 13], [-16.5, 12.5], [-14, -1], [17.5, -12.5], [31, -3], [31.5, 4],
+    [31.5, 11], [-6.5, -21.5], [2, -22], [11, -22], [4, 17], [-5, 17.5],
   ] as const,
   hay: [[19.6, -7.6], [19.6, -6.0], [19.6, -4.4], [20.8, -6.8]] as const,
 } as const;
@@ -101,6 +102,8 @@ export const SOLIDS: Box[] = [
   { ...LAYOUT.hrYard.building },
   ...CAFE.kitchen.map((k) => ({ ...k.box })),
   { ...FIELDS.stall.box },
+  ...FACTORY.machines.map((m) => ({ ...m.box })),
+  { x0: FACTORY.silo.x - FACTORY.silo.r, x1: FACTORY.silo.x + FACTORY.silo.r, z0: FACTORY.silo.z - FACTORY.silo.r, z1: FACTORY.silo.z + FACTORY.silo.r },
   { ...CAFE.counter.box },
   // hay bales lie along x (length 1.2, radius 0.5)
   ...LAYOUT.hay.map(([x, z]) => ({ x0: x - 0.6, x1: x + 0.6, z0: z - 0.5, z1: z + 0.5 })),

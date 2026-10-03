@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ECONOMY } from '../config/economy';
+import { FIELDS } from '../config/fields';
 import type { SimWorld } from '../sim/world';
 import { MAT, PRIM, merge, part } from './geo';
 import type { PhysicsFx } from './physicsFx';
@@ -10,8 +11,7 @@ const DRIVER = { shirt: 0xf28c38, pants: 0x3b4a6b, skin: 0xd9a074, hair: 0x1d1d1
 
 const { box, cyl, cylLo } = PRIM;
 
-/** Where the owned vehicle waits while the player is on foot (south-west of the corn, facing east). */
-const PARK = { x: -6.4, z: -11.0, rot: Math.PI / 2 };
+const PARK = FIELDS.park;
 
 interface Model {
   /** Sprung part (bobs and tilts). */

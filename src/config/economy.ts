@@ -29,11 +29,12 @@ export const ECONOMY = {
   products: {
     egg: { price: 2 },
     milk: { price: 4 },
+    /** Cut in the corn field, sold at the shop counter like eggs and milk. */
+    corn: { price: 5 },
   },
 
-  /** Field crops (stage 4): sale price per bundle at the grain stall. */
+  /** Field crops sold at the grain stall (wheat; it also feeds the bakery). Corn is a shop product. */
   crops: {
-    corn: { price: 5 },
     wheat: { price: 9 },
   },
 
@@ -71,6 +72,22 @@ export const ECONOMY = {
   dishes: {
     omelette: { price: 18 },
     coffee: { price: 10 },
+    /** Stage 5: made in the factories, carried to the café counter. */
+    cake: { price: 45 },
+    cheese: { price: 30 },
+  },
+
+  /** Stage 5 factories (bakery, dairy). */
+  factory: {
+    /** Raw items each machine holds per ingredient, and finished items waiting in its tray. */
+    inputMax: 30,
+    outputMax: 24,
+    /** Wheat silo next to the bakery: stall-sold wheat fills it first while the bakery is open. */
+    siloMax: 80,
+    /** Supplier/porter carry this many. */
+    carry: 6,
+    /** Radius of the factory drop/pick spots. */
+    zone: 1.1,
   },
 
   /** Farm café. */
@@ -154,6 +171,7 @@ export const ECONOMY = {
     qty: {
       egg: { base: 2, perProducer: 0.5, max: 6 },
       milk: { base: 1, perProducer: 1, max: 4 },
+      corn: { base: 2, perProducer: 0, max: 4 },
     },
   },
 
@@ -367,6 +385,18 @@ export const ECONOMY = {
     'field.engine': { base: 20000, growth: 2.3, max: 3, step: 0.12 },
     /** Fertilizer: crops regrow faster, time / (1 + step x level). */
     'field.regrow': { base: 6000, growth: 2.2, max: 4, step: 0.15 },
+    /** Stage 5: the factory yard east of the café with the bakery (eggs + wheat -> cake). */
+    'factory.unlock': { base: 150000, growth: 1, max: 1, step: 1 },
+    /** Dairy in the factory yard (milk -> cheese). */
+    'factory.dairy': { base: 120000, growth: 1, max: 1, step: 1 },
+    /** Factory machines work faster: time / (1 + step x level). */
+    'factory.speed': { base: 30000, growth: 2.2, max: 4, step: 0.35 },
+    /** Factory supplier (+1 per level): brings eggs and milk from the shop counters' surplus. */
+    'factory.worker': { base: 60000, growth: 2.5, max: 2, step: 1 },
+    /** Factory porter (+1 per level): carries cake and cheese to the café counter. */
+    'factory.porter': { base: 80000, growth: 2.5, max: 2, step: 1 },
+    /** Corn workers (+1 per level): corn pile by the grain stall -> the shop counter. */
+    'corn.worker': { base: 40000, growth: 2.5, max: 2, step: 1 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */

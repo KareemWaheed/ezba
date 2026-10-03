@@ -97,7 +97,8 @@ export class CustomerSystem {
 
   private spawn(lane: number): void {
     const w = this.w, rng = w.rng, cfg = ECONOMY.customers;
-    const open = w.stations.filter((s) => s.open);
+    // products with animals always; field products (corn) only while some are on the counter
+    const open = w.stations.filter((s) => s.open && (s.farmed || s.counter > 0));
     if (!open.length) return;
     // shop rushes only (café rushes are handled by the café)
     const rush = w.rush.active && w.rush.kind.target !== 'cafe';
@@ -150,7 +151,7 @@ export class CustomerSystem {
     let base = c.perMinute;
     for (const s of w.stations) {
       if (!s.open) continue;
-      const made = (s.animals.length * 60) / ECONOMY.producers[s.def.producer].interval;
+      const made = s.def.producer ? (s.animals.length * 60) / ECONOMY.producers[s.def.producer].interval : 0;
       const q = c.qty[s.def.product];
       const maxQ = Math.max(1, Math.min(q.max, Math.floor(q.base + s.animals.length * q.perProducer)));
       base += (made * c.demandRatio) / ((1 + maxQ) / 2);

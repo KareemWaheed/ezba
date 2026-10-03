@@ -1,10 +1,14 @@
 import type { Box } from '../sim/math';
-import type { CropId, UpgradeId } from './economy';
+import type { UpgradeId } from './economy';
+
+/** What grows in a plot: corn (shop product) or wheat (grain stall / bakery). */
+export type FieldCrop = 'corn' | 'wheat';
+export const FIELD_CROPS: readonly FieldCrop[] = ['corn', 'wheat'];
 
 /** One crop plot: a grid of stalks (ECONOMY.field.spacing apart) inside `box`. */
 export interface PlotDef {
   id: string;
-  crop: CropId;
+  crop: FieldCrop;
   box: Box;
   /** Upgrade that opens the plot. */
   unlockTrack: UpgradeId;
@@ -27,6 +31,8 @@ export const FIELDS = {
   stall: {
     box: { x0: -2.8, x1: -0.8, z0: -12.3, z1: -11.5 } as Box,
     drop: { x: -1.8, z: -10.75 },
-    cash: { x: -4.2, z: -10.9 },
+    cash: { x: -6.3, z: -11.0 },
   },
+  /** Where the owned vehicle waits while the player is on foot. */
+  park: { x: -8.0, z: -11.2, rot: Math.PI / 2 },
 } as const;

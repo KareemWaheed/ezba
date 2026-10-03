@@ -1,5 +1,5 @@
-import { ECONOMY, type CropId } from '../config/economy';
-import { FIELDS, type PlotDef } from '../config/fields';
+import { ECONOMY, priceOf } from '../config/economy';
+import { FIELDS, type FieldCrop, type PlotDef } from '../config/fields';
 import type { SimWorld } from './world';
 import { dist, moveToward } from './math';
 
@@ -12,7 +12,7 @@ export interface Driver {
   /** Waypoint index along the mowing path. */
   wp: number;
   hopper: number;
-  crop: CropId;
+  crop: FieldCrop;
   /** Seconds until the next bundle unloads. */
   t: number;
   /** 1..0 while cutting (drives the spinning cutter). */
@@ -42,7 +42,7 @@ export class Plot {
     this.grown = this.cols * this.rows;
   }
 
-  get crop(): CropId { return this.def.crop; }
+  get crop(): FieldCrop { return this.def.crop; }
   get size(): number { return this.regrow.length; }
 
   /** World position of stalk i (cell centers). */
@@ -64,7 +64,7 @@ export class FieldSystem {
   /** True while the player drives the owned vehicle in the farmland. */
   driving = false;
   /** Combine hopper: bundles per crop waiting to be unloaded at the stall. */
-  readonly hopper = { corn: 0, wheat: 0 } as Record<CropId, number>;
+  readonly hopper = { corn: 0, wheat: 0 } as Record<FieldCrop, number>;
   hopperN = 0;
   private sellT = 0;
   readonly drivers: Driver[] = [];
@@ -105,10 +105,10 @@ export class FieldSystem {
     return this.driving && this.vehicle === 'combine' ? this.hopperN >= ECONOMY.field.combine.hopper : this.w.carry.full();
   }
 
-  /** Bundles that still need selling (carried + in the hopper). */
+  /** Bundles that still need taking to the stall (carried wheat + everything in the hopper). */
   get held(): number {
     let n = this.hopperN;
-    for (const it of this.w.carry.items) if (it in ECONOMY.crops) n++;
+    for (const it of this.w.carry.items) if (it === 'wheat') n++;
     return n;
   }
 
@@ -180,11 +180,7 @@ export class FieldSystem {
           if (d.t <= 0 && d.hopper > 0) {
             d.t = cfg.unloadInterval;
             d.hopper--;
-            const v = Math.round(ECONOMY.crops[d.crop].price * w.priceMult);
-            this.cash.value += v;
-            this.cash.bills = Math.min(40, this.cash.bills + 1);
-            w.stats.crops++;
-            if (!w.away) w.events.emit('cropSold', d.crop, d.x, d.z, v, 0, -1);
+            this.deliver(d.crop, d.x, d.z, 0);
           }
           if (d.hopper <= 0) d.state = 'back';
           break;
@@ -303,19 +299,15 @@ export class FieldSystem {
     this.sellT -= dt;
     if (this.sellT <= 0 && dist(pl.x, pl.z, st.drop.x, st.drop.z) < (this.driving ? 1.9 : 1.25)) {
       for (const p2 of this.plots) {
-        // carried bundles first, then the combine's hopper (unloads twice as fast)
+        // carried wheat first (carried corn is for the shop counter), then the combine's hopper
         let fromHopper = false;
-        if (!c.take(p2.crop)) {
+        if (p2.crop !== 'wheat' || !c.take('wheat')) {
           if (this.hopper[p2.crop] <= 0) continue;
           this.hopper[p2.crop]--;
           this.hopperN--;
           fromHopper = true;
         }
-        const v = Math.round(ECONOMY.crops[p2.crop].price * w.priceMult);
-        this.cash.value += v;
-        this.cash.bills = Math.min(40, this.cash.bills + 1);
-        w.stats.crops++;
-        w.events.emit('cropSold', p2.crop, st.drop.x, st.drop.z, v, c.n);
+        this.deliver(p2.crop, st.drop.x, st.drop.z, c.n);
         this.sellT = fromHopper ? cfg.sellInterval / 2 : cfg.sellInterval;
         break;
       }
@@ -328,6 +320,22 @@ export class FieldSystem {
       this.cash.value = 0;
       this.cash.bills = 0;
     }
+  }
+
+  /**
+   * One bundle handed in at the stall: wheat fills the bakery silo first, corn goes on the corn pile
+   * (for the shop); whatever has no room is sold right here.
+   */
+  private deliver(crop: FieldCrop, x: number, z: number, n: number): void {
+    const w = this.w;
+    w.stats.crops++;
+    if (crop === 'wheat' && w.factory.store(1)) { if (!w.away) w.events.emit('drop', 'wheat', x, z, 0, n); return; }
+    const corn = crop === 'corn' ? w.stations.find((s) => s.def.product === 'corn') : undefined;
+    if (corn && corn.open && corn.pile + corn.pending < ECONOMY.pile.max) { corn.pile++; if (!w.away) w.events.emit('drop', 'corn', x, z, 0, n); return; }
+    const v = Math.round(priceOf(crop) * w.priceMult);
+    this.cash.value += v;
+    this.cash.bills = Math.min(40, this.cash.bills + 1);
+    if (!w.away) w.events.emit('cropSold', crop, x, z, v, n, -1);
   }
 
   /** Grown stalks in all open plots. */

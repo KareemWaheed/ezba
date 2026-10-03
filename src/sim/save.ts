@@ -36,6 +36,8 @@ export interface SaveData {
     cash: { value: number; bills: number };
   };
   album?: { seen: string[]; paid: string[] };
+  /** Factory machine buffers and the wheat silo. */
+  factory?: { silo: number; machines: Record<string, { in: Record<string, number>; out: Record<string, number> }> };
   daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
   /** Grain stall money not collected yet (stalks restart fully grown). */
   field?: { cash: number; bills: number; hopper?: Record<string, number> };
@@ -87,6 +89,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     },
     field: { cash: w.field.cash.value, bills: w.field.cash.bills, hopper: { ...w.field.hopper } },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
+    factory: { silo: w.factory.silo, machines: Object.fromEntries(w.factory.machines.map((m) => [m.def.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])) },
     daily: { day: w.daily.day, tasks: w.daily.tasks.map((t) => ({ ...t })) },
   };
 }
@@ -129,6 +132,13 @@ export function restore(w: SimWorld, s: SaveData): void {
     cafe.tables.forEach((t, i) => { const d = cf.tables?.[i]; if (d) { t.dirty = !!d.dirty; t.cash = num(d.cash); t.bills = Math.floor(num(d.bills)); } });
     cafe.cash.value = num(cf.cash?.value);
     cafe.cash.bills = Math.floor(num(cf.cash?.bills));
+  }
+  w.factory.silo = Math.max(0, Math.floor(num(s.factory?.silo)));
+  for (const m of w.factory.machines) {
+    const d = s.factory?.machines?.[m.def.id];
+    if (!d) continue;
+    for (const k of Object.keys(m.conv.input) as (keyof typeof m.conv.input)[]) m.conv.input[k] = Math.max(0, Math.floor(num(d.in?.[k])));
+    for (const k of Object.keys(m.conv.output) as (keyof typeof m.conv.output)[]) m.conv.output[k] = Math.max(0, Math.floor(num(d.out?.[k])));
   }
   for (const id of s.album?.seen ?? []) if (typeof id === 'string') w.album.seen.add(id);
   for (const id of s.album?.paid ?? []) if (typeof id === 'string') w.album.paid.add(id);

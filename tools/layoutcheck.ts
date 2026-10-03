@@ -8,6 +8,7 @@ import { STATIONS } from '../src/config/stations';
 import { LAYOUT, SOLIDS } from '../src/config/layout';
 import { CAFE } from '../src/config/cafe';
 import { FIELDS } from '../src/config/fields';
+import { FACTORY } from '../src/config/factories';
 import { ECONOMY } from '../src/config/economy';
 import { ZONE } from '../src/sim/world';
 
@@ -31,7 +32,7 @@ const zones: { name: string; x: number; z: number; r: number; owner?: string }[]
   ...STATIONS.flatMap((s) => [
     { name: `${s.product} pile`, x: s.pile.x, z: s.pile.z, r: ZONE.pile, owner: s.unlockTrack },
     { name: `${s.product} counter drop`, x: s.counter.dropX, z: s.counter.dropZ, r: ZONE.drop, owner: s.unlockTrack },
-    { name: `${s.product} trough`, ...s.trough, r: ECONOMY.feed.radius, owner: s.unlockTrack },
+    ...(s.trough ? [{ name: `${s.product} trough`, ...s.trough, r: ECONOMY.feed.radius, owner: s.unlockTrack }] : []),
   ]),
   ...LAYOUT.shop.lanes.map((l, i) => ({ name: `shop lane ${i}`, x: l.x, z: LAYOUT.shop.serveZ, r: ECONOMY.serveRadius })),
   { name: 'shop cash', ...LAYOUT.shop.cash, r: ZONE.cash },
@@ -43,6 +44,10 @@ const zones: { name: string; x: number; z: number; r: number; owner?: string }[]
   ...CAFE.tables.map(([x, z], i) => ({ name: `café table ${i}`, x, z, r: 1.15 })),
   { name: 'grain stall drop', ...FIELDS.stall.drop, r: 1.25 },
   { name: 'grain stall cash', ...FIELDS.stall.cash, r: 1.3 },
+  ...FACTORY.machines.flatMap((m) => [
+    { name: `${m.id} input`, ...m.input, r: 1.1 },
+    { name: `${m.id} output`, ...m.output, r: 1.1 },
+  ]),
 ];
 // tiles inside a crop plot would be paid into while harvesting
 for (const d of UPGRADES) {

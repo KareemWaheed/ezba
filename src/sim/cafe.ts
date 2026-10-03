@@ -122,6 +122,15 @@ class SupplyJob implements WorkerJob {
     const m = this.cafe.machineFor(item as ProductId);
     return !!m && m.conv.accept(item as ProductId);
   }
+  room(w: SimWorld, slot: number): number {
+    const s = w.stations[this.target[slot]];
+    const m = s && this.cafe.machineFor(s.def.product);
+    return m ? m.conv.inputMax - m.conv.input[s.def.product] : 0;
+  }
+  putBack(w: SimWorld, item: ItemId): void {
+    const s = w.stations.find((x) => x.def.product === item);
+    if (s) s.counter++;
+  }
 }
 
 /** Zone radii in the café. */
@@ -203,6 +212,8 @@ export class CafeSystem {
   private menu(): DishId[] {
     const out: DishId[] = [];
     for (const m of this.machines) for (const r of m.conv.active(this.w)) out.push(r.output);
+    // factory dishes: only while some are on the counter (a stalled chain never angers anyone)
+    for (const m of this.w.factory.machines) if (this.counter[m.def.makes] > 0) out.push(m.def.makes);
     return out;
   }
 
@@ -247,6 +258,18 @@ export class CafeSystem {
     if (!this.open) return;
     const w = this.w, p = w.player, c = w.carry, cfg = ECONOMY.player;
     this.dropT -= dt;
+    // factory dishes the player carried over go onto the café counter at the serve spot
+    if (this.dropT <= 0 && this.playerAtCounter()) {
+      for (const m of w.factory.machines) {
+        const d = m.def.makes;
+        if (!c.has(d) || this.counter[d] >= ECONOMY.cafe.counterMax) continue;
+        c.take(d);
+        this.counter[d]++;
+        this.dropT = cfg.dropInterval;
+        w.events.emit('drop', d, CAFE.counter.serve.x, CAFE.counter.serve.z, 0, c.n);
+        break;
+      }
+    }
     // raw items into whichever machine the player stands at (each takes its own raw item)
     if (this.dropT <= 0) {
       for (const m of this.machines) {

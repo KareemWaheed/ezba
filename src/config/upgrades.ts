@@ -35,11 +35,11 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'player.capacity', icon: '🎒', label: 'شيل أكتر', msg: 'بقيت تشيل أكتر 💪',
-    pos: { x: -7.6, z: 2.0 }, requires: [{ id: 'eggs.animals', level: 1 }],
+    pos: { x: -4.3, z: 6.3 }, requires: [{ id: 'eggs.animals', level: 1 }],
   },
   {
     id: 'player.speed', icon: '👟', label: 'جري أسرع', msg: 'بقيت أسرع ⚡',
-    pos: { x: -7.6, z: 4.2 }, requires: [{ id: 'player.capacity', level: 1 }],
+    pos: { x: 8.0, z: 6.6 }, requires: [{ id: 'player.capacity', level: 1 }],
   },
   {
     id: 'eggs.worker', icon: '👷', label: 'وظّف عامل بيض', msg: 'العامل بيلم البيض بدالك 👷',
@@ -139,6 +139,31 @@ export const UPGRADES: readonly UpgradeDef[] = [
   {
     id: 'field.engine', icon: '⚙️', label: 'موتور أقوى', msg: 'العربية بقت أسرع ⚙️',
     pos: { x: 13.0, z: -11.1 }, requires: [{ id: 'field.tractor', level: 1 }],
+  },
+  {
+    id: 'corn.worker', icon: '🌽', label: 'وظّف عامل درة', msg: 'عامل الدرة بيودّي الدرة للبيع 🌽',
+    pos: { x: -6.6, z: -13.8 }, requires: [{ id: 'field.unlock', level: 1 }], milestone: true,
+  },
+  // Stage 5: factory yard east of the café
+  {
+    id: 'factory.unlock', icon: '🏭', label: 'المصنع والفرن', msg: 'فتحت المصنع! الفرن بيعمل كيك من البيض والقمح 🍰',
+    pos: { x: 19.6, z: -0.9 }, requires: [{ id: 'field.wheat', level: 1 }, { id: 'cafe.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'factory.dairy', icon: '🧀', label: 'مصنع الجبنة', msg: 'مصنع الجبنة شغال! لبن يبقى جبنة 🧀',
+    pos: { x: 23.4, z: 9.4 }, requires: [{ id: 'factory.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'factory.worker', icon: '👷', label: 'وظّف عامل مصنع', msg: 'عامل المصنع بيجيب البيض واللبن 👷',
+    pos: { x: 27.2, z: 3.4 }, requires: [{ id: 'factory.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'factory.porter', icon: '🛒', label: 'وظّف شيّال', msg: 'الشيّال بيودّي الكيك والجبنة للكافيه 🛒',
+    pos: { x: 27.2, z: 5.6 }, requires: [{ id: 'factory.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'factory.speed', icon: '⚙️', label: 'مكن أسرع', msg: 'مكن المصنع بقى أسرع ⚙️',
+    pos: { x: 27.2, z: 7.8 }, requires: [{ id: 'factory.unlock', level: 1 }],
   },
   // Loading dock: company contracts with trucks
   {

@@ -27,7 +27,7 @@ class PenMesh {
       const grew = !Number.isNaN(this.x0);
       this.x0 = a.x0;
       this.x1 = a.x1;
-      const g: THREE.BufferGeometry[] = [ground(a, GROUND[this.st.def.producer] ?? 0xe6d07c, 0.012)];
+      const g: THREE.BufferGeometry[] = [ground(a, GROUND[this.st.def.producer ?? ''] ?? 0xe6d07c, 0.012)];
       fence(a, g);
       // one barn per ~7 units of width, inside the pen along the back fence (the strip behind the
       // pens is the walkway in front of the crop fields)
@@ -60,7 +60,7 @@ class PenMesh {
 export class PenView {
   private pens: PenMesh[];
   constructor(scene: THREE.Scene, sim: SimWorld) {
-    this.pens = sim.stations.map((s) => new PenMesh(scene, s));
+    this.pens = sim.stations.filter((s) => s.farmed).map((s) => new PenMesh(scene, s));
   }
   sync(dt: number, px: number, pz: number): void { for (const p of this.pens) p.sync(dt, px, pz); }
 }

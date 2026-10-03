@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { LAYOUT } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import { FIELDS } from '../config/fields';
+import { FACTORY } from '../config/factories';
 import type { SimWorld } from '../sim/world';
 import { CanvasSprite, FONT, rr } from './canvas';
 
@@ -42,7 +43,7 @@ export class SignsView {
     };
     const early = (w: SimWorld) => w.upgrades.bought < 6;
     for (const st of sim.stations) {
-      const d = st.def, name = d.product === 'egg' ? 'البيض' : 'اللبن';
+      const d = st.def, name = d.product === 'egg' ? 'البيض' : d.product === 'milk' ? 'اللبن' : 'الدرة';
       add(`لمّ ${name} من هنا`, d.pile.x, d.pile.z + 0.6, (w) => st.open && early(w), 1.7);
       add(`حط ${name} هنا للبيع`, d.counter.dropX, d.counter.dropZ, (w) => st.open && early(w), 1.6);
     }
@@ -60,7 +61,13 @@ export class SignsView {
     const fieldNew = (w: SimWorld) => w.field.open && w.stats.crops < 30;
     const corn = FIELDS.plots[0].box;
     add('🌽 امشي في الغيط واحصد', (corn.x0 + corn.x1) / 2, corn.z1 - 1.2, fieldNew, 2.2, 'rgba(63,155,74,0.92)');
-    add('🌽 بيع المحصول هنا', FIELDS.stall.drop.x, FIELDS.stall.drop.z + 0.2, fieldNew, 0.9, 'rgba(63,155,74,0.92)');
+    add('🌾 بيع القمح هنا', FIELDS.stall.drop.x, FIELDS.stall.drop.z + 0.2, fieldNew, 0.9, 'rgba(63,155,74,0.92)');
+    // factory: until a porter takes the carrying over
+    for (const [i, m] of FACTORY.machines.entries()) {
+      const show = (w: SimWorld) => w.factory.machines[i].open && w.upgrades.level('factory.porter') === 0;
+      add(m.id === 'bakery' ? '🥚🌾 حط البيض والقمح' : '🥛 حط اللبن هنا', m.input.x - 0.3, m.input.z + 0.3, show, 0.95, 'rgba(176,96,30,0.9)');
+      add(m.id === 'bakery' ? '🍰 خد الكيك للكافيه' : '🥪 خد الساندويتش للكافيه', m.output.x + 0.3, m.output.z + 0.3, show, 1.9, 'rgba(176,96,30,0.9)');
+    }
     add('🍳 الطلبات للمنصة', LAYOUT.vipStage.drop.x, LAYOUT.vipStage.drop.z, (w) => w.scenario.guest?.state === 'order', 1.6, 'rgba(176,24,46,0.9)');
     add('🚚 حمّل العربية هنا', LAYOUT.dock.load.x, LAYOUT.dock.load.z, (w) => w.contracts.open && w.contracts.truck.state === 'loading' && w.stats.trucks < 4, 1.6, 'rgba(30,91,198,0.9)');
   }

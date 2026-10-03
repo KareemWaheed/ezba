@@ -84,3 +84,13 @@ This file records the decisions made on top of it.
   targets grow with the farm, rewards = seconds of production); customer album (8 customer types with their
   own clothes/hats — picked from the look seed so the sim stays deterministic — plus VIPs and the scenario
   guests; finishing a page pays a production-scaled bonus); side buttons 📋 📖 ⚙️ (sound, install help).
+- Fixes from playtest: workers only load what their target can take (WorkerJob.room) and put leftovers back
+  after 3 s of refusals (putBack) — no more helpers/dock workers frozen with tall stacks; the café cashier is a
+  visible character; corn is a shop product (counter slot at the shop's left end, ordered only while stocked;
+  pile by the grain stall where drivers/combine unload; `corn.worker` carries pile -> counter). Staff crossing
+  between yard and farmland walk through the gap between the pens (farmRoute). Barn/stall/tile positions
+  adjusted (player capacity/speed tiles moved off the longer counter).
+- M11 factories (east of the café): bakery (2 eggs + 2 wheat -> cake), dairy (3 milk -> cheese), generic
+  Converter machines. Wheat handed in at the grain stall fills the bakery silo (80) first. Supplier brings
+  eggs/milk from shop surplus; porter carries cake/cheese to the café counter's front row; the player can do
+  both. Café customers order cake/cheese only while some is on display.

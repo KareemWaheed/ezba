@@ -113,7 +113,7 @@ export class PressureView {
   private _s = new THREE.Vector3();
 
   constructor(scene: THREE.Scene, sim: SimWorld) {
-    this.troughs = sim.stations.map((s) => new TroughView(scene, s.def.trough.x, s.def.trough.z));
+    this.troughs = sim.stations.map((s) => new TroughView(scene, s.def.trough?.x ?? 0, s.def.trough?.z ?? -100));
     for (const b of sim.staff.machines) {
       const sign = new CanvasSprite(96, 96, 0.9);
       sign.draw((c) => { c.font = `70px ${EMOJI}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('⚠️', 48, 52); });
@@ -193,7 +193,7 @@ export class PressureView {
     const a = sim.golden.animal;
     for (const k in this.golden) this.golden[k].visible = false;
     if (a) {
-      const g = this.golden[sim.stations[a.station].def.producer];
+      const g = this.golden[sim.stations[a.station].def.producer ?? 'chicken'];
       g.visible = true;
       // blink in the last 5 seconds
       g.visible = a.t > 5 || Math.sin(this.time * 18) > -0.3;

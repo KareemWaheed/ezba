@@ -111,7 +111,7 @@ export class ScenarioSystem {
   }
 
   private start(def: ScenarioDef): void {
-    const w = this.w, open = w.stations.filter((s) => s.open);
+    const w = this.w, open = w.stations.filter((s) => s.open && s.farmed);
     this.def = def;
     this.featured = def.featured === undefined || def.featured === null ? (open.length ? w.rng.pick(open).def.product : null) : def.featured;
     this.phase = 'warn';
@@ -125,7 +125,7 @@ export class ScenarioSystem {
   /** The guest steps out of the motorcade with their order. */
   private spawnGuest(): void {
     const w = this.w, g = this.def.guest!, e = LAYOUT.vipStage.entry;
-    const open = w.stations.filter((s) => s.open);
+    const open = w.stations.filter((s) => s.open && s.farmed);
     const lines: GuestLine[] = [];
     for (const s of open) {
       const q = ECONOMY.customers.qty[s.def.product];

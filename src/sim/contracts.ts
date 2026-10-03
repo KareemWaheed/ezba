@@ -56,6 +56,16 @@ class DockJob implements WorkerJob {
     out.z = LAYOUT.dock.load.z - 0.3;
   }
   give(_w: SimWorld, item: ItemId): boolean { return this.sys.load(item as ProductId); }
+  /** Only what the waiting truck still needs (nothing while no truck is loading). */
+  room(w: SimWorld): number {
+    let n = 0;
+    for (const s of w.stations) n += Math.max(0, this.sys.stillNeeds(s.def.product));
+    return n;
+  }
+  putBack(w: SimWorld, item: ItemId): void {
+    const s = w.stations.find((x) => x.def.product === item);
+    if (s) s.counter++;
+  }
 }
 
 /**

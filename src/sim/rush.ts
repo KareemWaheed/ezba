@@ -68,7 +68,7 @@ export class RushSystem {
         if (this.t > 0) break;
         if (!force && w.upgrades.bought < cfg.minUpgrades) { this.t = 30; break; }
         if (!force && w.scenario.phase !== 'idle') { this.t = 20; break; }
-        const open = w.stations.filter((s) => s.open);
+        const open = w.stations.filter((s) => s.open && s.farmed);
         this.kind = this.pickKind();
         this.featured = open.length ? w.rng.pick(open).def.product : null;
         this.phase = 'warn';

@@ -21,9 +21,16 @@ export const CAFE = {
   /** Café counter (solid). Dishes stack on it; the player drops dishes / serves from the kitchen side. */
   counter: {
     box: { x0: 13.5, x1: 17.0, z0: 4.6, z1: 5.4 } as Box,
-    /** Each dish stacks where its conveyor ends (kitchen[].beltX). */
-    slots: { omelette: { x: 14.25 }, coffee: { x: 15.95 } } as Record<DishId, { x: number }>,
-    slotZ: 5.0,
+    /**
+     * Where each dish stacks: kitchen dishes in the back row where their conveyor ends (kitchen[].beltX),
+     * dishes carried in from the factories in a single-column front row.
+     */
+    slots: {
+      omelette: { x: 14.25, z: 4.85, cols: 2 },
+      coffee: { x: 15.95, z: 4.85, cols: 2 },
+      cake: { x: 13.8, z: 5.15, cols: 1 },
+      cheese: { x: 15.1, z: 5.15, cols: 1 },
+    } as Record<DishId, { x: number; z: number; cols: number }>,
     /** Player drops dishes here and serves from here. */
     serve: { x: 15.1, z: 3.9 },
     /** Café line starts in front of the counter. */

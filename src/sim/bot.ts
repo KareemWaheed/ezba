@@ -1,8 +1,8 @@
 import { ECONOMY } from '../config/economy';
 import { LAYOUT, SOLIDS, SOLIDS_VERSION } from '../config/layout';
 import { CAFE } from '../config/cafe';
-import { CROP_IDS, type CropId, type ProductId } from '../config/economy';
-import { FIELDS } from '../config/fields';
+import type { ProductId } from '../config/economy';
+import { FIELDS, FIELD_CROPS, type FieldCrop } from '../config/fields';
 import { dist, type Box } from './math';
 import type { SimWorld } from './world';
 import type { TileState } from './upgrades';
@@ -83,7 +83,7 @@ export class Bot {
   /** Current raw-item trip is for the truck at the loading dock. */
   private toDock = false;
   /** Crop being harvested this trip (null = not harvesting). */
-  private harvesting: CropId | null = null;
+  private harvesting: FieldCrop | null = null;
   private stalk = { x: 0, z: 0 };
 
   constructor(private w: SimWorld, readonly profile: BotProfile) {}
@@ -153,7 +153,7 @@ export class Bot {
     }
     // fields: keep cutting until full (stack or combine hopper) or the plot is bare, then sell it all
     const f = w.field;
-    if (this.harvesting && c.items.every((it) => (CROP_IDS as string[]).includes(it))) {
+    if (this.harvesting && c.items.every((it) => (FIELD_CROPS as string[]).includes(it))) {
       if (!f.full() && nearestStalk(w, this.stalk, this.harvesting)) { this.go('harvest', this.stalk.x, this.stalk.z); return; }
       this.harvesting = null;
     }
@@ -180,8 +180,8 @@ export class Bot {
     if (w.field.cash.value > 0 && (cashNeeded || w.field.cash.bills >= 30)) { this.go('cash', FIELDS.stall.cash.x, FIELDS.stall.cash.z); return; }
     // keep the troughs full (player-only production boost)
     const fc = ECONOMY.feed;
-    const hungry = this.profile === 'active' ? w.stations.find((s) => s.open && s.boostT < fc.duration * fc.refillBelow) : undefined;
-    if (hungry && c.n === 0) { this.go('feed', hungry.def.trough.x, hungry.def.trough.z + 0.5); return; }
+    const hungry = this.profile === 'active' ? w.stations.find((s) => s.open && s.def.trough && s.boostT < fc.duration * fc.refillBelow) : undefined;
+    if (hungry && hungry.def.trough && c.n === 0) { this.go('feed', hungry.def.trough.x, hungry.def.trough.z + 0.5); return; }
     if (this.dockTask()) return;
     if (this.cafeTask()) return;
     if (this.fieldTask()) return;

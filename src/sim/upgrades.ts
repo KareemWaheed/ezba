@@ -3,6 +3,7 @@ import { UPGRADES, UPGRADE_BY_ID, type UpgradeDef } from '../config/upgrades';
 import { FENCES, LAYOUT, SOLIDS_VERSION } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import { FIELDS } from '../config/fields';
+import { FACTORY } from '../config/factories';
 import { dist } from './math';
 import type { SimWorld } from './world';
 
@@ -75,9 +76,9 @@ export class UpgradeSystem {
     for (const s of w.stations) {
       if (s.def.unlockTrack) s.open = this.level(s.def.unlockTrack) > 0;
       // bigger pens: move the fence out and update its solid
-      const ex = s.def.expand;
-      if (ex) {
-        const n = this.level(ex.track), a = s.def.area, f = FENCES[s.def.id];
+      const ex = s.def.expand, area = s.def.area;
+      if (ex && area) {
+        const n = this.level(ex.track), a = area, f = FENCES[s.def.id];
         const x0 = a.x0 + ex.dx0 * n, x1 = a.x1 + ex.dx1 * n;
         if (s.area.x0 !== x0 || s.area.x1 !== x1) {
           s.area.x0 = x0;
@@ -86,7 +87,7 @@ export class UpgradeSystem {
         }
       }
       const track = s.def.animalTrack;
-      if (!s.open || !track) continue;
+      if (!s.open || !track || !s.def.producer) continue;
       const want = ECONOMY.producers[s.def.producer].start + this.level(track) * U[track].step;
       while (s.animals.length < want) s.addAnimal(w.rng);
     }
@@ -96,7 +97,8 @@ export class UpgradeSystem {
     w.field.sync();
     w.bounds.z0 = w.field.open ? FIELDS.unlockedZ0 : LAYOUT.bounds.z0;
     w.contracts.sync();
-    w.bounds.x1 = w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
+    w.factory.sync();
+    w.bounds.x1 = w.factory.open ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
   }
 
   private purchase(t: TileState): void {

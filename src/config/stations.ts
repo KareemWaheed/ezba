@@ -9,9 +9,10 @@ import { LAYOUT } from './layout';
 export interface StationDef {
   id: string;
   product: ProductId;
-  producer: ProducerKind;
+  /** Animals that make the product (none for corn: it's cut in the field). */
+  producer?: ProducerKind;
   /** Area the animals wander in. */
-  area: Box;
+  area?: Box;
   /** Pickup pile position and footprint (cols x rows per layer). */
   pile: { x: number; z: number; cols: number; rows: number };
   /** Spot on the counter where this product stacks, and the drop zone in front of it (player side). */
@@ -29,7 +30,7 @@ export interface StationDef {
   /** Fence moves out by these amounts per level of `track` (bigger pen). */
   expand?: { track: UpgradeId; dx0: number; dx1: number };
   /** Feeding trough on the front fence (player refills it for a production boost). */
-  trough: { x: number; z: number };
+  trough?: { x: number; z: number };
 }
 
 export const STATIONS: readonly StationDef[] = [
@@ -47,6 +48,14 @@ export const STATIONS: readonly StationDef[] = [
     pile: { x: 6.5, z: -0.8, cols: 2, rows: 2 },
     trough: { x: 4.4, z: -1.5 },
     counter: { x: 4.4, z: 4, dropX: 4.4, dropZ: 2.9 },
+    startsOpen: false,
+  },
+  {
+    // corn: the pile sits by the grain stall (drivers and the combine unload there); its counter slot is
+    // at the left end of the shop counter
+    id: 'corn', product: 'corn', unlockTrack: 'field.unlock', workerTrack: 'corn.worker',
+    pile: { x: -4.4, z: -10.9, cols: 2, rows: 2 },
+    counter: { x: -6.6, z: 4, dropX: -6.6, dropZ: 2.9 },
     startsOpen: false,
   },
 ];

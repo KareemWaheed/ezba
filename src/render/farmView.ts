@@ -21,6 +21,7 @@ import { PenView } from './penView';
 import { SignsView } from './signs';
 import { DockView } from './dockView';
 import { FieldView } from './fieldView';
+import { FactoryView } from './factoryView';
 import { UPGRADES } from '../config/upgrades';
 
 const _v = new THREE.Vector3();
@@ -29,7 +30,7 @@ const _v = new THREE.Vector3();
 class StationView {
   readonly pile: InstancedStack;
   readonly counter: InstancedStack;
-  readonly herd: AnimalHerdView;
+  readonly herd: AnimalHerdView | null;
   private label = new CanvasSprite(192, 96, 1.1);
   private labelN = -1;
   private objs: THREE.Object3D[] = [];
@@ -46,7 +47,7 @@ class StationView {
     marker.position.z = d.counter.dropZ;
     this.objs.push(this.pile.group, this.counter.group, pallet, marker, this.label.sprite);
     for (const o of this.objs) { o.visible = false; scene.add(o); }
-    this.herd = new AnimalHerdView(scene, d.producer, st.index * 2.1);
+    this.herd = d.producer ? new AnimalHerdView(scene, d.producer, st.index * 2.1) : null;
   }
 
   /** Show `count` and the overflow label ("x120") once the visual stack is capped. */
@@ -86,7 +87,7 @@ class StationView {
     this.syncCounter(st.counter, pop);
     this.pile.update(dt);
     this.counter.update(dt);
-    this.herd.update(st, time, dt, pop);
+    this.herd?.update(st, time, dt, pop);
     // sim-driven flights: animal -> top of pile
     let k = 0;
     for (const f of st.flights) {
@@ -112,6 +113,7 @@ export class FarmView {
   readonly signs: SignsView;
   readonly dock: DockView;
   readonly field: FieldView;
+  readonly factory: FactoryView;
   /** True on frames where a coin flew into an upgrade tile (for the coin sound). */
   coinFlew = false;
   private payT = 0;
@@ -141,6 +143,7 @@ export class FarmView {
     this.cafe = new CafeView(scene);
     this.pens = new PenView(scene, sim);
     this.field = new FieldView(scene, sim);
+    this.factory = new FactoryView(scene);
     this.signs = new SignsView(scene, sim);
     this.dock = new DockView(scene);
     this.arrow = new THREE.Mesh(merge([
@@ -168,6 +171,7 @@ export class FarmView {
     this.signs.sync(sim, dt);
     this.dock.sync(sim);
     this.field.sync(sim, dt);
+    this.factory.sync(sim, dt);
 
     // coins fly from the player into the tile being paid
     this.coinFlew = false;
