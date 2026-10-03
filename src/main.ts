@@ -28,6 +28,9 @@ import { PressureHud } from './ui/pressureHud';
 import { ScenarioHud } from './ui/scenarioHud';
 import { ScenarioView } from './render/scenarioView';
 import { clockFromDate } from './config/events';
+import { Modal, fmtAway, fmtMoney } from './ui/modal';
+import { DebugPanel } from './ui/debug';
+import { simulateAway } from './sim/offline';
 
 preventZoom();
 const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -76,51 +79,43 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) save(
 addEventListener('pagehide', save);
 void requestPersistence();
 
-// temporary dev strip until the M9 debug panel: triple-tap the money counter
-uiRoot.insertAdjacentHTML('beforeend', `
-  <div id="dev" data-ui hidden>
-    <span id="fps"></span>
-    <button data-a="close" class="close">✕</button>
-    <button data-a="money">+500 (اضغط مطوّل)</button>
-    <button data-a="rush">زحمة</button>
-    <button data-a="break">عطل</button>
-    <button data-a="vip">VIP</button>
-    <button data-a="golden">دهبي</button>
-    <button data-a="event">حدث 🎉</button>
-    <button data-a="reset">ابدأ من الأول</button>
-  </div>`);
-const devEl = document.getElementById('dev')!;
-const fpsEl = document.getElementById('fps')!;
-// "+500": tap adds 500; hold to keep adding, faster and faster
-const moneyBtn = devEl.querySelector('[data-a="money"]') as HTMLElement;
-let moneyHold = 0;
-let moneyStep = 500;
-const stopMoney = () => { window.clearInterval(moneyHold); moneyHold = 0; };
-moneyBtn.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  sim.money += 500;
-  moneyStep = 500;
-  stopMoney();
-  moneyHold = window.setInterval(() => { sim.money += moneyStep; moneyStep = Math.round(moneyStep * 1.25); }, 120);
+const modal = new Modal(uiRoot);
+
+/** Time away (reopen or tab return): run the automation for it and say what it earned. */
+function welcomeBack(seconds: number): void {
+  if (seconds < ECONOMY.offline.minSeconds) return;
+  const r = simulateAway(sim, seconds);
+  sim.events.drain(() => {});
+  const capped = seconds > ECONOMY.offline.capSeconds ? `<div class="m-note">(بنحسب لحد ${fmtAway(ECONOMY.offline.capSeconds)} بس)</div>` : '';
+  if (r.earned > 0) {
+    sfx.kaching();
+    modal.open(`
+      <div class="m-icon">👋</div>
+      <div class="m-title">أهلاً بيك تاني!</div>
+      <div>وانت غايب ${fmtAway(seconds)}، العمال والمكن كسبولك</div>
+      <div class="m-big">+${fmtMoney(r.earned)} 💰</div>${capped}
+      <button class="m-btn" data-close>تمام</button>`);
+  } else if (seconds >= 600) {
+    modal.open(`
+      <div class="m-icon">😴</div>
+      <div class="m-title">أهلاً بيك تاني!</div>
+      <div>المزرعة ما كسبتش حاجة وانت غايب. وظّف عمال وكاشير عشان يشتغلوا وانت مش موجود.</div>
+      <button class="m-btn" data-close>ماشي</button>`);
+  }
+  save();
+}
+if (saved) welcomeBack((Date.now() - saved.t) / 1000);
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  if (hiddenAt) welcomeBack((Date.now() - hiddenAt) / 1000);
+  hiddenAt = 0;
 });
-for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) moneyBtn.addEventListener(ev, stopMoney);
-devEl.addEventListener('click', (e) => {
-  const a = (e.target as HTMLElement).closest('button')?.dataset.a;
-  if (a === 'close') devEl.hidden = true;
-  if (a === 'rush') sim.rush.trigger();
-  if (a === 'break') for (const b of sim.staff.belts) if (b.level > 0) b.breakT = 0.01;
-  if (a === 'vip') sim.customers.forceVip = true;
-  if (a === 'golden') sim.golden.spawn();
-  if (a === 'event') sim.scenario.trigger();
-  if (a === 'reset') { clearSave(); location.reload(); }
-});
-let taps: number[] = [];
-hud.money.addEventListener('pointerdown', () => {
-  const now = performance.now();
-  taps = taps.filter((t) => now - t < 700);
-  taps.push(now);
-  if (taps.length >= 3) { devEl.hidden = !devEl.hidden; taps = []; }
-});
+
+const debug = new DebugPanel(uiRoot, sim, view, {
+  away: (sec) => welcomeBack(sec),
+  reset: () => { clearSave(); location.reload(); },
+}, hud.money);
 
 const _sv = new THREE.Vector3();
 function toScreen(x: number, y: number, z: number): THREE.Vector3 {
@@ -225,7 +220,6 @@ farm.sync(sim, 0, false);
 if (import.meta.env.DEV) Object.assign(window, { sim, input, guideTarget, farm });
 
 let last = performance.now();
-let fpsT = 0;
 let goalT = 0;
 function frame(now: number): void {
   const real = Math.min(0.1, Math.max(0, (now - last) / 1000));
@@ -235,7 +229,7 @@ function frame(now: number): void {
   if (input.moved) hud.showHint(false);
   sim.input.x = input.x;
   sim.input.z = input.z;
-  sim.advance(real);
+  sim.advance(real * debug.speed);
   sim.events.drain(onEvent);
 
   const p = sim.player;
@@ -269,8 +263,7 @@ function frame(now: number): void {
   } else hud.setFull(0, 0, false);
 
   view.measure(real);
-  fpsT += real;
-  if (!devEl.hidden && fpsT > 0.5) { fpsT = 0; fpsEl.textContent = `${Math.round(view.fps)} fps · ${view.pixelRatio.toFixed(2)}x`; }
+  debug.update(real);
 
   view.render(real);
   requestAnimationFrame(frame);
