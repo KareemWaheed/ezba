@@ -1,5 +1,6 @@
 import type { ScenarioDef, ScenarioGoal } from '../../config/scenarios';
 import type { SimWorld } from '../world';
+import type { ProductId } from '../../config/economy';
 
 /**
  * What makes one scenario play differently from another. ScenarioSystem owns the phases (warn,
@@ -14,6 +15,8 @@ export interface Mechanic {
   goal(w: SimWorld, g: ScenarioGoal): boolean | undefined;
   /** 0..1 progress for the HUD bar of an owned goal. */
   progress?(w: SimWorld, g: ScenarioGoal): number;
+  /** An item was sold at a shop lane (byPlayer: the player was serving that lane). */
+  onSell?(w: SimWorld, product: ProductId, byPlayer: boolean): void;
   /** Multiplies event customers' tips (on top of the event's own tipMult). */
   tipMult?(): number;
   /** Extra condition for the third star (e.g. a perfect run). */

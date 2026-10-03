@@ -7,12 +7,14 @@ import { BASIC, type Mechanic, type MechanicId } from './scenarios/mechanic';
 import { StormMechanic } from './scenarios/storm';
 import { InspectorMechanic } from './scenarios/inspector';
 import { FootballMechanic } from './scenarios/football';
+import { CommentsMechanic } from './scenarios/comments';
 
 /** Mechanic per id; ids without their own module yet fall back to BASIC. */
 const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
   storm: () => new StormMechanic(),
   inspector: () => new InspectorMechanic(),
   football: () => new FootballMechanic(),
+  comments: () => new CommentsMechanic(),
 };
 
 export interface GoalState { goal: ScenarioGoal; ok: boolean; progress: number }

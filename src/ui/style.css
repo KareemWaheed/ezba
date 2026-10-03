@@ -189,6 +189,22 @@ html, body {
 #sc-result .r-stars span.on { color: #f5b301; text-shadow: 0 2px 0 #b07d00; }
 @keyframes star-pop { 0% { transform: scale(0); } 70% { transform: scale(1.35); } 100% { transform: scale(1); } }
 
+/* influencer live comments: right edge, under the event banner, above the joystick area */
+#sc-feed {
+  position: fixed; right: 8px; top: calc(env(safe-area-inset-top, 0px) + 200px); width: min(62vw, 240px); z-index: 6;
+  pointer-events: none; direction: rtl; display: flex; flex-direction: column; gap: 5px;
+}
+#sc-feed .c-row {
+  background: rgba(17, 17, 27, 0.72); color: #fff; font-size: 13px; font-weight: 700; padding: 5px 9px 6px;
+  border-radius: 12px; animation: c-in 0.25s ease-out; line-height: 1.35;
+}
+#sc-feed .c-row b { color: #ffd166; margin-left: 4px; }
+#sc-feed .c-row.done { background: rgba(142, 108, 196, 0.85); }
+#sc-feed .c-likes { float: left; }
+#sc-feed .c-bar { height: 4px; border-radius: 3px; background: rgba(255, 255, 255, 0.25); margin-top: 4px; overflow: hidden; }
+#sc-feed .c-bar div { height: 100%; background: #ff5c8a; transition: width 0.2s; }
+@keyframes c-in { from { transform: translateX(-20px); opacity: 0; } to { transform: none; opacity: 1; } }
+
 /* event entrance letterbox */
 #cine { position: fixed; inset: 0; z-index: 7; pointer-events: none; }
 #cine .cine-bar { position: absolute; left: 0; right: 0; height: 9vh; background: #000; transition: transform 0.4s ease; }

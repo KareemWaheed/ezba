@@ -230,6 +230,7 @@ export class CustomerSystem {
             c.takeT = w.laneInterval(c.lane);
             c.servedT = 0.8;
             w.events.emit('sell', line.product, c.x, c.z, 0, c.qty - c.left, c.id);
+            if (w.scenario.active) w.scenario.mech.onSell?.(w, line.product, w.playerAtLane(c.lane));
             if (c.left <= 0) { this.finish(c); continue; }
           }
         }

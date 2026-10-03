@@ -11,6 +11,8 @@ import { Bot } from '../src/sim/bot';
 import type { StormMechanic } from '../src/sim/scenarios/storm';
 import type { InspectorMechanic } from '../src/sim/scenarios/inspector';
 import { FOOTBALL, type FootballMechanic } from '../src/sim/scenarios/football';
+import type { CommentsMechanic } from '../src/sim/scenarios/comments';
+import { LAYOUT } from '../src/config/layout';
 
 const DT = 1 / 30;
 const only = process.argv[2];
@@ -211,6 +213,29 @@ if (!only || only === 'messi') {
   });
   w.input.x = w.input.z = 0;
   ok(scored === 0, `messi: skipping the cones scores nothing (${scored})`);
+}
+
+// ---- influencer: live comment requests ----
+if (!only || only === 'influencer') {
+  const w = fresh();
+  w.scenario.trigger('influencer');
+  runUntilIdle(w);
+  ok(goalOk(w, 'likes') === false, 'influencer unattended: likes fail');
+}
+if (!only || only === 'influencer') {
+  // serve at the lane whose front customer wants a requested product
+  const w = fresh();
+  w.scenario.trigger('influencer');
+  let done = 0, total = 0;
+  runUntilIdle(w, (w) => {
+    const m = w.scenario.mech as CommentsMechanic;
+    if (!m.requests) return;
+    done = m.requests.filter((r) => r.done).length; total = m.requests.length;
+    const t = m.botTarget(w) ?? { x: LAYOUT.shop.lanes[0].x, z: LAYOUT.shop.serveZ };
+    w.player.x = t.x; w.player.z = t.z;
+  });
+  ok(total >= 3 && done >= 2, `influencer: requests come in and get filled (${done}/${total})`);
+  ok(goalOk(w, 'likes') === true, `influencer: serving requests fills the likes (${w.scenario.likes})`);
 }
 
 // ---- availability: never pick an event whose area is locked ----

@@ -208,9 +208,9 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     twists: [{ at: 30, kind: 'extend', text: 'العاصفة لسه شغالة! ⛈️' }],
   },
   {
-    id: 'influencer', icon: '📱', title: 'إنفلونسر بيعمل لايف من المزرعة!', hint: 'خدمة سريعة = لايكات، لو الفيديو ضرب الزباين هتزيد',
+    id: 'influencer', icon: '📱', title: 'إنفلونسر بيعمل لايف من المزرعة!', hint: 'بيع بإيدك اللي المتابعين بيطلبوه = لايكات',
     color: '#8e6cc4', weight: 2, warning: 6, duration: 60, arrivalMult: 1.4, crowdShare: 0,
-    patienceMult: 1, qtyMult: 1, tipMult: 1.5, likesTarget: 10,
+    patienceMult: 1, qtyMult: 1, tipMult: 1.5, likesTarget: 30, mechanic: 'comments',
     guest: { name: 'الإنفلونسر', look: 'influencer', qtyMult: 1, payMult: 6, patience: 80, entourage: 1 },
     goals: ['serveGuest', 'likes'], rewardSeconds: 45, rewardShare: 0.3, ratingWin: 0.5, ratingLose: 0,
     boostAfter: { mult: 1.5, seconds: 300 },

@@ -28,6 +28,7 @@ import { PressureHud } from './ui/pressureHud';
 import { ScenarioHud } from './ui/scenarioHud';
 import { ScenarioView } from './render/scenarioView';
 import { Cinematic } from './render/cinematic';
+import { CommentFeed } from './ui/commentFeed';
 import { LAYOUT } from './config/layout';
 import { clockFromDate } from './config/events';
 import { Modal, fmtAway, fmtMoney, ltr } from './ui/modal';
@@ -71,6 +72,7 @@ const pressureHud = new PressureHud(uiRoot);
 const scenarioHud = new ScenarioHud(uiRoot);
 const scenarioView = new ScenarioView(view.scene, view);
 const cinematic = new Cinematic(uiRoot, rig);
+const commentFeed = new CommentFeed(uiRoot);
 sim.clock = clockFromDate(new Date());
 setInterval(() => { sim.clock = clockFromDate(new Date()); }, 60_000);
 
@@ -138,6 +140,7 @@ let dropRun = 0;
 /** Sounds for a mechanic's cues (n is mechanic-specific; see sim/scenarios/). */
 function cueSound(mech: string | undefined, n: number): void {
   if (mech === 'storm') { if (n === 1) sfx.angry(); else sfx.fixed(); }
+  if (mech === 'comments') { if (n === 1) sfx.sell(); else sfx.tip(); }
   if (mech === 'inspector') { if (n === 1) sfx.fixed(); else sfx.clunk(); }
   // football: 1 goal, 2 saved, 3 cone passed, 4 shot without the cones
   if (mech === 'football') { if (n === 1) { sfx.fanfare(); toast.show('جووون! ⚽🔥 الفانز هيدفعوا أكتر'); } else if (n === 2) sfx.clunk(); else if (n === 3) sfx.coin(); else toast.show('لازم تلف على كل الأقماع الأول! 🔶'); }
@@ -300,6 +303,7 @@ function frame(now: number): void {
   hud.setMoney(sim.money);
   pressureHud.update(sim);
   scenarioHud.update(sim);
+  commentFeed.update(sim);
   scenarioView.sync(sim, real);
   if (sim.scenario.phase === 'idle') music.stop();
   goalT -= real;
