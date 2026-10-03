@@ -9,6 +9,7 @@ import { SCENARIOS, type ScenarioDef } from '../src/config/scenarios';
 import { serialize, restore, migrate, type SaveData } from '../src/sim/save';
 import { Bot } from '../src/sim/bot';
 import type { StormMechanic } from '../src/sim/scenarios/storm';
+import type { InspectorMechanic } from '../src/sim/scenarios/inspector';
 
 const DT = 1 / 30;
 const only = process.argv[2];
@@ -130,6 +131,34 @@ if (!only || only === 'storm') {
   w.scenario.trigger('storm');
   runUntilIdle(w, () => bot.update(DT));
   ok(goalOk(w, 'herd') === true, 'storm: the active bot herds them back');
+}
+
+// ---- inspector: a walking checklist ----
+if (!only || only === 'inspector') {
+  const w = fresh();
+  w.scenario.trigger('inspector');
+  runUntilIdle(w);
+  ok(goalOk(w, 'checkpoints') === false, 'inspector unattended: checkpoints fail');
+}
+if (!only || only === 'inspector') {
+  // stand at whatever the event points at (fix, feed, clean happen by standing there)
+  const w = fresh();
+  w.scenario.trigger('inspector');
+  let route = 0;
+  runUntilIdle(w, (w) => {
+    const m = w.scenario.mech as InspectorMechanic;
+    route = Math.max(route, m.route?.length ?? 0);
+    const t = m.botTarget?.(w);
+    if (t) { w.player.x = t.x; w.player.z = t.z; }
+  });
+  ok(route >= 3, `inspector: route has checkpoints (${route})`);
+  ok(goalOk(w, 'checkpoints') === true, 'inspector: everything fixed in time passes');
+}
+if (!only || only === 'inspector') {
+  const w = fresh(), bot = new Bot(w, 'active');
+  w.scenario.trigger('inspector');
+  runUntilIdle(w, () => bot.update(DT));
+  ok(goalOk(w, 'checkpoints') === true, 'inspector: the active bot passes');
 }
 
 // ---- availability: never pick an event whose area is locked ----

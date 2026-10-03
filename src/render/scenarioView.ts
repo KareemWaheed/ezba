@@ -14,10 +14,13 @@ import type { ItemId } from '../config/economy';
 import type { MechanicId } from '../sim/scenarios/mechanic';
 import type { MechanicView, MechanicViewFactory } from './scenarios/types';
 import { StormView } from './scenarios/storm';
+import { InspectorView } from './scenarios/inspector';
+import type { InspectorMechanic } from '../sim/scenarios/inspector';
 
 /** Each mechanic's own visuals (the shared ones — guest, stage, crowd, flags, weather — stay here). */
 const MECHANIC_VIEWS: Partial<Record<MechanicId, MechanicViewFactory>> = {
   storm: (scene, view) => new StormView(scene, view),
+  inspector: (scene) => new InspectorView(scene),
 };
 
 const { box, cyl, sph } = PRIM;
@@ -427,8 +430,13 @@ export class ScenarioView {
     // band bobs, inspector paces
     this.band.forEach((b, k) => { b.body.position.y = Math.abs(Math.sin(this.time * 7 + k)) * 0.15; });
     if (this.inspector) {
-      const a = this.time * 0.35, x = 4 + Math.cos(a) * 7, z = 3 + Math.sin(a) * 4;
-      this.inspector.update(x, z, Math.atan2(-Math.sin(a), Math.cos(a)), 1.8, dt, false);
+      // walks the route the inspector mechanic sets; paces around before it starts
+      const m = sc.mech as Partial<InspectorMechanic>;
+      if (m.route) this.inspector.update(m.x!, m.z!, m.rot!, m.speed!, dt, false);
+      else {
+        const e = LAYOUT.vipStage.entry;
+        this.inspector.update(e.x, e.z, 0, 0, dt, false);
+      }
     }
 
     // storm: darkness + lightning

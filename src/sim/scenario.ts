@@ -5,10 +5,12 @@ import { dist, moveToward, turnToward } from './math';
 import type { SimWorld } from './world';
 import { BASIC, type Mechanic, type MechanicId } from './scenarios/mechanic';
 import { StormMechanic } from './scenarios/storm';
+import { InspectorMechanic } from './scenarios/inspector';
 
 /** Mechanic per id; ids without their own module yet fall back to BASIC. */
 const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
   storm: () => new StormMechanic(),
+  inspector: () => new InspectorMechanic(),
 };
 
 export interface GoalState { goal: ScenarioGoal; ok: boolean; progress: number }

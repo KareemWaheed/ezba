@@ -16,6 +16,9 @@ const EARLY_UPGRADES = 4;
 export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean {
   // the scenario guest waiting at the VIP stage: bring their order in person
   if (vipDelivery(w, out)) return true;
+  // the running event's own objective (strays, checkpoints, the ball...)
+  const ev = w.scenario.active ? w.scenario.mech.botTarget?.(w) : null;
+  if (ev) { out.x = ev.x; out.z = ev.z; return true; }
   // things only the player can do come first: VIPs, jammed machines, golden animals
   for (let i = 0; i < w.lanes; i++) {
     const f = w.customers.front(i);

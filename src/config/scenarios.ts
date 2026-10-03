@@ -30,7 +30,8 @@ export type ScenarioGoal =
   | 'noJams'         // no machine jammed when it ends
   | 'cleanTables'    // no dirty café tables when it ends
   | 'likes'          // fill the likes meter with fast services
-  | 'herd';          // bring every escaped animal back
+  | 'herd'           // bring every escaped animal back
+  | 'checkpoints';   // every stop on the inspector's route is fine
 
 /** The special guest (served only by the player, like a VIP). */
 export interface GuestDef {
@@ -187,10 +188,10 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     flag: 'wedding', tint: 'rgba(217,106,167,0.28)', intro: 'الزفة وصلت! 💃🥁',
   },
   {
-    id: 'inspector', icon: '📋', title: 'مفتش الصحة جه فجأة!', hint: 'صلّح العطل ونضّف الترابيزات ومحدش يزعل',
-    color: '#2fb59a', weight: 2, warning: 4, duration: 45, arrivalMult: 1, crowdShare: 0,
-    patienceMult: 1, qtyMult: 1, tipMult: 1,
-    goals: ['noAngry', 'noJams', 'cleanTables'], rewardSeconds: 90, rewardShare: 0, ratingWin: 0.8, ratingLose: -0.8,
+    id: 'inspector', icon: '📋', title: 'مفتش الصحة جه فجأة!', hint: 'سبق المفتش وظبّط كل حاجة قبل ما يوصلها',
+    color: '#2fb59a', weight: 2, warning: 6, duration: 60, arrivalMult: 1, crowdShare: 0,
+    patienceMult: 1, qtyMult: 1, tipMult: 1, mechanic: 'inspector',
+    goals: ['checkpoints', 'noAngry'], rewardSeconds: 90, rewardShare: 0, ratingWin: 0.8, ratingLose: -0.8,
     props: ['clipboard'], music: 'pop', minUpgrades: 30, when: (w) => w.cafe.open,
     tint: 'rgba(47,181,154,0.25)', intro: 'التفتيش بدأ! 📋',
   },
@@ -222,6 +223,7 @@ export const SCENARIO_GOAL_LABEL: Record<ScenarioGoal, string> = {
   cleanTables: 'الترابيزات نضيفة',
   likes: 'كمّل اللايكات',
   herd: 'رجّع الحيوانات',
+  checkpoints: 'كل نقط التفتيش سليمة',
 };
 
 /** How often scenarios happen (seconds of active play between them). */

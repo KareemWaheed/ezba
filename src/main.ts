@@ -138,6 +138,7 @@ let dropRun = 0;
 /** Sounds for a mechanic's cues (n is mechanic-specific; see sim/scenarios/). */
 function cueSound(mech: string | undefined, n: number): void {
   if (mech === 'storm') { if (n === 1) sfx.angry(); else sfx.fixed(); }
+  if (mech === 'inspector') { if (n === 1) sfx.fixed(); else sfx.clunk(); }
 }
 
 function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void {
