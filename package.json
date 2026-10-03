@@ -12,7 +12,8 @@
     "simulate": "tsx tools/simulate.ts",
     "simulate:check": "tsx tools/simulate.ts --check",
     "cafeflow": "tsx tools/cafeflow.ts",
-    "layoutcheck": "tsx tools/layoutcheck.ts"
+    "layoutcheck": "tsx tools/layoutcheck.ts",
+    "eventcheck": "tsx tools/eventcheck.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.12.0",

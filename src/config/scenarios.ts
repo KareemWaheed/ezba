@@ -1,5 +1,7 @@
 import type { ProductId } from './economy';
 import type { CrowdStyle, FlagId, GuestLookId } from './looks';
+import type { MechanicId } from '../sim/scenarios/mechanic';
+import type { SimWorld } from '../sim/world';
 
 export type { CrowdStyle } from './looks';
 
@@ -81,6 +83,10 @@ export interface ScenarioDef {
   intro?: string;
   /** Only after this many upgrades. */
   minUpgrades: number;
+  /** Only when this holds (e.g. the area it needs is open). */
+  when?: (w: SimWorld) => boolean;
+  /** The event's own rules (sim/scenarios/). */
+  mechanic?: MechanicId;
 }
 
 export const SCENARIOS: readonly ScenarioDef[] = [
@@ -170,7 +176,7 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     color: '#2fb59a', weight: 2, warning: 4, duration: 45, arrivalMult: 1, crowdShare: 0,
     patienceMult: 1, qtyMult: 1, tipMult: 1,
     goals: ['noAngry', 'noJams', 'cleanTables'], rewardSeconds: 90, rewardShare: 0, ratingWin: 0.8, ratingLose: -0.8,
-    props: ['clipboard'], music: 'pop', minUpgrades: 30,
+    props: ['clipboard'], music: 'pop', minUpgrades: 30, when: (w) => w.cafe.open,
     tint: 'rgba(47,181,154,0.25)', intro: 'التفتيش بدأ! 📋',
   },
   {
@@ -178,7 +184,7 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     color: '#4b5563', weight: 2, warning: 6, duration: 50, arrivalMult: 0.8, crowdShare: 0,
     patienceMult: 1.2, qtyMult: 1, tipMult: 1.5, powerCut: true,
     goals: ['noAngry'], rewardSeconds: 70, rewardShare: 0.5, ratingWin: 0.4, ratingLose: -0.2,
-    props: ['rain'], music: 'thunder', minUpgrades: 35,
+    props: ['rain'], music: 'thunder', minUpgrades: 35, when: (w) => w.staff.machines.some((m) => m.running),
     tint: 'rgba(20,24,40,0.45)', intro: 'الكهربا قطعت! ⚡',
   },
   {

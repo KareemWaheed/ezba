@@ -3,6 +3,12 @@ import { ECONOMY, type ProductId } from '../config/economy';
 import { LAYOUT } from '../config/layout';
 import { dist, moveToward, turnToward } from './math';
 import type { SimWorld } from './world';
+import { BASIC, type Mechanic, type MechanicId } from './scenarios/mechanic';
+
+/** Mechanic per id; ids without their own module yet fall back to BASIC. */
+const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {};
+
+export interface GoalState { goal: ScenarioGoal; ok: boolean; progress: number }
 
 export type ScenarioPhase = 'idle' | 'warn' | 'active' | 'settle';
 
@@ -52,7 +58,9 @@ export class ScenarioSystem {
   likes = 0;
   guestServed = false;
   /** Results of the last evaluation (for the end banner). */
-  lastGoals: { goal: ScenarioGoal; ok: boolean }[] = [];
+  lastGoals: GoalState[] = [];
+  /** The running event's own rules (BASIC when it has none). */
+  mech: Mechanic = BASIC;
   /** Post-event arrival boost (e.g. the video went viral). */
   boostT = 0;
   boostMult = 1;
@@ -101,7 +109,7 @@ export class ScenarioSystem {
   }
 
   private pick(): ScenarioDef | null {
-    const w = this.w, ok = SCENARIOS.filter((s) => w.upgrades.bought >= s.minUpgrades);
+    const w = this.w, ok = SCENARIOS.filter((s) => w.upgrades.bought >= s.minUpgrades && (!s.when || s.when(w)));
     if (!ok.length) return null;
     let total = 0;
     for (const s of ok) total += s.weight;
@@ -202,18 +210,34 @@ export class ScenarioSystem {
     }
   }
 
+  /** Live state of every goal of the current event (the HUD and the final check both use this). */
+  checkGoals(): GoalState[] {
+    const w = this.w, d = this.def, m = this.mech;
+    return d.goals.map((goal) => {
+      const own = m.goal(w, goal);
+      let ok: boolean;
+      let progress: number | undefined = m.progress?.(w, goal);
+      if (own !== undefined) ok = own;
+      else switch (goal) {
+        case 'noAngry': ok = this.angry === 0; break;
+        case 'serveGuest': ok = this.guestServed; break;
+        case 'noJams': ok = !w.staff.machines.some((x) => x.running && x.broken); break;
+        case 'cleanTables': { ok = true; for (let i = 0; i < w.cafe.tableCount; i++) if (w.cafe.tables[i].dirty) ok = false; break; }
+        case 'likes': { const t = d.likesTarget ?? 0; ok = this.likes >= t; progress ??= t ? Math.min(1, this.likes / t) : 1; break; }
+        default: ok = false;
+      }
+      return { goal, ok, progress: progress ?? (ok ? 1 : 0) };
+    });
+  }
+
+  private endMechanic(): void {
+    this.mech.teardown(this.w);
+    this.mech = BASIC;
+  }
+
   private finish(): void {
     const w = this.w, d = this.def;
-    const check = (goal: ScenarioGoal): boolean => {
-      switch (goal) {
-        case 'noAngry': return this.angry === 0;
-        case 'serveGuest': return this.guestServed;
-        case 'noJams': return !w.staff.machines.some((m) => m.running && m.broken);
-        case 'cleanTables': { for (let i = 0; i < w.cafe.tableCount; i++) if (w.cafe.tables[i].dirty) return false; return true; }
-        case 'likes': return this.likes >= (d.likesTarget ?? 0);
-      }
-    };
-    this.lastGoals = d.goals.map((goal) => ({ goal, ok: check(goal) }));
+    this.lastGoals = this.checkGoals();
     const won = this.lastGoals.every((g) => g.ok);
     const r = w.service;
     let reward = 0;
@@ -227,6 +251,7 @@ export class ScenarioSystem {
       if (d.boostAfter) { this.boostT = d.boostAfter.seconds; this.boostMult = d.boostAfter.mult; }
     } else r.rating = Math.max(1, r.rating + d.ratingLose);
     w.events.emit('scenarioEnd', '', 0, 0, reward, won ? 1 : 0);
+    this.endMechanic();
     this.phase = 'idle';
     this.guest = null;
     this.t = this.gap();
@@ -236,6 +261,7 @@ export class ScenarioSystem {
     const w = this.w;
     if (w.away) {
       if (this.phase !== 'idle') {
+        this.endMechanic();
         this.phase = 'idle';
         this.guest = null;
         this.t = this.gap();
@@ -246,6 +272,7 @@ export class ScenarioSystem {
     if (this.boostT > 0) this.boostT = Math.max(0, this.boostT - dt);
     this.t -= dt;
     this.updateGuest(dt);
+    if (this.phase === 'active' || this.phase === 'settle') this.mech.update(w, dt);
     switch (this.phase) {
       case 'idle':
         if (this.t > 0) break;
@@ -258,6 +285,8 @@ export class ScenarioSystem {
           this.phase = 'active';
           this.t = this.def.duration;
           if (this.def.guest) this.spawnGuest();
+          this.mech = MECHANICS[this.def.mechanic ?? 'basic']?.() ?? BASIC;
+          this.mech.start(w, this.def);
           w.events.emit('scenarioStart', this.featured ?? '');
         }
         break;

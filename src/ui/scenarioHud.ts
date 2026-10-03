@@ -1,4 +1,4 @@
-import { SCENARIO_GOAL_LABEL, type ScenarioGoal } from '../config/scenarios';
+import { SCENARIO_GOAL_LABEL } from '../config/scenarios';
 import type { SimWorld } from '../sim/world';
 
 /**
@@ -41,17 +41,6 @@ export class ScenarioHud {
     this.result = root.querySelector('#sc-result')!;
   }
 
-  private goalOk(sim: SimWorld, g: ScenarioGoal): boolean {
-    const sc = sim.scenario;
-    switch (g) {
-      case 'noAngry': return sc.angry === 0;
-      case 'serveGuest': return sc.guestServed;
-      case 'noJams': return !sim.staff.machines.some((m) => m.running && m.broken);
-      case 'cleanTables': { for (let i = 0; i < sim.cafe.tableCount; i++) if (sim.cafe.tables[i].dirty) return false; return true; }
-      case 'likes': return sc.likes >= (sc.def.likesTarget ?? 0);
-    }
-  }
-
   /** Called by main on scenarioStart / scenarioEnd events. */
   showIntro(text: string, color: string): void {
     this.intro.textContent = text;
@@ -90,7 +79,7 @@ export class ScenarioHud {
     if (!on) return;
     const secs = sc.phase === 'warn' ? Math.ceil(sc.t) : sc.phase === 'active' ? Math.ceil(sc.t) : 0;
     let key = `${sc.phase}|${secs}|${sc.likes}`;
-    const states = d.goals.map((g) => this.goalOk(sim, g));
+    const states = sc.checkGoals().map((g) => g.ok);
     key += states.join(',');
     if (key === this.key) return;
     this.key = key;
