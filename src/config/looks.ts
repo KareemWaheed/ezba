@@ -13,7 +13,7 @@ export interface GuestLook {
   bigHair?: boolean;
   beard?: number;
   /** Something on the head. */
-  hat?: { kind: 'cap' | 'beret' | 'crown' | 'veil' | 'flowerCrown'; color: number };
+  hat?: { kind: 'cap' | 'beret' | 'crown' | 'veil' | 'flowerCrown' | 'straw' | 'chef' | 'hardhat'; color: number };
   /** Necktie / bow tie color. */
   tie?: number;
   /** Sunglasses frame color. */

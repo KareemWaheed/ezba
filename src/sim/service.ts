@@ -7,6 +7,8 @@ export interface ServedCustomer {
   patience: number; patienceMax: number;
   playerItems: number; qty: number;
   away: boolean;
+  /** Album entry (customer type or 'vip'). */
+  type: string;
 }
 
 /**
@@ -37,6 +39,7 @@ export class ServiceSystem {
   /** Customer paid `value`. Returns the tip (0 if staff served or service was slow). */
   complete(c: ServedCustomer, value: number): number {
     const cfg = ECONOMY.tips, r = ECONOMY.rating;
+    if (!c.away) this.w.album.see(c.type);
     const fast = c.patience / c.patienceMax >= cfg.fastAbove;
     const byPlayer = c.playerItems * 2 >= c.qty;
     if (!c.away) this.rate(fast ? r.scoreFast : r.scoreNormal);

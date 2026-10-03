@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { moodOf, type Customer, type Mood } from '../sim/customers';
 import type { SimWorld } from '../sim/world';
 import { CROWD_LOOKS, GUEST_LOOKS, type GuestLook } from '../config/looks';
+import { CUSTOMER_TYPES, type CustomerType } from '../config/album';
 import { bodyAccessories, handProp } from './accessories';
 import { CharacterView, type Outfit } from './character';
 import { CarrierView } from './stacks';
@@ -157,6 +158,18 @@ export class CustomerView {
   invalidate(): void { this.shownKey = -1; this.faceKey = -1; }
 }
 
+/** A regular customer dressed as their type (farmer, chef, tourist...); plain random clothes otherwise. */
+export function typedCustomerView(c: { kind: BubbleCustomer['kind']; look: number; type: string }): CustomerView {
+  const t: CustomerType | undefined = (CUSTOMER_TYPES as Record<string, CustomerType>)[c.type];
+  if (!t || c.kind !== 'normal') return new CustomerView(c);
+  const v = new CustomerView(c, { ...outfitOf(c.look), shirt: t.shirts[c.look % t.shirts.length], pants: t.pants[(c.look >>> 5) % t.pants.length] });
+  const body = t.hat ? bodyAccessories({ hat: t.hat }) : null;
+  if (body) v.char.attach(body);
+  const hand = t.holds ? handProp({ holds: t.holds }) : null;
+  if (hand) v.char.attach(hand, 'hand');
+  return v;
+}
+
 /** Maps sim customers to views; views are created on arrival and dropped when the customer leaves. */
 export class CustomersView {
   private views = new Map<number, CustomerView>();
@@ -177,7 +190,7 @@ export class CustomersView {
       const cl = CROWD_LOOKS[c.style] as { shirts: readonly number[]; pants: readonly number[]; hat?: GuestLook['hat'] };
       outfit = { ...outfitOf(c.look), shirt: cl.shirts[c.look % cl.shirts.length], pants: cl.pants[(c.look >>> 5) % cl.pants.length] };
       if (cl.hat) extras = { hat: cl.hat };
-    }
+    } else return typedCustomerView(c);
     const v = new CustomerView(c, outfit);
     if (extras) {
       const body = bodyAccessories(extras);

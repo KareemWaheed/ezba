@@ -15,6 +15,7 @@ import { CafeSystem } from './cafe';
 import { ScenarioSystem } from './scenario';
 import { ContractSystem } from './contracts';
 import { FieldSystem } from './field';
+import { AlbumSystem, DailySystem } from './meta';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
@@ -40,6 +41,8 @@ export class SimWorld {
   readonly scenario: ScenarioSystem;
   readonly contracts: ContractSystem;
   readonly field: FieldSystem;
+  readonly album: AlbumSystem;
+  readonly daily: DailySystem;
   /** Real-world clock for seasonal events (the UI updates it; the simulator keeps the default). */
   clock: Clock = { weekday: 1, hour: 12, ramadan: false };
   readonly cash = { value: 0, bills: 0 };
@@ -70,9 +73,20 @@ export class SimWorld {
     this.scenario = new ScenarioSystem(this);
     this.contracts = new ContractSystem(this);
     this.field = new FieldSystem(this);
+    this.album = new AlbumSystem(this);
+    this.daily = new DailySystem(this);
     this.upgrades = new UpgradeSystem(this);
     this.upgrades.apply();
     this.upgrades.refresh();
+  }
+
+  /** What the animals produce per second at shop prices (scales rewards: events, tasks, album). */
+  get perSec(): number {
+    let v = 0;
+    for (const st of this.stations) {
+      if (st.open) v += (st.animals.length / ECONOMY.producers[st.def.producer].interval) * ECONOMY.products[st.def.product].price * this.priceMult;
+    }
+    return v;
   }
 
   /** Sale price multiplier from farm growth (see ECONOMY.market). */

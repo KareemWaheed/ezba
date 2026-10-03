@@ -77,3 +77,10 @@ This file records the decisions made on top of it.
   They work during time away (stall money counts toward offline earnings at the usual 30%). Balance after
   drivers: corn 5 / wheat 9 per bundle, fertilizer step 0.15 — a fully upgraded field earns about what the
   shop does (~5k/min), drivers add ~4k/min of automation.
+- M9: debug panel (triple-tap money: +money, speed x1/x5/x10, time away 10m/1h/2h, rush/jam/VIP/golden/event,
+  quality auto/1x/1.5x/2x, FPS, reset); welcome-back popup on reopen and tab return (automation only, 30%,
+  2 h cap); PWA (vite-plugin-pwa: manifest, PNG + maskable + apple-touch icons, precache of every built file
+  incl. the Rapier chunk, auto update); daily tasks (3 per calendar day from a pool gated by what's unlocked,
+  targets grow with the farm, rewards = seconds of production); customer album (8 customer types with their
+  own clothes/hats — picked from the look seed so the sim stays deterministic — plus VIPs and the scenario
+  guests; finishing a page pays a production-scaled bonus); side buttons 📋 📖 ⚙️ (sound, install help).

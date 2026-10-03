@@ -218,9 +218,8 @@ export class ScenarioSystem {
     const r = w.service;
     let reward = 0;
     if (won) {
-      let perSec = 0;
-      for (const st of w.stations) if (st.open) perSec += (st.animals.length / ECONOMY.producers[st.def.producer].interval) * ECONOMY.products[st.def.product].price * w.priceMult;
-      reward = Math.round(d.rewardSeconds * perSec + this.sales * d.rewardShare);
+      reward = Math.round(d.rewardSeconds * w.perSec + this.sales * d.rewardShare);
+      if (d.guest) w.album.see(`g:${d.id}`);
       w.cash.value += reward;
       w.cash.bills += 16;
       r.rating = Math.min(5, r.rating + d.ratingWin);

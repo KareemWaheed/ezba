@@ -28,8 +28,10 @@ import { PressureHud } from './ui/pressureHud';
 import { ScenarioHud } from './ui/scenarioHud';
 import { ScenarioView } from './render/scenarioView';
 import { clockFromDate } from './config/events';
-import { Modal, fmtAway, fmtMoney } from './ui/modal';
+import { Modal, fmtAway, fmtMoney, ltr } from './ui/modal';
 import { DebugPanel } from './ui/debug';
+import { MetaMenus, dayKey } from './ui/menus';
+import { ALBUM_PAGES } from './config/album';
 import { simulateAway } from './sim/offline';
 
 preventZoom();
@@ -112,6 +114,9 @@ document.addEventListener('visibilitychange', () => {
   hiddenAt = 0;
 });
 
+sim.daily.ensure(dayKey());
+const menus = new MetaMenus(uiRoot, sim, modal);
+
 const debug = new DebugPanel(uiRoot, sim, view, {
   away: (sec) => welcomeBack(sec),
   reset: () => { clearSave(); location.reload(); },
@@ -143,6 +148,20 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       break;
     }
     case 'cropSold': sfx.sell(); break;
+    case 'albumNew': {
+      const en = ALBUM_PAGES[e.n]?.entries[e.id];
+      if (en) { sfx.sparkle(); toast.show(`📖 جديد في الألبوم: ${en.name} ${en.icon}`); }
+      break;
+    }
+    case 'albumPage': sfx.fanfare(); toast.show(`📖 كمّلت صفحة "${ALBUM_PAGES[e.n].name}"! ${ltr(`+${e.value.toLocaleString('en-US')}`)} 💰`); break;
+    case 'taskDone': sfx.sparkle(); toast.show('📋 خلصت مهمة! افتح المهام واستلم الجايزة'); break;
+    case 'taskClaimed': {
+      sfx.kaching();
+      const s = toScreen(sim.player.x, 2.6, sim.player.z);
+      hud.float(`+${e.value}`, s.x, s.y);
+      save();
+      break;
+    }
     case 'goldenStalk': {
       sfx.fanfare();
       const s = toScreen(e.x, 2, e.z);
@@ -170,7 +189,7 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       break;
     }
     case 'truckDone':
-      if (e.value > 0) { sfx.kaching(); toast.show(`${sim.contracts.truck.company.name} دفعت +${e.value.toLocaleString('en-US')} ${e.n ? '👍' : ''}`); }
+      if (e.value > 0) { sfx.kaching(); toast.show(`${sim.contracts.truck.company.name} دفعت ${ltr(`+${e.value.toLocaleString('en-US')}`)} ${e.n ? '👍' : ''}`); }
       else toast.show(`العربية مشيت فاضية 😕`);
       break;
     case 'vip':
@@ -185,7 +204,7 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       scenarioHud.showResult(sim, !!e.n, e.value);
       break;
     case 'rushEnd':
-      if (e.n) { sfx.fanfare(); toast.show(`الزحمة عدّت من غير زعل! +${e.value} 🎉`); }
+      if (e.n) { sfx.fanfare(); toast.show(`الزحمة عدّت من غير زعل! ${ltr(`+${e.value}`)} 🎉`); }
       else toast.show('الزحمة خلصت، بس في زباين زعلوا 😕');
       break;
     case 'break': sfx.clunk(); toast.show('السير عطل! روح صلّحه 🔧'); break;
@@ -264,6 +283,7 @@ function frame(now: number): void {
 
   view.measure(real);
   debug.update(real);
+  menus.update(real);
 
   view.render(real);
   requestAnimationFrame(frame);

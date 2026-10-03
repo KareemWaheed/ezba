@@ -1,4 +1,5 @@
 import { DISH_IDS, ECONOMY, type DishId, type ItemId, type ProductId } from '../config/economy';
+import { pickType } from '../config/album';
 import { CAFE } from '../config/cafe';
 import { KITCHEN_RECIPES } from '../config/recipes';
 import { Converter } from './converter';
@@ -28,6 +29,8 @@ export type CafeState = 'queue' | 'toTable' | 'eat' | 'leave' | 'angry';
 export interface CafeCustomer {
   id: number;
   look: number;
+  /** Customer type (album entry) — also picks their clothes. */
+  type: string;
   x: number; z: number; rot: number; speed: number;
   state: CafeState;
   lines: DishLine[];
@@ -223,8 +226,9 @@ export class CafeSystem {
     const pc = cfg.patience * (1 + w.upgrades.level('cafe.nice') * 0.2);
     const rush = w.rush.active && w.rush.kind.target === 'cafe';
     if (rush) w.rush.spawned++;
+    const look = rng.int(1 << 30);
     this.customers.push({
-      id: this.nextId++, look: rng.int(1 << 30), x: CAFE.spawn.x + rng.range(-1, 1), z: CAFE.spawn.z, rot: Math.PI, speed: 0,
+      id: this.nextId++, look, type: pickType(this.w, look), x: CAFE.spawn.x + rng.range(-1, 1), z: CAFE.spawn.z, rot: Math.PI, speed: 0,
       state: 'queue', lines, qty: total, left: total, patience: pc, patienceMax: pc, playerItems: 0, away: w.away, rush,
       table: -1, takeT: 0, servedT: 0, eatT: 0, gone: false,
     });

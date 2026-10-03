@@ -182,3 +182,45 @@ html, body {
 #sc-result .r-icon { font-size: 40px; line-height: 1; }
 #sc-result .r-title { font-size: 22px; margin: 4px 0 6px; }
 #sc-result .r-reward { font-size: 26px; color: #2f8f3a; direction: ltr; margin-top: 6px; }
+
+/* side buttons: tasks, album, settings */
+#side {
+  position: fixed; left: 10px; top: calc(env(safe-area-inset-top, 0px) + 84px); z-index: 6;
+  display: flex; flex-direction: column; gap: 8px;
+}
+#side button {
+  position: relative; width: 44px; height: 44px; border-radius: 14px; border: 0; font-size: 22px; line-height: 1;
+  background: rgba(255, 251, 234, 0.92); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.18); padding: 0;
+}
+#side .badge {
+  position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; border-radius: 10px; padding: 0 5px;
+  background: #e8554e; color: #fff; font: 800 13px/20px var(--font); direction: ltr;
+}
+#side .badge[hidden] { display: none; }
+/* daily tasks */
+#modal .t-list { display: flex; flex-direction: column; gap: 8px; margin: 6px 0; text-align: right; }
+#modal .t-row { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 14px; padding: 6px 8px; border: 2px solid var(--panel-edge); }
+#modal .t-icon { font-size: 26px; }
+#modal .t-body { flex: 1; min-width: 0; }
+#modal .t-label { font-weight: 800; font-size: 15px; }
+#modal .t-track { height: 7px; border-radius: 4px; background: #e9dfb6; overflow: hidden; margin: 3px 0; direction: ltr; }
+#modal .t-bar { height: 100%; background: var(--bill); border-radius: 4px; }
+#modal .t-sub { font-size: 13px; }
+#modal .t-claim {
+  font: inherit; font-weight: 800; font-size: 15px; border: 0; border-radius: 12px; padding: 6px 10px;
+  background: var(--accent); color: #fff; box-shadow: 0 3px 0 #b8600f;
+}
+#modal .t-claim:disabled { background: #c9c3a8; box-shadow: 0 3px 0 #a39d84; }
+#modal .t-ok { font-size: 24px; }
+/* album */
+#modal .a-page { background: #fff; border: 2px solid var(--panel-edge); border-radius: 14px; padding: 6px 8px; margin: 8px 0; }
+#modal .a-head { display: flex; justify-content: space-between; font-size: 15px; }
+#modal .a-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; margin: 6px 0; }
+#modal .a-cell { display: flex; flex-direction: column; align-items: center; background: #fff6d6; border-radius: 10px; padding: 4px 2px; }
+#modal .a-cell span { font-size: 26px; line-height: 1.1; }
+#modal .a-cell small { font-size: 11px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+#modal .a-cell.off { background: #eee8d2; opacity: 0.6; }
+#modal .a-reward { font-size: 13px; font-weight: 800; color: #2f8f3a; }
+/* settings */
+#modal .s-sound { background: var(--accent); box-shadow: 0 4px 0 #b8600f; display: block; margin: 8px auto 4px; }
+#modal .s-tip { background: #fff; border: 2px solid var(--panel-edge); border-radius: 12px; padding: 8px; margin-top: 10px; font-size: 14px; }

@@ -35,6 +35,8 @@ export interface SaveData {
     tables: { dirty: boolean; cash: number; bills: number }[];
     cash: { value: number; bills: number };
   };
+  album?: { seen: string[]; paid: string[] };
+  daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
   /** Grain stall money not collected yet (stalks restart fully grown). */
   field?: { cash: number; bills: number; hopper?: Record<string, number> };
 }
@@ -84,6 +86,8 @@ export function serialize(w: SimWorld, now: number): SaveData {
       cash: { value: w.cafe.uncollected - w.cafe.tables.reduce((a, t) => a + t.cash, 0), bills: w.cafe.cash.bills },
     },
     field: { cash: w.field.cash.value, bills: w.field.cash.bills, hopper: { ...w.field.hopper } },
+    album: { seen: [...w.album.seen], paid: [...w.album.paid] },
+    daily: { day: w.daily.day, tasks: w.daily.tasks.map((t) => ({ ...t })) },
   };
 }
 
@@ -125,6 +129,14 @@ export function restore(w: SimWorld, s: SaveData): void {
     cafe.tables.forEach((t, i) => { const d = cf.tables?.[i]; if (d) { t.dirty = !!d.dirty; t.cash = num(d.cash); t.bills = Math.floor(num(d.bills)); } });
     cafe.cash.value = num(cf.cash?.value);
     cafe.cash.bills = Math.floor(num(cf.cash?.bills));
+  }
+  for (const id of s.album?.seen ?? []) if (typeof id === 'string') w.album.seen.add(id);
+  for (const id of s.album?.paid ?? []) if (typeof id === 'string') w.album.paid.add(id);
+  if (s.daily && typeof s.daily.day === 'string' && Array.isArray(s.daily.tasks)) {
+    w.daily.day = s.daily.day;
+    w.daily.tasks = s.daily.tasks.filter((t) => t && typeof t.id === 'string').map((t) => ({
+      id: t.id, target: Math.max(1, num(t.target, 1)), start: num(t.start), reward: num(t.reward), claimed: !!t.claimed, notified: !!t.notified,
+    }));
   }
   w.field.cash.value = num(s.field?.cash);
   w.field.cash.bills = Math.floor(num(s.field?.bills));

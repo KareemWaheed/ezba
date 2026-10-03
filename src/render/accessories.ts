@@ -20,6 +20,12 @@ export function hatGeo(h: HatLook): THREE.BufferGeometry[] {
     case 'crown': return [part(cyl, 0xf5c542, 0, 1.78, -0.03, 0, 0, 0, 0.2, 0.14, 0.2), ...[0, 1, 2, 3, 4].map((i) => part(cone, 0xf5c542, Math.cos((i / 5) * Math.PI * 2) * 0.16, 1.9, -0.03 + Math.sin((i / 5) * Math.PI * 2) * 0.16, 0, 0, 0, 0.05, 0.12, 0.05))];
     case 'veil': return [part(sph, h.color, 0, 1.55, -0.12, 0, 0, 0, 0.32, 0.4, 0.3), part(box, h.color, 0, 1.15, -0.25, 0, 0, 0, 0.5, 0.6, 0.05)];
     case 'flowerCrown': return [0, 1, 2, 3, 4, 5].map((i) => part(sph, i % 2 ? 0xf28c38 : 0xd96aa7, Math.cos((i / 6) * Math.PI * 2) * 0.24, 1.66, Math.sin((i / 6) * Math.PI * 2) * 0.24, 0, 0, 0, 0.06, 0.06, 0.06));
+    // wide-brim farmer's straw hat
+    case 'straw': return [part(cyl, h.color, 0, 1.64, -0.02, 0, 0, 0, 0.46, 0.03, 0.46), part(cyl, h.color, 0, 1.72, -0.02, 0, 0, 0, 0.24, 0.16, 0.24), part(cyl, 0x8a5a32, 0, 1.68, -0.02, 0, 0, 0, 0.25, 0.04, 0.25)];
+    // tall white chef's toque
+    case 'chef': return [part(cyl, h.color, 0, 1.7, -0.03, 0, 0, 0, 0.25, 0.12, 0.25), part(sph, h.color, 0, 1.86, -0.03, 0, 0, 0, 0.3, 0.2, 0.3)];
+    // builder's hard hat with a brim
+    case 'hardhat': return [part(sph, h.color, 0, 1.64, -0.02, 0, 0, 0, 0.29, 0.2, 0.29), part(cyl, h.color, 0, 1.62, 0.02, 0, 0, 0, 0.33, 0.025, 0.36)];
   }
 }
 

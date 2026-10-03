@@ -31,7 +31,11 @@ export type SimEventType =
   | 'truckDone'   // a truck left (value = payment, n = 1 if the company was happy)
   | 'cut'         // a stalk was cut (product = crop, id = plot)
   | 'goldenStalk' // a golden stalk was cut (value = reward)
-  | 'cropSold';   // a bundle was sold at the grain stall (value)
+  | 'cropSold'    // a bundle was sold at the grain stall (value)
+  | 'albumNew'    // first time this customer kind was served (n = page, id = entry)
+  | 'albumPage'   // an album page was completed (value = bonus, n = page)
+  | 'taskDone'    // a daily task is finished, ready to claim (value = reward, id = task)
+  | 'taskClaimed'; // a daily task reward was claimed (value, id = task)
 
 export interface SimEvent {
   type: SimEventType;

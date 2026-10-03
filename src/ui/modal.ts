@@ -45,3 +45,6 @@ export function fmtAway(seconds: number): string {
 }
 
 export const fmtMoney = (v: number) => Math.round(v).toLocaleString('en-US');
+
+/** Left-to-right isolate, so "+1,250" keeps its sign in front inside Arabic (RTL) text. */
+export const ltr = (s: string) => `\u2066${s}\u2069`;

@@ -1,4 +1,5 @@
 import { ECONOMY, type ProductId } from '../config/economy';
+import { pickType } from '../config/album';
 import { LAYOUT } from '../config/layout';
 import { moveToward } from './math';
 import type { SimWorld } from './world';
@@ -39,6 +40,8 @@ export interface Customer {
   scenario: boolean;
   /** Crowd look for the renderer ('' = random clothes). */
   style: CrowdStyle | '';
+  /** Customer type (album entry; 'vip' for VIPs) — also picks their clothes. */
+  type: string;
   /** Arrived while the player was away (doesn't count toward the rating). */
   away: boolean;
   /** Cooldown before taking the next item. */
@@ -119,8 +122,9 @@ export class CustomerSystem {
     const grace = pc.early * Math.max(0, 1 - w.upgrades.bought / pc.earlyUpgrades);
     const patience = (pc.normal + grace) * (vip ? ECONOMY.vip.patienceMult : 1) * (inScenario ? sc.def.patienceMult : 1);
     const sp = LAYOUT.shop.spawn;
+    const look = rng.int(1 << 30);
     this.list.push({
-      id: this.nextId++, kind: vip ? 'vip' : 'normal', look: rng.int(1 << 30),
+      id: this.nextId++, kind: vip ? 'vip' : 'normal', look, type: vip ? 'vip' : pickType(w, look),
       x: rng.range(sp.x0, sp.x1), z: sp.z, rot: Math.PI, speed: 0,
       state: 'queue', lines, lane, qty, left: qty, patience, patienceMax: patience, playerItems: 0,
       rush, scenario: inScenario, style: crowd && sc.def.crowd ? sc.def.crowd : '', away: w.away, takeT: 0, servedT: 0, gone: false,

@@ -9,7 +9,7 @@ import { InstancedStack, easeOutBack, gridSlots } from './stacks';
 import { ITEM_GEO, ITEM_ICON } from './models';
 import { CharacterView } from './character';
 import { CarrierView } from './stacks';
-import { CustomerView } from './customers';
+import { CustomerView, typedCustomerView } from './customers';
 
 const { box, cyl } = PRIM;
 const CLEANER = { shirt: 0x6cb6e0, pants: 0x2e2e2e, skin: 0xd9a074, hair: 0x3b2414 };
@@ -215,7 +215,7 @@ export class CafeView {
     for (const c of cafe.customers) if (c.state === 'queue') { front = c; break; }
     for (const c of cafe.customers) {
       let v = this.customers.get(c.id);
-      if (!v) { v = new CustomerView(c); this.customers.set(c.id, v); this.scene.add(v.char.root); }
+      if (!v) { v = typedCustomerView({ kind: 'normal', look: c.look, type: c.type }); this.customers.set(c.id, v); this.scene.add(v.char.root); }
       v.items.length = 0;
       if (c.state === 'queue' || c.state === 'toTable') for (const l of c.lines) for (let i = l.left; i < l.qty; i++) v.items.push(l.product);
       const full = c.state === 'angry' || c === front;
