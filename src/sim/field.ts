@@ -45,6 +45,11 @@ export class FieldSystem {
   readonly cash = { value: 0, bills: 0 };
   /** Seconds the tool has been cutting (drives the swing animation; 0 when idle). */
   cutting = 0;
+  /** True while the player drives the owned vehicle in the farmland. */
+  driving = false;
+  /** Combine hopper: bundles per crop waiting to be unloaded at the stall. */
+  readonly hopper = { corn: 0, wheat: 0 } as Record<CropId, number>;
+  hopperN = 0;
   private sellT = 0;
 
   constructor(private w: SimWorld) {
@@ -53,9 +58,29 @@ export class FieldSystem {
 
   get open(): boolean { return this.plots[0].open; }
 
-  /** Cutting reach of the current tool. */
+  /** Best vehicle owned (null = on foot with the sickle). */
+  get vehicle(): 'tractor' | 'combine' | null {
+    const up = this.w.upgrades;
+    return up.level('field.combine') > 0 ? 'combine' : up.level('field.tractor') > 0 ? 'tractor' : null;
+  }
+
+  /** Cutting reach of the current tool (+ the vehicle's cutter while driving). */
   get toolRadius(): number {
-    return ECONOMY.field.toolRadius + this.w.upgrades.level('field.tool') * ECONOMY.upgrades['field.tool'].step;
+    const v = this.driving ? this.vehicle : null;
+    return ECONOMY.field.toolRadius + this.w.upgrades.level('field.tool') * ECONOMY.upgrades['field.tool'].step
+      + (v ? ECONOMY.field[v].reach : 0);
+  }
+
+  /** No room for another bundle (the combine's hopper while driving it, else the player's stack). */
+  full(): boolean {
+    return this.driving && this.vehicle === 'combine' ? this.hopperN >= ECONOMY.field.combine.hopper : this.w.carry.full();
+  }
+
+  /** Bundles that still need selling (carried + in the hopper). */
+  get held(): number {
+    let n = this.hopperN;
+    for (const it of this.w.carry.items) if (it in ECONOMY.crops) n++;
+    return n;
   }
 
   regrowTime(p: Plot): number {
@@ -77,7 +102,11 @@ export class FieldSystem {
   }
 
   update(dt: number): void {
-    const cfg = ECONOMY.field, rng = this.w.rng;
+    const cfg = ECONOMY.field, rng = this.w.rng, w = this.w, v = this.vehicle;
+    this.driving = this.open && !!v && !w.away && w.player.z < cfg.farmlandZ;
+    w.player.driveMult = this.driving && v
+      ? cfg[v].speedMult * (1 + w.upgrades.level('field.engine') * ECONOMY.upgrades['field.engine'].step) : 1;
+    w.player.radius = this.driving && v ? cfg[v].radius : ECONOMY.player.radius;
     for (const p of this.plots) {
       if (!p.open || p.grown === p.size) continue;
       const r = p.regrow;
@@ -99,13 +128,14 @@ export class FieldSystem {
     if (!this.open) return;
     const w = this.w, pl = w.player, c = w.carry, cfg = ECONOMY.field;
     const p = this.plotAt(pl.x, pl.z);
-    if (p && p.open && !c.full()) {
+    const combine = this.driving && this.vehicle === 'combine';
+    if (p && p.open && !this.full()) {
       const R = this.toolRadius, s = cfg.spacing, b = p.def.box;
       const c0 = Math.max(0, Math.floor((pl.x - R - b.x0) / s)), c1 = Math.min(p.cols - 1, Math.floor((pl.x + R - b.x0) / s));
       const r0 = Math.max(0, Math.floor((pl.z - R - b.z0) / s)), r1 = Math.min(p.rows - 1, Math.floor((pl.z + R - b.z0) / s));
       const regrow = this.regrowTime(p);
-      for (let row = r0; row <= r1 && !c.full(); row++) {
-        for (let col = c0; col <= c1 && !c.full(); col++) {
+      for (let row = r0; row <= r1 && !this.full(); row++) {
+        for (let col = c0; col <= c1 && !this.full(); col++) {
           const i = row * p.cols + col;
           if (p.regrow[i] > 0) continue;
           const x = p.x(i), z = p.z(i);
@@ -125,8 +155,11 @@ export class FieldSystem {
           }
           if (++p.partial >= cfg.stalksPerBundle) {
             p.partial = 0;
-            c.push(p.crop);
-            w.events.emit('pick', p.crop, x, z, 0, c.n, -1);
+            if (combine) { this.hopper[p.crop]++; this.hopperN++; }
+            else {
+              c.push(p.crop);
+              w.events.emit('pick', p.crop, x, z, 0, c.n, -1);
+            }
           }
         }
       }
@@ -134,15 +167,22 @@ export class FieldSystem {
     // sell bundles at the stall, one at a time
     const st = FIELDS.stall;
     this.sellT -= dt;
-    if (this.sellT <= 0 && dist(pl.x, pl.z, st.drop.x, st.drop.z) < 1.25) {
+    if (this.sellT <= 0 && dist(pl.x, pl.z, st.drop.x, st.drop.z) < (this.driving ? 1.9 : 1.25)) {
       for (const p2 of this.plots) {
-        if (!c.take(p2.crop)) continue;
+        // carried bundles first, then the combine's hopper (unloads twice as fast)
+        let fromHopper = false;
+        if (!c.take(p2.crop)) {
+          if (this.hopper[p2.crop] <= 0) continue;
+          this.hopper[p2.crop]--;
+          this.hopperN--;
+          fromHopper = true;
+        }
         const v = Math.round(ECONOMY.crops[p2.crop].price * w.priceMult);
         this.cash.value += v;
         this.cash.bills = Math.min(40, this.cash.bills + 1);
         w.stats.crops++;
         w.events.emit('cropSold', p2.crop, st.drop.x, st.drop.z, v, c.n);
-        this.sellT = cfg.sellInterval;
+        this.sellT = fromHopper ? cfg.sellInterval / 2 : cfg.sellInterval;
         break;
       }
     }

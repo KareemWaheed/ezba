@@ -52,6 +52,11 @@ export const ECONOMY = {
     goldenReward: 60,
     /** Seconds between two bundles sold at the stall. */
     sellInterval: 0.06,
+    /** North of this z is farmland: owned vehicles carry the player there (parked south of it). */
+    farmlandZ: -9.95,
+    /** Vehicles: speed multiplier and extra cutting reach; the combine fills its own hopper. */
+    tractor: { speedMult: 1.4, reach: 0.9, radius: 0.9 },
+    combine: { speedMult: 1.55, reach: 1.9, hopper: 60, radius: 1.2 },
   },
 
   /**
@@ -350,6 +355,12 @@ export const ECONOMY = {
     'field.tool': { base: 4000, growth: 2.2, max: 5, step: 0.3 },
     /** Open the wheat field next to the corn (pricier crop). */
     'field.wheat': { base: 60000, growth: 1, max: 1, step: 1 },
+    /** Tractor with a cutter: you drive it in the fields (faster, wider path). */
+    'field.tractor': { base: 90000, growth: 1, max: 1, step: 1 },
+    /** Combine harvester: very wide path, bundles go into its hopper (unloads at the stall). */
+    'field.combine': { base: 300000, growth: 1, max: 1, step: 1 },
+    /** Bigger engine: vehicles drive faster, x (1 + step x level). */
+    'field.engine': { base: 20000, growth: 2.3, max: 3, step: 0.12 },
     /** Fertilizer: crops regrow faster, time / (1 + step x level). */
     'field.regrow': { base: 6000, growth: 2.2, max: 4, step: 0.3 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */

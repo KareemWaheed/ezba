@@ -10,6 +10,8 @@ import { CanvasSprite, FONT, groundMarker } from './canvas';
 import { InstancedStack, gridSlots } from './stacks';
 import { STALK_GEO } from './models';
 import { ground, lockOverlay } from './worldView';
+import { PhysicsFx } from './physicsFx';
+import { VehicleView } from './vehicles';
 
 const _m = new THREE.Matrix4();
 const _p = new THREE.Vector3();
@@ -150,12 +152,20 @@ class Chaff {
 export class FieldView {
   private plots: PlotView[];
   private chaff: Chaff;
+  private fx: PhysicsFx;
+  readonly vehicles: VehicleView;
+  private rng = new Rng(9);
+  private rand = () => this.rng.next();
+  /** 1 = full particle count; lowered by the caller when the frame rate drops. */
+  quality = 1;
   private cash: InstancedStack;
   private stall = new THREE.Group();
 
   constructor(scene: THREE.Scene, sim: SimWorld) {
     this.plots = sim.field.plots.map((p) => new PlotView(scene, p));
     this.chaff = new Chaff(scene);
+    this.fx = new PhysicsFx(scene);
+    this.vehicles = new VehicleView(scene, this.fx);
     const st = FIELDS.stall, b = st.box, cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2, w = b.x1 - b.x0, d = b.z1 - b.z0;
     // wooden market stall with a striped awning, crates of corn and wheat on the table
     const g = [
@@ -196,13 +206,20 @@ export class FieldView {
   sync(sim: SimWorld, dt: number): void {
     sim.field.plots.forEach((p, i) => this.plots[i].sync(sim.field.regrowTime(p)));
     this.stall.visible = sim.field.open;
+    if (sim.field.open) this.fx.load();
+    this.vehicles.sync(sim, dt, this.rand);
     this.cash.set(sim.field.cash.bills);
     this.cash.update(dt);
     this.chaff.update(dt);
   }
 
   onEvent(e: SimEvent): void {
-    if (e.type === 'cut') this.chaff.burst(e.x, e.z, e.product === 'wheat' ? 0xe2b955 : 0x6fb83f, 2);
-    if (e.type === 'goldenStalk') this.chaff.burst(e.x, e.z, 0xffd34a, 14);
+    if (e.type !== 'cut' && e.type !== 'goldenStalk') return;
+    const gold = e.type === 'goldenStalk';
+    const color = gold ? 0xffd34a : e.product === 'wheat' ? 0xe2b955 : 0x6fb83f;
+    const n = Math.max(1, Math.round((gold ? 14 : 2) * this.quality));
+    // physics chaff once Rapier is loaded, the simple particles until then
+    if (this.fx.ready) this.fx.burst(e.x, e.z, color, n, this.rand);
+    else this.chaff.burst(e.x, e.z, color, n);
   }
 }

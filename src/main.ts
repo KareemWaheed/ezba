@@ -222,7 +222,7 @@ document.fonts?.ready.then(() => farm.invalidateText());
 
 rig.snap(sim.player.x, sim.player.z);
 farm.sync(sim, 0, false);
-if (import.meta.env.DEV) Object.assign(window, { sim, input, guideTarget });
+if (import.meta.env.DEV) Object.assign(window, { sim, input, guideTarget, farm });
 
 let last = performance.now();
 let fpsT = 0;
@@ -239,12 +239,15 @@ function frame(now: number): void {
   sim.events.drain(onEvent);
 
   const p = sim.player;
-  player.update(p.x, p.z, p.rot, p.speed, real, sim.carry.n > 0);
+  const driving = sim.field.driving ? sim.field.vehicle : null;
+  player.update(p.x, p.z, p.rot, driving ? 0 : p.speed, real, sim.carry.n > 0, !!driving);
   playerStack.update(sim.carry.items, Math.min(1, p.speed / ECONOMY.player.speed), real);
-  const inField = sim.field.plotAt(p.x, p.z)?.open ?? false;
+  const inField = !driving && (sim.field.plotAt(p.x, p.z)?.open ?? false);
   sickle.visible = inField;
   sickle.rotation.x = sim.field.cutting > 0 ? Math.sin(now * 0.03) * 0.9 : 0;
+  farm.field.quality = view.fps < 40 ? 0.5 : 1;
   farm.sync(sim, real);
+  if (driving) farm.field.vehicles.seat(player.root, driving);
   farm.endFrame(real);
   if (farm.coinFlew) sfx.coin();
   dust.update(real);

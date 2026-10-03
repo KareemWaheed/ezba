@@ -36,7 +36,7 @@ export interface SaveData {
     cash: { value: number; bills: number };
   };
   /** Grain stall money not collected yet (stalks restart fully grown). */
-  field?: { cash: number; bills: number };
+  field?: { cash: number; bills: number; hopper?: Record<string, number> };
 }
 
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
@@ -83,7 +83,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
       tables: w.cafe.tables.map((t) => ({ dirty: t.dirty, cash: t.cash, bills: t.bills })),
       cash: { value: w.cafe.uncollected - w.cafe.tables.reduce((a, t) => a + t.cash, 0), bills: w.cafe.cash.bills },
     },
-    field: { cash: w.field.cash.value, bills: w.field.cash.bills },
+    field: { cash: w.field.cash.value, bills: w.field.cash.bills, hopper: { ...w.field.hopper } },
   };
 }
 
@@ -128,6 +128,11 @@ export function restore(w: SimWorld, s: SaveData): void {
   }
   w.field.cash.value = num(s.field?.cash);
   w.field.cash.bills = Math.floor(num(s.field?.bills));
+  w.field.hopperN = 0;
+  for (const k of Object.keys(w.field.hopper) as (keyof typeof w.field.hopper)[]) {
+    w.field.hopper[k] = Math.max(0, Math.floor(num(s.field?.hopper?.[k])));
+    w.field.hopperN += w.field.hopper[k];
+  }
   w.cash.value = num(s.cash?.value);
   w.cash.bills = Math.floor(num(s.cash?.bills));
   up.apply();

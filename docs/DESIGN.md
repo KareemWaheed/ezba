@@ -65,3 +65,10 @@ This file records the decisions made on top of it.
   Crops are player-only income for now (no offline earnings) — vehicles and hired drivers come in 4b/4c.
   Barns moved inside the pens (the strip behind is the field walkway) and fade see-through while the
   player is behind them.
+- Stage 4b — vehicles: `field.tractor` then `field.combine` (chained tile). Owning one puts the player on it
+  north of the pens (farmland, z < farmlandZ); it parks west of the stall when they walk back through the
+  corridor. Vehicles drive faster (`field.engine`), cut wider and collide with a bigger radius; the combine's
+  bundles go into a 60-bundle hopper that empties at the stall at double speed. Rapier (lazy chunk, loaded
+  when the field opens) drives only cosmetics: a sprung body simulated in the vehicle's own frame (bumps,
+  lean in turns, tilt capped at 8°) and pooled chaff bodies (cap 150, halved when FPS < 40); until it
+  loads, a simple shake and hand-written particles stand in.

@@ -151,17 +151,17 @@ export class Bot {
       else this.go('wait', p.x, p.z);
       return;
     }
+    // fields: keep cutting until full (stack or combine hopper) or the plot is bare, then sell it all
+    const f = w.field;
+    if (this.harvesting && c.items.every((it) => (CROP_IDS as string[]).includes(it))) {
+      if (!f.full() && nearestStalk(w, this.stalk, this.harvesting)) { this.go('harvest', this.stalk.x, this.stalk.z); return; }
+      this.harvesting = null;
+    }
+    if (f.held > 0) { this.go('sellCrop', FIELDS.stall.drop.x, FIELDS.stall.drop.z); return; }
     if (c.n > 0) {
       const cafe = w.cafe;
       // dishes go to the café counter
       if (c.items.some((it) => it in cafe.counter)) { this.go('cafeDrop', CAFE.counter.serve.x, CAFE.counter.serve.z); return; }
-      // crops: keep cutting until full (or the plot is bare), then sell at the stall
-      if (c.items.some((it) => (CROP_IDS as string[]).includes(it))) {
-        if (this.harvesting && !c.full() && nearestStalk(w, this.stalk, this.harvesting)) { this.go('harvest', this.stalk.x, this.stalk.z); return; }
-        this.harvesting = null;
-        this.go('sellCrop', FIELDS.stall.drop.x, FIELDS.stall.drop.z);
-        return;
-      }
       // once a trip has started, fill up while the pile still has items, then unload
       const ps = w.stations[this.pickStation];
       if (ps && !c.full() && ps.pile > 0 && dist(p.x, p.z, ps.def.pile.x, ps.def.pile.z) < 2) { this.go('pick', ps.def.pile.x, ps.def.pile.z); return; }
@@ -215,7 +215,8 @@ export class Bot {
     const w = this.w, f = w.field, c = w.carry;
     if (!f.open || c.n > 0 || unservedLane(w) >= 0) return false;
     if (w.stations.some((s) => s.open && s.pile >= ECONOMY.pile.max * 0.75)) return false;
-    const need = c.cap * ECONOMY.field.stalksPerBundle;
+    const cap = f.vehicle === 'combine' ? ECONOMY.field.combine.hopper : c.cap;
+    const need = cap * ECONOMY.field.stalksPerBundle;
     for (let i = f.plots.length - 1; i >= 0; i--) {
       const p = f.plots[i];
       if (!p.open || p.grown < need || !nearestStalk(w, this.stalk, p.crop)) continue;

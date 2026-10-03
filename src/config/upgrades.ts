@@ -124,6 +124,18 @@ export const UPGRADES: readonly UpgradeDef[] = [
     id: 'field.wheat', icon: '🌾', label: 'غيط القمح', msg: 'فتحت غيط القمح! القمح أغلى 🌾',
     pos: { x: 8.6, z: -11.1 }, requires: [{ id: 'field.tool', level: 2 }], milestone: true,
   },
+  {
+    id: 'field.tractor', icon: '🚜', label: 'جرار', msg: 'اشتريت جرار! ادخل الغيط وسوق 🚜',
+    pos: { x: 10.8, z: -11.1 }, requires: [{ id: 'field.tool', level: 3 }], milestone: true,
+  },
+  {
+    id: 'field.combine', icon: '🌾', label: 'كومباين', msg: 'كومباين! بيحصد عريض ويشيل في الخزان 🌾',
+    pos: { x: 10.8, z: -11.1 }, requires: [{ id: 'field.wheat', level: 1 }], requiresMaxed: 'field.tractor', milestone: true,
+  },
+  {
+    id: 'field.engine', icon: '⚙️', label: 'موتور أقوى', msg: 'العربية بقت أسرع ⚙️',
+    pos: { x: 13.0, z: -11.1 }, requires: [{ id: 'field.tractor', level: 1 }],
+  },
   // Loading dock: company contracts with trucks
   {
     id: 'dock.unlock', icon: '🚚', label: 'رصيف التحميل', msg: 'الشركات هتبعت عربيات تاخد منك بالجملة 🚚',
