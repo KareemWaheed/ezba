@@ -62,7 +62,7 @@ export class SignsView {
     const fieldNew = (w: SimWorld) => w.field.open && w.stats.crops < 30;
     const corn = FIELDS.plots[0].box;
     add('🌽 امشي في الغيط واحصد', (corn.x0 + corn.x1) / 2, corn.z1 - 1.2, fieldNew, 2.2, 'rgba(63,155,74,0.92)');
-    add('🌾 بيع القمح هنا', FIELDS.stall.drop.x, FIELDS.stall.drop.z + 0.2, fieldNew, 0.9, 'rgba(63,155,74,0.92)');
+    add('🌽🌾 سلّم المحصول هنا', FIELDS.stall.drop.x, FIELDS.stall.drop.z + 0.2, fieldNew, 0.9, 'rgba(63,155,74,0.92)');
     // factory: until a porter takes the carrying over
     for (const [i, m] of FACTORY.machines.entries()) {
       const show = (w: SimWorld) => w.factory.machines[i].open && w.upgrades.level('factory.porter') === 0;

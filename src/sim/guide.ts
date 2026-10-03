@@ -1,3 +1,4 @@
+import { ECONOMY } from '../config/economy';
 import { LAYOUT } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import { FIELDS } from '../config/fields';
@@ -87,10 +88,12 @@ const FIELD_TUTORIAL = 40;
 function fieldAction(w: SimWorld, out: { x: number; z: number }): boolean {
   const f = w.field, c = w.carry;
   if (!f.open || w.stats.crops >= FIELD_TUTORIAL) return false;
-  // full (or the field is bare): wheat to the stall, corn to its shop counter slot
+  // full (or the field is bare): bundles to the stall (corn goes on its pile for the corn workers);
+  // corn only walks to its shop counter slot while that pile is full
   if (c.n > 0 && (c.full() || f.ready === 0)) {
-    if (c.has('wheat')) { out.x = FIELDS.stall.drop.x; out.z = FIELDS.stall.drop.z; return true; }
     const corn = w.stations.find((s) => s.def.product === 'corn');
+    const cornRoom = !!corn && corn.pile + corn.pending < ECONOMY.pile.max;
+    if (c.has('wheat') || (c.has('corn') && cornRoom)) { out.x = FIELDS.stall.drop.x; out.z = FIELDS.stall.drop.z; return true; }
     if (corn && c.has('corn')) { out.x = corn.def.counter.dropX; out.z = corn.def.counter.dropZ; return true; }
   }
   if (c.full()) return false;

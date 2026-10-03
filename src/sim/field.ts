@@ -298,10 +298,14 @@ export class FieldSystem {
     const st = FIELDS.stall;
     this.sellT -= dt;
     if (this.sellT <= 0 && dist(pl.x, pl.z, st.drop.x, st.drop.z) < (this.driving ? 1.9 : 1.25)) {
+      const cornSt = w.stations.find((s) => s.def.product === 'corn');
+      const cornRoom = !!cornSt && cornSt.open && cornSt.pile + cornSt.pending < ECONOMY.pile.max;
       for (const p2 of this.plots) {
-        // carried wheat first (carried corn is for the shop counter), then the combine's hopper
+        // carried bundles first — wheat, and corn while its pile (for the corn workers) has room; a full
+        // pile leaves the corn in hand for the shop counter — then the combine's hopper
         let fromHopper = false;
-        if (p2.crop !== 'wheat' || !c.take('wheat')) {
+        const carried = p2.crop === 'wheat' ? c.take('wheat') : cornRoom && c.take('corn');
+        if (!carried) {
           if (this.hopper[p2.crop] <= 0) continue;
           this.hopper[p2.crop]--;
           this.hopperN--;
