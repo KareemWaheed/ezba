@@ -468,6 +468,23 @@ Commit `"Khamaseen event: cover the piles"`.
 
 ---
 
+# Phase 7 — Risk and consequences (draft — idea still forming, brainstorm with the user before planning)
+
+**User's request (2026-10-03):** animals can die; products can spoil, and selling spoiled goods to people causes problems; taxes and similar pressures.
+
+**Design direction (to agree on):** risks the player can *see coming and prevent*, never random punishment that feels unfair in an idle game; offline never kills or spoils anything (consistent with "offline never lowers rating").
+
+- **Animal health instead of sudden death:** each pen has a health bar that drops when the trough stays empty too long or the pen is overcrowded. Low health → animals look sick (🤒, slower, produce less). Only if it stays at zero for a long active-play stretch does one animal die (pen loses one, with a vet event to prevent it). Vet upgrade / medicine item. Never during time away.
+- **Spoilage:** items on piles and counters get a freshness timer (milk fastest, eggs slow). Stale items show a brown tint / 🪰. The player can throw them out (bin spot) or sell them cheap.
+- **Selling spoiled goods = a choice with consequences:** a customer who buys a stale item may come back sick and angry (rating hit, refund), or the inspector event fines you if stale stock is on the counter. Fresh-only customers (doctor, VIPs) refuse stale items.
+- **Taxes / bills:** a weekly (real-day) electricity + water bill and a tax collector visit (مصلحة الضرائب) scaled to income; paying on time = rating/trust bonus, late = fine. Could double as a scenario event (the tax man walks the farm counting what you own).
+- **Insurance / prevention upgrades:** fridge for the shop counter (slows spoilage), vet clinic, accountant (auto-pays bills at a discount) — gives money sinks for late game.
+- **Feedback first:** every risk gets a clear warning icon and a guide-arrow priority before it costs anything.
+
+**Open questions:** how harsh should death be (can it happen at all, or only "sick")? Should spoiled sales be a deliberate gamble (cheap price, chance of trouble)? Taxes as a fixed bill, a % of income, or an event?
+
+---
+
 ## Open questions for the user (answer any time before that phase)
 
 1. Phase 4: call to prayer at sunset — recorded clip, or lights/ambience only (default)?
