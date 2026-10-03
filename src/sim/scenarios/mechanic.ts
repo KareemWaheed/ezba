@@ -34,6 +34,8 @@ export interface Mechanic {
   bonus?(w: SimWorld): boolean;
   /** Where the bot should go to work on this event (null = nothing to do). */
   botTarget?(w: SimWorld): { x: number; z: number } | null;
+  /** Lane for an event crowd customer with this look seed (null = the usual shortest lane). */
+  laneFor?(look: number, waiting: readonly number[], lanes: number): number | null;
   /** Crowd look for an event customer with this look seed (default: the event's crowd). */
   crowdStyle?(look: number): CrowdStyle;
   /** A -1..1 tug meter for the banner (e.g. the derby's balance). */

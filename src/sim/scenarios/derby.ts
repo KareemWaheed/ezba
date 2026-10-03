@@ -15,9 +15,9 @@ const GRACE = 12;
 const CLASH_COST = 0.2;
 
 /**
- * Ahly vs Zamalek: red and white fans come in together. A meter leans toward the side with more fans
- * kept waiting in line; keep it near the middle by serving that side's lanes, or they clash (everyone
- * loses patience). The fans' side comes from their look seed, so no extra random draws.
+ * Ahly vs Zamalek: red and white fans come in together, each side in its own lanes. A meter leans
+ * toward the side with more fans kept waiting; keep it near the middle by serving that side's lane, or
+ * they clash (everyone loses patience). The fans' side comes from their look seed (no extra random draws).
  */
 export class DerbyMechanic implements Mechanic {
   /** -1 (white waited much longer) .. 1 (red waited much longer). */
@@ -30,6 +30,16 @@ export class DerbyMechanic implements Mechanic {
 
   /** Derby fans wear one side's colors. */
   crowdStyle(look: number): CrowdStyle { return look % 2 ? 'fanWhite' : 'fanRed'; }
+
+  /**
+   * Each side has its own stand: Ahly fans queue in lanes 1 and 3, Zamalek fans only in lane 2, so the
+   * white line backs up unless the player helps there (with one lane open everyone shares it).
+   */
+  laneFor(look: number, waiting: readonly number[], lanes: number): number | null {
+    if (lanes < 2) return null;
+    if (look % 2) return 1;
+    return lanes >= 3 && waiting[2] < waiting[0] ? 2 : 0;
+  }
 
   /** Fans of each side waiting in line. */
   private waiting(w: SimWorld): { red: number; white: number } {

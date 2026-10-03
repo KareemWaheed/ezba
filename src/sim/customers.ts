@@ -124,6 +124,8 @@ export class CustomerSystem {
     const patience = (pc.normal + grace) * (vip ? ECONOMY.vip.patienceMult : 1) * (inScenario ? sc.def.patienceMult : 1);
     const sp = LAYOUT.shop.spawn;
     const look = rng.int(1 << 30);
+    // some events seat their crowd in particular lanes (derby: each side has its own stand)
+    if (crowd) lane = sc.mech.laneFor?.(look, this.waitingPerLane, w.lanes) ?? lane;
     this.list.push({
       id: this.nextId++, kind: vip ? 'vip' : 'normal', look, type: vip ? 'vip' : pickType(w, look),
       x: rng.range(sp.x0, sp.x1), z: sp.z, rot: Math.PI, speed: 0,
