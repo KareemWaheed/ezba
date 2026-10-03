@@ -33,10 +33,10 @@ const MECHANIC_VIEWS: Partial<Record<MechanicId, MechanicViewFactory>> = {
 
 const { box, cyl, sph } = PRIM;
 
-/** Where flags go up around the farm when an event has a flag. */
+/** Where flags go up when an event has a flag: around the event square, plus a few in the yard. */
 const FLAG_SPOTS: readonly [number, number][] = [
-  [-6.6, 5.2], [-6.6, 9.0], [6.2, 7.0], [9.2, 9.6], [-4.4, 13.0], [4.0, 13.0],
-  [-1.2, -1.7], [7.6, -1.7], [11.6, 5.8], [11.6, 10.4], [-8.2, 0.8], [2.2, 9.8],
+  [-8.7, 14.6], [-8.7, 20.5], [-8.7, 27.2], [-2.0, 27.4], [4.0, 27.4], [8.0, 27.2], [8.0, 21.6], [0.4, 14.6],
+  [-6.6, 5.2], [6.2, 7.0], [-1.2, -1.7], [7.6, -1.7],
 ];
 
 /** Draw a flag (stripes + canton/emblem) to a canvas texture. Cached per flag id. */
@@ -236,7 +236,7 @@ export class ScenarioView {
     }
     if (this.has(d, 'truck')) {
       const t = new THREE.Mesh(TRUCK_GEO, MAT);
-      t.position.set(st.entry.x - 1.5, 0, st.entry.z + 0.6);
+      t.position.set(LAYOUT.army.truck.x, 0, LAYOUT.army.truck.z);
       t.rotation.y = Math.PI / 2;
       this.group.add(t);
     }
@@ -245,7 +245,8 @@ export class ScenarioView {
       for (let k = 0; k < 3; k++) {
         const c = this.character({ shirt: look.shirts[k], pants: look.pants[0], skin: 0xd9a074, hair: 0x1d1d1d });
         c.attach(DRUM_GEO);
-        c.update(-9.8, 7.0 + k * 1.2, Math.PI / 2, 0, 0, false);
+        const p0 = LAYOUT.procession.path[0];
+        c.update(p0.x + 2 + k * 1.2, p0.z + 0.9, Math.PI / 2, 0, 0, false);
         this.band.push(c);
       }
     }
@@ -318,7 +319,7 @@ export class ScenarioView {
     const crowd = d.crowd ? CROWD_LOOKS[d.crowd] : CROWD_LOOKS.press;
     for (let k = 0; k < 9; k++) {
       const row = k < 5 ? 0 : 1, i = row ? k - 5 : k;
-      const fx = st.x - 2 + i * (row ? 1.2 : 1.0) + row * 0.4, fz = st.z + hd + 2.3 + row * 0.9;
+      const f = LAYOUT.fans, fx = f.x + i * (row ? 1.2 : 1.0) + row * 0.4, fz = f.z + row * 0.9;
       const c = this.character({ shirt: crowd.shirts[k % crowd.shirts.length], pants: crowd.pants[k % crowd.pants.length], skin: [0xf1c7a0, 0xd9a074, 0xa86d45][k % 3], hair: [0x3b2414, 0x1d1d1d, 0x8b4513][k % 3] }, { holds: 'phone' });
       c.update(fx, fz, Math.PI + (fx - st.x) * -0.15, 0, 0, false);
       this.fans.push(c);
@@ -442,7 +443,7 @@ export class ScenarioView {
       const m = sc.mech as Partial<InspectorMechanic>;
       if (m.route) this.inspector.update(m.x!, m.z!, m.rot!, m.speed!, dt, false);
       else {
-        const e = LAYOUT.vipStage.entry;
+        const e = LAYOUT.inspectorEntry;
         this.inspector.update(e.x, e.z, 0, 0, dt, false);
       }
     }

@@ -205,6 +205,10 @@ html, body {
 #sc-feed .c-bar div { height: 100%; background: #ff5c8a; transition: width 0.2s; }
 @keyframes c-in { from { transform: translateX(-20px); opacity: 0; } to { transform: none; opacity: 1; } }
 
+#sc-banner .sc-order { display: flex; justify-content: center; gap: 10px; margin-top: 4px; font-size: 15px; font-weight: 800; }
+#sc-banner .sc-order span { background: rgba(0, 0, 0, 0.25); border-radius: 10px; padding: 1px 8px; }
+#sc-banner .sc-order span.ok { background: rgba(61, 220, 132, 0.45); }
+
 /* event entrance letterbox */
 #cine { position: fixed; inset: 0; z-index: 7; pointer-events: none; }
 #cine .cine-bar { position: absolute; left: 0; right: 0; height: 9vh; background: #000; transition: transform 0.4s ease; }

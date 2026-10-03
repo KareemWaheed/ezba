@@ -56,7 +56,7 @@ export class FootballView implements MechanicView {
     this.group.add(new THREE.Mesh(pitchLines(), new THREE.MeshBasicMaterial({ vertexColors: true })));
     this.group.add(new THREE.Mesh(goalGeo(), MAT));
     this.group.add(this.ball);
-    this.score.sprite.position.set(P.goal.x + 0.7, 2.6, P.goal.z1 + 0.6);
+    this.score.sprite.position.set(P.goal.x - 0.6, 2.6, P.goal.z0 - 0.8);
     this.ball.scale.setScalar(1.35);
     this.group.add(this.score.sprite);
     scene.add(this.group);

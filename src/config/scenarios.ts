@@ -36,7 +36,8 @@ export type ScenarioGoal =
   | 'beatCombo'      // a combo on the dance pads
   | 'inTime'         // the guest served with patience to spare
   | 'photo'          // stood in the official photo
-  | 'trays';         // served the walking group
+  | 'trays'          // served the walking group
+  | 'bulkOrder';     // the army's whole order delivered
 
 /** The special guest (served only by the player, like a VIP). */
 export interface GuestDef {
@@ -177,11 +178,11 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     flag: 'japan', tint: 'rgba(188,0,45,0.22)', intro: 'Konnichiwa! أهلاً بالسياح 🇯🇵📸',
   },
   {
-    id: 'army', icon: '🪖', title: 'قافلة الجيش وصلت!', hint: 'طلبات كبيرة، بس صبرهم طويل',
-    color: '#5b6b3a', weight: 2, warning: 8, duration: 75, arrivalMult: 1.4, crowdShare: 0.9, crowd: 'camo',
+    id: 'army', icon: '🪖', title: 'قافلة الجيش وصلت!', hint: 'طلبية كبيرة! جهّزها وسلّمها لعربية الجيش في الساحة',
+    color: '#5b6b3a', weight: 2, warning: 40, duration: 75, arrivalMult: 1.4, crowdShare: 0.9, crowd: 'camo',
     patienceMult: 1.8, qtyMult: 2.5, tipMult: 1,
     guest: { name: 'اللواء', look: 'general', qtyMult: 3, payMult: 8, patience: 120, entourage: 2 },
-    goals: ['serveGuest', 'noAngry'], rewardSeconds: 90, rewardShare: 0.6, ratingWin: 0.5, ratingLose: -0.3,
+    goals: ['bulkOrder', 'noAngry'], mechanic: 'bulk', rewardSeconds: 90, rewardShare: 0.6, ratingWin: 0.5, ratingLose: -0.3,
     props: ['truck', 'flags', 'guards'], music: 'drums', minUpgrades: 32,
     flag: 'military', tint: 'rgba(85,107,47,0.32)', intro: 'تمام يا فندم! 🪖',
   },
@@ -236,6 +237,7 @@ export const SCENARIO_GOAL_LABEL: Record<ScenarioGoal, string> = {
   inTime: 'وصّل قبل الوقت',
   photo: 'اتصوّر مع الضيف',
   trays: 'خدّم ٦ وهما ماشيين',
+  bulkOrder: 'كمّل طلب الجيش',
 };
 
 /** How often scenarios happen (seconds of active play between them). */

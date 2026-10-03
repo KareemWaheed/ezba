@@ -27,7 +27,7 @@ export class InspectorMechanic implements Mechanic {
   lookT = 0;
 
   start(w: SimWorld, _def: ScenarioDef): void {
-    const e = LAYOUT.vipStage.entry;
+    const e = LAYOUT.inspectorEntry;
     this.x = e.x; this.z = e.z;
     const stops: Checkpoint[] = [];
     // troughs always need the player

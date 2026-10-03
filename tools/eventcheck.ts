@@ -14,6 +14,7 @@ import { FOOTBALL, type FootballMechanic } from '../src/sim/scenarios/football';
 import type { CommentsMechanic } from '../src/sim/scenarios/comments';
 import type { StageMechanic } from '../src/sim/scenarios/stage';
 import type { ProcessionMechanic } from '../src/sim/scenarios/procession';
+import type { BulkMechanic } from '../src/sim/scenarios/bulk';
 import { LAYOUT } from '../src/config/layout';
 
 const DT = 1 / 30;
@@ -358,6 +359,30 @@ for (const id of ['wedding', 'japan'] as const) {
     ok(goalOk(w, 'trays') === true, `${id}: trays goal passes`);
     if (id === 'japan') ok(goalOk(w, 'photo') === true, 'japan: the group photo is taken');
   }
+}
+
+// ---- army: plan and fill a bulk order ----
+if (!only || only === 'army') {
+  const w = fresh();
+  w.scenario.trigger('army');
+  const m = w.scenario.mech as BulkMechanic;
+  ok((m.order?.length ?? 0) > 0 && w.scenario.phase === 'warn', 'army: the order is known during the warning');
+  runUntilIdle(w);
+  ok(goalOk(w, 'bulkOrder') === false, 'army unattended: bulk order fails');
+}
+if (!only || only === 'army') {
+  const w = fresh();
+  w.scenario.trigger('army');
+  const drop = LAYOUT.army.drop;
+  runUntilIdle(w, (w) => {
+    const m = w.scenario.mech as BulkMechanic;
+    if (!m.order || w.scenario.phase !== 'active') return;
+    const l = m.order.find((x) => x.left > 0);
+    if (!l) return;
+    if (!w.carry.has(l.product)) { w.carry.items.length = 0; for (let k = 0; k < 8; k++) w.carry.push(l.product); }
+    w.player.x = drop.x; w.player.z = drop.z;
+  });
+  ok(goalOk(w, 'bulkOrder') === true, 'army: delivering everything passes');
 }
 
 // ---- availability: never pick an event whose area is locked ----

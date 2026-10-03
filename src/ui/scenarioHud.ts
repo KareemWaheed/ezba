@@ -1,4 +1,6 @@
 import { SCENARIO_GOAL_LABEL } from '../config/scenarios';
+import { ITEM_ICON } from '../render/models';
+import type { ItemId } from '../config/economy';
 import type { SimWorld } from '../sim/world';
 
 /**
@@ -83,13 +85,16 @@ export class ScenarioHud {
     }
     if (!on) return;
     const secs = sc.phase === 'warn' ? Math.ceil(sc.t) : sc.phase === 'active' ? Math.ceil(sc.t) : 0;
-    let key = `${sc.phase}|${secs}|${sc.likes}`;
+    const extra = sc.mech.hudText?.(sim) ?? '';
+    let key = `${sc.phase}|${secs}|${sc.likes}|${extra}`;
     const states = sc.checkGoals().map((g) => g.ok);
     key += states.join(',');
     if (key === this.key) return;
     this.key = key;
     const timer = sc.phase === 'warn' ? `يبدأ بعد ${secs}` : sc.phase === 'active' ? `⏱ ${secs}` : '…';
-    this.goals.innerHTML = `<span class="sc-timer">${timer}</span>` + d.goals.map((g, i) => `<span class="${states[i] ? 'ok' : ''}">${states[i] ? '✓' : '•'} ${SCENARIO_GOAL_LABEL[g]}</span>`).join('');
+    // "egg:12 milk:4" -> 🥚12 🥛4
+    const order = extra ? `<div class="sc-order" dir="ltr">${extra.split(' ').map((p) => { const [id, n] = p.split(':'); return `<span class="${n === '0' ? 'ok' : ''}">${ITEM_ICON[id as ItemId] ?? id}${n === '0' ? '✓' : n}</span>`; }).join('')}</div>` : '';
+    this.goals.innerHTML = `<span class="sc-timer">${timer}</span>` + d.goals.map((g, i) => `<span class="${states[i] ? 'ok' : ''}">${states[i] ? '✓' : '•'} ${SCENARIO_GOAL_LABEL[g]}</span>`).join('') + order;
     if (d.likesTarget) this.likesBar.style.width = `${Math.min(100, (sc.likes / d.likesTarget) * 100)}%`;
   }
 }

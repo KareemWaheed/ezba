@@ -155,6 +155,7 @@ function cueSound(mech: string | undefined, n: number, v = 0): void {
     else if (n === 3) { sfx.fanfare(); toast.show('Cheese! صورة حلوة 📸'); }
     else if (n === 4) toast.show('الصورة اتاخدت من غيرك 😅');
   }
+  if (mech === 'bulk' && n === 1) { sfx.fanfare(); toast.show('تمام يا فندم! الطلبية كاملة 🪖✅'); }
   if (mech === 'stage') { if (n === 1) sfx.tip(); else sfx.angry(); }
   if (mech === 'comments') { if (n === 1) sfx.sell(); else sfx.tip(); }
   if (mech === 'inspector') { if (n === 1) sfx.fixed(); else sfx.clunk(); }

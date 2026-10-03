@@ -10,7 +10,7 @@ import { FACTORY } from './factories';
  */
 export const LAYOUT = {
   /** Walkable area; the player is clamped inside it. */
-  bounds: { x0: -8.6, x1: 11.4, z0: -9.5, z1: 13.5 } as Box,
+  bounds: { x0: -8.6, x1: 11.4, z0: -9.5, z1: 27.4 } as Box,
   spawn: { x: -1.5, z: 1.6 },
 
   /** Sandy yard in front of the animal areas. */
@@ -44,36 +44,47 @@ export const LAYOUT = {
     unlockedX0: -16.3,
   },
   /**
+   * Event square (ساحة الاحتفالات): paved ground south of the yard where special visits happen, so
+   * the stage, the crowd, the pitch and the dance floor have room and stay clear of the shop.
+   */
+  plaza: { x0: -9, x1: 8.2, z0: 14.0, z1: 27.6 } as Box,
+  /**
    * VIP stage for scenario guests (president, stars...): they arrive from `entry` (motorcade side),
    * walk the carpet to the stage, pose, order, and the player delivers to `drop` in person.
    */
+  vipStage: {
+    x: -4.8, z: 19.0, w: 3.2, d: 2.2,
+    seat: { x: -4.8, z: 18.7 },
+    drop: { x: -4.8, z: 20.7 },
+    entry: { x: -11.5, z: 23.4 },
+    /** Security gate on the carpet (escort visits check the order here). */
+    gate: { x: -8.2, z: 22.0 },
+    /** Where the player stands for the official photo next to the guest. */
+    photo: { x: -3.6, z: 20.9 },
+  },
+  /** Fans and press stand here, facing the stage (two rows). */
+  fans: { x: -6.8, z: 23.6 },
   /**
-   * Mini football pitch for the star footballers' visits (right of the shop lanes). The goal mouth is
-   * on the east line; the ball starts at `kick`; Messi's cones zigzag across the middle.
+   * Football pitch for the star footballers' visits (east half of the square). The goal mouth is on
+   * the east line; the ball starts at `kick`; Messi's cones zigzag across the middle.
    */
   pitch: {
-    x0: 2.9, x1: 6.3, z0: 4.8, z1: 8.0,
-    goal: { x: 6.3, z0: 5.8, z1: 7.0 },
-    kick: { x: 3.6, z: 6.4 },
-    cones: [{ x: 4.1, z: 5.3 }, { x: 4.7, z: 7.5 }, { x: 5.3, z: 5.3 }],
+    x0: 0.6, x1: 6.6, z0: 16.2, z1: 21.0,
+    goal: { x: 6.6, z0: 17.9, z1: 19.3 },
+    kick: { x: 1.8, z: 18.6 },
+    cones: [{ x: 2.8, z: 17.2 }, { x: 3.7, z: 20.0 }, { x: 4.6, z: 17.2 }, { x: 5.4, z: 20.0 }],
   },
-  /** Route of a walking group (wedding zaffa, tour) from the west gate across the yard, and the tour's stops. */
+  /** Dance floor for the concert visit (diamond: west, east, north, south). */
+  dancePads: [{ x: 0.9, z: 23.6 }, { x: 2.9, z: 23.6 }, { x: 1.9, z: 22.6 }, { x: 1.9, z: 24.6 }],
+  /** Route of a walking group (wedding zaffa, tour) across the square, and the tour's stops. */
   procession: {
-    path: [{ x: -8.3, z: 13.2 }, { x: -3.5, z: 11.4 }, { x: 3.0, z: 11.4 }, { x: 6.6, z: 9.6 }, { x: 10.8, z: 9.6 }],
-    stops: [{ x: -3.5, z: 11.4 }, { x: 2.0, z: 11.4 }, { x: 6.6, z: 9.6 }],
+    path: [{ x: -10.5, z: 26.4 }, { x: 5.2, z: 26.4 }, { x: 7.5, z: 24.0 }, { x: 7.5, z: 15.2 }, { x: 9.4, z: 14.4 }],
+    stops: [{ x: -4.5, z: 26.4 }, { x: 2.5, z: 26.4 }, { x: 7.5, z: 20.0 }],
   },
-  /** Dance pads beside the VIP stage's crowd for the concert visit (diamond: west, east, north, south). */
-  dancePads: [{ x: -2.2, z: 11.7 }, { x: -0.2, z: 11.7 }, { x: -1.2, z: 10.7 }, { x: -1.2, z: 12.7 }],
-  vipStage: {
-    x: -6.4, z: 8.4, w: 3.2, d: 2.2,
-    seat: { x: -6.4, z: 8.1 },
-    drop: { x: -6.4, z: 10.1 },
-    entry: { x: -11.5, z: 13.4 },
-    /** Security gate on the carpet (escort visits check the order here). */
-    gate: { x: -8.1, z: 11.1 },
-    /** Where the player stands for the official photo next to the guest. */
-    photo: { x: -5.3, z: 10.3 },
-  },
+  /** Where the army truck parks and the player hands over the bulk order. */
+  army: { drop: { x: -7.4, z: 16.9 }, truck: { x: -10.0, z: 16.9 } },
+  /** Where the health inspector walks in from (the yard's west side). */
+  inspectorEntry: { x: -8.3, z: 13.0 },
   /** Loading dock for company trucks (bottom right). The player loads at `load`; trucks park at `bay`. */
   dock: {
     load: { x: 8.4, z: 10.4 },
@@ -88,7 +99,7 @@ export const LAYOUT = {
   /** Decorative trees around the edge (x, z). */
   trees: [
     [-18.5, -11], [-17.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 13], [-16.5, 12.5], [-14, -1], [17.5, -12.5], [31, -3], [31.5, 4],
-    [31.5, 11], [4, 17], [-5, 17.5],
+    [31.5, 11], [-12.5, 27.5], [10.5, 28.5], [-13, 19.5], [12.5, 24.5], [-2, 30], [6, 31],
   ] as const,
   hay: [[19.6, -7.6], [19.6, -6.0], [19.6, -4.4], [20.8, -6.8]] as const,
 } as const;

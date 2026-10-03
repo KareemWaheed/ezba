@@ -7,6 +7,8 @@ import type { ProductId } from '../../config/economy';
  * active, settle) and the reward; a mechanic adds the event's own rules, state and goals.
  */
 export interface Mechanic {
+  /** The warning starts (e.g. announce an order so the player can prepare). */
+  warn?(w: SimWorld, def: ScenarioDef): void;
   /** The event goes active. */
   start(w: SimWorld, def: ScenarioDef): void;
   /** Every tick while the event is active or settling. */
@@ -27,6 +29,8 @@ export interface Mechanic {
   bonus?(w: SimWorld): boolean;
   /** Where the bot should go to work on this event (null = nothing to do). */
   botTarget?(w: SimWorld): { x: number; z: number } | null;
+  /** Extra line for the event banner (e.g. what's left of an order). */
+  hudText?(w: SimWorld): string;
   /** Keep the event going past its timer (e.g. a procession still walking). */
   busy?(w: SimWorld): boolean;
   /** Drop all temporary state (event end, time away). Idempotent. */

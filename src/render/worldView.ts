@@ -43,6 +43,9 @@ export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
   const L = LAYOUT;
   g.push(part(box, 0x8fd14f, 0, -0.05, 0, 0, 0, 0, 160, 0.1, 160));
   g.push(ground(L.yard, 0xe9b06a, 0.005));
+  // event square: light paving with a darker border
+  g.push(ground(L.plaza, 0xc9b48f, 0.004));
+  g.push(ground({ x0: L.plaza.x0 + 0.3, x1: L.plaza.x1 - 0.3, z0: L.plaza.z0 + 0.3, z1: L.plaza.z1 - 0.3 }, 0xdccaa6, 0.006));
   // coop/pen ground, fences and barns are drawn by PenView (they grow with expansions)
 
   const rng = new Rng(7);

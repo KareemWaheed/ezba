@@ -11,6 +11,7 @@ import { CommentsMechanic } from './scenarios/comments';
 import { StageMechanic } from './scenarios/stage';
 import { MotorcadeMechanic } from './scenarios/motorcade';
 import { ProcessionMechanic } from './scenarios/procession';
+import { BulkMechanic } from './scenarios/bulk';
 
 /** Mechanic per id; ids without their own module yet fall back to BASIC. */
 const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
@@ -21,6 +22,7 @@ const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
   stage: () => new StageMechanic(),
   motorcade: () => new MotorcadeMechanic(),
   procession: () => new ProcessionMechanic(),
+  bulk: () => new BulkMechanic(),
 };
 
 export interface GoalState { goal: ScenarioGoal; ok: boolean; progress: number }
@@ -157,6 +159,10 @@ export class ScenarioSystem {
     this.twistIx = 0;
     this.twistMult = 1;
     this.servedPatience = 0;
+    // the mechanic exists from the warning on (some announce things early)
+    this.mech.teardown(w);
+    this.mech = MECHANICS[def.mechanic ?? 'basic']?.() ?? BASIC;
+    this.mech.warn?.(w, def);
     w.events.emit('scenarioWarn', this.featured ?? '', 0, 0, 0, Math.ceil(this.t));
   }
 
@@ -368,7 +374,6 @@ export class ScenarioSystem {
           this.phase = 'active';
           this.t = this.def.duration;
           if (this.def.guest) this.spawnGuest();
-          this.mech = MECHANICS[this.def.mechanic ?? 'basic']?.() ?? BASIC;
           this.mech.start(w, this.def);
           w.events.emit('scenarioStart', this.featured ?? '');
         }
