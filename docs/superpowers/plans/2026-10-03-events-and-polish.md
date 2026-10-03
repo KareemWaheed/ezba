@@ -468,20 +468,65 @@ Commit `"Khamaseen event: cover the piles"`.
 
 ---
 
-# Phase 7 — Risk and consequences (draft — idea still forming, brainstorm with the user before planning)
+# Phase 7 — Risk and consequences: sick animals, spoiled goods, bills and taxes
 
-**User's request (2026-10-03):** animals can die; products can spoil, and selling spoiled goods to people causes problems; taxes and similar pressures.
+**User's request (2026-10-03):** animals can die; products can spoil and selling them causes trouble; taxes and similar pressures. The user asked me to think the design through.
 
-**Design direction (to agree on):** risks the player can *see coming and prevent*, never random punishment that feels unfair in an idle game; offline never kills or spoils anything (consistent with "offline never lowers rating").
+## Design principles
 
-- **Animal health instead of sudden death:** each pen has a health bar that drops when the trough stays empty too long or the pen is overcrowded. Low health → animals look sick (🤒, slower, produce less). Only if it stays at zero for a long active-play stretch does one animal die (pen loses one, with a vet event to prevent it). Vet upgrade / medicine item. Never during time away.
-- **Spoilage:** items on piles and counters get a freshness timer (milk fastest, eggs slow). Stale items show a brown tint / 🪰. The player can throw them out (bin spot) or sell them cheap.
-- **Selling spoiled goods = a choice with consequences:** a customer who buys a stale item may come back sick and angry (rating hit, refund), or the inspector event fines you if stale stock is on the counter. Fresh-only customers (doctor, VIPs) refuse stale items.
-- **Taxes / bills:** a weekly (real-day) electricity + water bill and a tax collector visit (مصلحة الضرائب) scaled to income; paying on time = rating/trust bonus, late = fine. Could double as a scenario event (the tax man walks the farm counting what you own).
-- **Insurance / prevention upgrades:** fridge for the shop counter (slows spoilage), vet clinic, accountant (auto-pays bills at a discount) — gives money sinks for late game.
-- **Feedback first:** every risk gets a clear warning icon and a guide-arrow priority before it costs anything.
+1. **You always see it coming.** Every risk has a warning stage (icon over the thing + guide arrow + toast) with enough time to react. Losing something should feel like *your* call, never bad luck.
+2. **Active play only.** Nothing gets sick, spoils or gets fined during time away (the same rule as "offline never lowers the rating"). Coming back is always good news.
+3. **Every risk has a fix you can buy.** Each new pressure comes with an upgrade that softens it (vet, fridge, accountant), so it doubles as a late-game money sink and a reason to keep upgrading.
+4. **Choices, not punishments.** The most fun part is the gamble: sell the stale milk cheap and hope nobody notices, or throw it away?
+5. **Unlocks gradually.** Spoilage after the café, animal health after cows, bills from day 3, the tax man after the factories. A new player never meets any of it.
 
-**Open questions:** how harsh should death be (can it happen at all, or only "sick")? Should spoiled sales be a deliberate gamble (cheap price, chance of trouble)? Taxes as a fixed bill, a % of income, or an event?
+## 7A — Animal health (sick, then the vet, death only if you ignore it)
+
+- Each pen gets a **health bar** (0–100, shown on the barn sign as 💚/💛/❤️‍🩹).
+- Health **drops** when: the trough has been empty a long time (feeding finally matters for more than a boost), the pen is over its comfort size (expanding the pen fixes it), or a storm event left strays out at the end.
+- Health **rises** slowly while the trough is fed and the pen isn't crowded.
+- **Below 50:** the pen produces 25% less and its animals look sick (🤒 bubble, slow walk, grey tint).
+- **At 0 for 60 s of active play:** a **"الحيوان تعبان!" emergency**: one animal lies down and a countdown starts (45 s). Bring the vet (a walk-in zone at the HR office) or a 💊 medicine item from the shop. If the timer runs out, the animal dies: the pen loses one animal, there's a small sad moment (a little angel 👼 floats up, not graphic) and a toast. You can rebuy it at the normal tile.
+- **Vet upgrade** (HR office tile): health drains slower; level 2 = the vet walks over by themselves when an emergency starts (automation, like the other staff).
+- **Sim:** `Station.health`, `Station.sickT`; `HealthSystem` in `src/sim/health.ts`; saved as `stations[id].health` (optional, default 100).
+
+## 7B — Freshness and spoilage (with the stale-goods gamble)
+
+- Items on **piles and counters** get an age. Milk spoils fastest, eggs are slow, cooked café dishes are in between; corn and wheat never spoil. Sim cost stays low: one age counter per slot group, as the oldest item's age (FIFO).
+- **Fresh → stale → spoiled:**
+  - *Stale* (counter/pile shows a brown tint and 🪰): still sellable.
+  - *Spoiled* (🤢): nobody buys it; it just takes up space and lowers the shop rating while it sits on the counter.
+- **The gamble:** stale items sell at a 40% discount. Each stale item sold has a chance (from the customer type: grandma 5%, student 15%) that the customer **comes back sick**: an angry "انت بعتلي لبن بايظ!" visit asking for a refund. Pay the refund (×2 price) to keep your rating, or refuse and take a rating hit and a bad review toast. Doctors and VIPs refuse stale goods outright.
+- **The bin:** a 🗑️ spot by the shop. Walking a stack of stale/spoiled items there throws them away (small cleanliness bonus: +rating sparkle).
+- **Fridge upgrade** (shop line): the counter's spoil timers run ×0.5, then ×0.25. A cold store for the café does the same for dishes.
+- **Ties into events:** the inspector event gets a new checkpoint, "no spoiled food on the counter", and a fine if there is.
+- **Sim:** `Freshness` helper in `src/sim/fresh.ts`, ages kept per pile/counter; customer `sickReturn` flag; never ages while `w.away`.
+
+## 7C — Bills and the tax man
+
+- **Monthly bills (every real day = one "month"):** electricity (scales with machines/belts owned) and water (scales with animals). Shown in a 🧾 side-button panel with a due date. Paying on time is one tap. Late → electricity cut until paid (belts and machines stop, exactly like the storm's power cut, which already exists in the sim). This is a reminder, never a trap: there are 2 warnings before the cut.
+- **The tax man (مأمور الضرايب) as a scenario event:** he walks the farm with a clipboard counting what you own (camera follows him). Taxes = a % of earnings since his last visit. You choose:
+  1. **Pay in full:** rating + trust bonus with companies (better truck contracts).
+  2. **Ask to pay in installments (تقسيط):** smaller payments over 3 visits, no bonus.
+  3. **Hide stock** (mini-game: carry piles behind the barn before he reaches them): if he doesn't catch you, you save money; if he does, you pay a fine ×2. A deliberately cheeky, fun choice.
+- **Accountant upgrade (محاسب):** pays bills automatically and gives a 10% tax discount.
+
+## Balance and checks
+
+- `simulate:check` must stay green. Bills/taxes are tuned to remove ~5–8% of active income, and less with the upgrades. The casual bot must not get stuck in a death or power-cut spiral: add a pacing target "casual: no animal deaths and no power cut in 7 days".
+- New check script `tools/riskcheck.ts`: no health loss/spoilage/bill during `away`; an empty trough for N minutes → sick → emergency → death only after the timeout; refund flow; fridge halves spoil time; save round-trip of health/ages/bill state.
+
+## Build order inside the phase
+
+1. 7B freshness + bin + fridge (most gameplay value, touches the most code)
+2. 7A health + vet + emergency
+3. 7C bills, then the tax-man event (reuses the scenario mechanic framework from Phase 1)
+
+## Decisions to confirm with the user (defaults in bold)
+
+- Can animals die at all? **Yes, but only after a sick stage plus a 45 s emergency you can always fix.**
+- Stale-goods gamble: **on** (sell at a discount with a refund risk).
+- Taxes: **a scenario event with 3 choices** plus small daily bills.
 
 ---
 

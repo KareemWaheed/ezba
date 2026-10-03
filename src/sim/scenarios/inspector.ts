@@ -110,6 +110,8 @@ export class InspectorMechanic implements Mechanic {
   botTarget(w: SimWorld): { x: number; z: number } | null {
     for (let i = this.at; i < this.route.length; i++) {
       const c = this.route[i];
+      // a full pile only gets better by picking up, which needs free hands
+      if (c.kind === 'pile' && w.carry.full()) continue;
       if (c.passed === null && !this.fine(w, c)) return { x: c.x, z: c.z };
     }
     return null;
