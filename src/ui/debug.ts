@@ -1,3 +1,4 @@
+import { SCENARIOS } from '../config/scenarios';
 import type { SimWorld } from '../sim/world';
 import type { Renderer, Quality } from '../render/renderer';
 
@@ -27,7 +28,8 @@ export class DebugPanel {
         <div class="d-row"><b>فلوس</b><button data-a="money">+500 (اضغط مطوّل)</button><button data-a="money10k">+10,000</button></div>
         <div class="d-row"><b>السرعة</b>${[1, 5, 10].map((s) => `<button data-speed="${s}">x${s}</button>`).join('')}</div>
         <div class="d-row"><b>غياب</b><button data-away="600">10 د</button><button data-away="3600">ساعة</button><button data-away="7200">ساعتين</button></div>
-        <div class="d-row"><b>أحداث</b><button data-a="rush">زحمة</button><button data-a="break">عطل</button><button data-a="vip">VIP</button><button data-a="golden">دهبي</button><button data-a="event">حدث 🎉</button></div>
+        <div class="d-row"><b>أحداث</b><button data-a="rush">زحمة</button><button data-a="break">عطل</button><button data-a="vip">VIP</button><button data-a="golden">دهبي</button><button data-a="event">حدث 🎉</button><button data-a="win">كسّب الحدث ✅</button></div>
+        <div class="d-row d-events"><b>حدث</b>${SCENARIOS.map((s) => `<button data-ev="${s.id}" title="${s.id}">${s.icon}</button>`).join('')}</div>
         <div class="d-row"><b>الجودة</b>${['auto', 1, 1.5, 2].map((q) => `<button data-q="${q}">${q === 'auto' ? 'تلقائي' : `${q}x`}</button>`).join('')}</div>
         <div class="d-row"><button data-a="reset" class="close">ابدأ من الأول</button></div>
       </div>`);
@@ -55,6 +57,8 @@ export class DebugPanel {
       if (a === 'vip') sim.customers.forceVip = true;
       if (a === 'golden') sim.golden.spawn();
       if (a === 'event') sim.scenario.trigger();
+      if (a === 'win') sim.scenario.debugWin = true;
+      if (b.dataset.ev) sim.scenario.trigger(b.dataset.ev);
       if (a === 'reset') hooks.reset();
       if (b.dataset.speed) this.speed = Number(b.dataset.speed);
       if (b.dataset.away) hooks.away(Number(b.dataset.away));

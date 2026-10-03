@@ -52,14 +52,19 @@ export class ScenarioHud {
     window.setTimeout(() => { this.intro.hidden = true; }, 2600);
   }
 
-  showResult(sim: SimWorld, won: boolean, reward: number): void {
+  showResult(sim: SimWorld, won: boolean, reward: number, stars: number): void {
     const sc = sim.scenario;
     const rows = sc.lastGoals.map((g) => `<div>${g.ok ? '✅' : '❌'} ${SCENARIO_GOAL_LABEL[g.goal]}</div>`).join('');
-    this.result.innerHTML = `<div class="r-icon">${sc.def.icon}</div><div class="r-title">${won ? 'نجحت! 🎉' : 'معلش، المرة الجاية 😅'}</div>${rows}${won ? `<div class="r-reward">+${reward.toLocaleString('en-US')}</div>` : ''}`;
+    const starRow = won ? `<div class="r-stars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}" style="animation-delay:${0.25 + i * 0.25}s">★</span>`).join('')}</div>` : '';
+    const title = !won ? 'معلش، المرة الجاية 😅' : stars >= 3 ? 'تحفة! 🤩' : stars === 2 ? 'برافو! 🎉' : 'نجحت! 👍';
+    this.result.innerHTML = `<div class="r-icon">${sc.def.icon}</div><div class="r-title">${title}</div>${starRow}${rows}${won ? `<div class="r-reward">+${reward.toLocaleString('en-US')}</div>` : ''}`;
     this.result.style.borderColor = sc.def.color;
     this.result.hidden = false;
+    this.result.classList.remove('show');
+    void this.result.offsetWidth;
+    this.result.classList.add('show');
     window.clearTimeout(this.resultTimer);
-    this.resultTimer = window.setTimeout(() => { this.result.hidden = true; }, 3800);
+    this.resultTimer = window.setTimeout(() => { this.result.hidden = true; }, 4600);
   }
 
   update(sim: SimWorld): void {

@@ -35,6 +35,9 @@ export interface Guest {
   upset: boolean;
 }
 
+/** Reward multiplier per star grade. */
+export const STAR_MULT = [0, 1, 1.5, 2] as const;
+
 /** Guest timings (s). */
 const POSE_TIME = 5;
 const ENJOY_TIME = 10;
@@ -61,6 +64,15 @@ export class ScenarioSystem {
   lastGoals: GoalState[] = [];
   /** The running event's own rules (BASIC when it has none). */
   mech: Mechanic = BASIC;
+  /** Grade of the last finished event: 0 = failed, 1 = all goals, 2 = clean, 3 = perfect. */
+  stars = 0;
+  /** Debug panel: every goal counts as passed for the running event. */
+  debugWin = false;
+  /** Next twist to fire and the crowd multiplier from 'rush' twists. */
+  private twistIx = 0;
+  private twistMult = 1;
+  /** Guest patience left (0..1) when they were served. */
+  private servedPatience = 0;
   /** Post-event arrival boost (e.g. the video went viral). */
   boostT = 0;
   boostMult = 1;
@@ -79,7 +91,7 @@ export class ScenarioSystem {
 
   /** Shop arrival multiplier (event crowd, or the post-event boost). */
   get arrivalMult(): number {
-    if (this.active) return this.def.arrivalMult;
+    if (this.active) return this.def.arrivalMult * this.twistMult;
     return this.boostT > 0 ? this.boostMult : 1;
   }
 
@@ -127,6 +139,9 @@ export class ScenarioSystem {
     this.angry = this.sales = this.likes = 0;
     this.guest = null;
     this.guestServed = false;
+    this.twistIx = 0;
+    this.twistMult = 1;
+    this.servedPatience = 0;
     w.events.emit('scenarioWarn', this.featured ?? '', 0, 0, 0, Math.ceil(this.t));
   }
 
@@ -163,6 +178,7 @@ export class ScenarioSystem {
         g.state = 'enjoy';
         g.t = ENJOY_TIME;
         this.guestServed = true;
+        this.servedPatience = g.patience / g.patienceMax;
         let value = 0;
         for (const x of g.lines) value += x.qty * ECONOMY.products[x.product].price * w.priceMult;
         value = Math.round(value * (this.def.guest?.payMult ?? 1));
@@ -217,7 +233,8 @@ export class ScenarioSystem {
       const own = m.goal(w, goal);
       let ok: boolean;
       let progress: number | undefined = m.progress?.(w, goal);
-      if (own !== undefined) ok = own;
+      if (this.debugWin) ok = true;
+      else if (own !== undefined) ok = own;
       else switch (goal) {
         case 'noAngry': ok = this.angry === 0; break;
         case 'serveGuest': ok = this.guestServed; break;
@@ -230,6 +247,49 @@ export class ScenarioSystem {
     });
   }
 
+  /** 1 = every goal; 2 = also nobody angry and the guest served with time to spare; 3 = also the mechanic's bonus. */
+  private grade(won: boolean): number {
+    if (!won) return 0;
+    if (this.debugWin) return 3;
+    const clean = this.angry === 0 && (!this.def.guest || this.servedPatience >= 0.25);
+    if (!clean) return 1;
+    return this.mech.bonus && !this.mech.bonus(this.w) ? 2 : 3;
+  }
+
+  /** Fire the next twist when its time comes. */
+  private updateTwists(): void {
+    const tw = this.def.twists;
+    if (!tw || this.twistIx >= tw.length || this.def.duration - this.t < tw[this.twistIx].at) return;
+    const x = tw[this.twistIx], w = this.w;
+    if (x.kind === 'extend') this.t += 15;
+    else if (x.kind === 'rush') this.twistMult *= 1.5;
+    else this.reorder();
+    w.events.emit('scenarioTwist', '', 0, 0, 0, this.twistIx);
+    this.twistIx++;
+  }
+
+  /** The guest changes their mind: every unfinished line switches to another open product, same amount. */
+  private reorder(): void {
+    const g = this.guest, w = this.w;
+    if (!g || (g.state !== 'order' && g.state !== 'arrive' && g.state !== 'pose')) return;
+    const open = w.stations.filter((s) => s.open && s.farmed).map((s) => s.def.product);
+    if (open.length < 2) return;
+    for (const l of g.lines) {
+      if (l.left <= 0) continue;
+      const others = open.filter((p) => p !== l.product);
+      l.product = others[w.rng.int(others.length)];
+    }
+    // merge lines that now ask for the same product
+    const merged: GuestLine[] = [];
+    for (const l of g.lines) {
+      const m = merged.find((x) => x.product === l.product);
+      if (m) { m.qty += l.qty; m.left += l.left; } else merged.push({ ...l });
+    }
+    g.lines = merged;
+    // a fresh order gets fresh patience
+    g.patience = Math.max(g.patience, g.patienceMax * 0.6);
+  }
+
   private endMechanic(): void {
     this.mech.teardown(this.w);
     this.mech = BASIC;
@@ -239,10 +299,11 @@ export class ScenarioSystem {
     const w = this.w, d = this.def;
     this.lastGoals = this.checkGoals();
     const won = this.lastGoals.every((g) => g.ok);
+    this.stars = this.grade(won);
     const r = w.service;
     let reward = 0;
     if (won) {
-      reward = Math.round(d.rewardSeconds * w.perSec + this.sales * d.rewardShare);
+      reward = Math.round((d.rewardSeconds * w.perSec + this.sales * d.rewardShare) * STAR_MULT[this.stars]);
       if (d.guest) w.album.see(`g:${d.id}`);
       w.cash.value += reward;
       w.cash.bills += 16;
@@ -250,7 +311,8 @@ export class ScenarioSystem {
       w.stats.scenariosWon++;
       if (d.boostAfter) { this.boostT = d.boostAfter.seconds; this.boostMult = d.boostAfter.mult; }
     } else r.rating = Math.max(1, r.rating + d.ratingLose);
-    w.events.emit('scenarioEnd', '', 0, 0, reward, won ? 1 : 0);
+    w.events.emit('scenarioEnd', '', 0, 0, reward, won ? 1 : 0, this.stars);
+    this.debugWin = false;
     this.endMechanic();
     this.phase = 'idle';
     this.guest = null;
@@ -291,6 +353,7 @@ export class ScenarioSystem {
         }
         break;
       case 'active':
+        this.updateTwists();
         // the event lasts at least until the guest has left the stage
         if (this.t <= 0 && (!this.guest || this.guest.state === 'leave' || this.guest.state === 'gone')) { this.phase = 'settle'; this.settleT = 25; }
         break;

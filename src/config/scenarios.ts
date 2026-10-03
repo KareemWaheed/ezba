@@ -14,6 +14,15 @@ export type { CrowdStyle } from './looks';
 export type ScenarioProp = 'carpet' | 'flags' | 'motorcade' | 'guards' | 'confetti' | 'truck' | 'band' | 'rain' | 'ringLight' | 'clipboard';
 export type MusicId = 'anthem' | 'chant' | 'drums' | 'zaffa' | 'thunder' | 'pop';
 
+/** A mid-event surprise (seconds into the active phase). */
+export interface Twist {
+  at: number;
+  /** Toast text (Egyptian Arabic). */
+  text: string;
+  /** reorder: the guest wants something else; extend: +15 s; rush: more crowd for the rest. */
+  kind: 'reorder' | 'extend' | 'rush';
+}
+
 /** Goals checked when the scenario ends. All must pass for the big reward. */
 export type ScenarioGoal =
   | 'noAngry'        // nobody leaves angry during the event
@@ -87,6 +96,8 @@ export interface ScenarioDef {
   when?: (w: SimWorld) => boolean;
   /** The event's own rules (sim/scenarios/). */
   mechanic?: MechanicId;
+  /** Mid-event surprises, in order. */
+  twists?: readonly Twist[];
 }
 
 export const SCENARIOS: readonly ScenarioDef[] = [
@@ -116,6 +127,7 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     goals: ['serveGuest', 'noAngry', 'noJams'], rewardSeconds: 110, rewardShare: 1.0, ratingWin: 1, ratingLose: -0.5,
     props: ['motorcade', 'carpet', 'flags', 'guards'], music: 'anthem', minUpgrades: 42,
     flag: 'usa', tint: 'rgba(178,34,52,0.25)', intro: 'ترامب وصل! 🇺🇸',
+    twists: [{ at: 20, kind: 'reorder', text: 'ترامب غيّر رأيه! طلب جديد 😅' }, { at: 40, kind: 'reorder', text: 'ترامب غيّر رأيه تاني!! 🙄' }],
   },
   {
     id: 'salah', icon: '⚽', title: 'محمد صلاح جاي المزرعة!', hint: 'الفانز هيطلبوا زيه، خدمهم بسرعة',
@@ -125,6 +137,7 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     goals: ['serveGuest', 'noAngry'], rewardSeconds: 75, rewardShare: 0.8, ratingWin: 0.6, ratingLose: -0.3,
     props: ['confetti'], music: 'chant', minUpgrades: 28,
     tint: 'rgba(200,16,46,0.28)', intro: 'مو صلاح وصل! ⚽🔥',
+    twists: [{ at: 30, kind: 'rush', text: 'فانز زيادة جايين! 🏃' }],
   },
   {
     id: 'messi', icon: '🐐', title: 'ميسي في المزرعة!', hint: 'زحمة فانز! كله عايز اللي ميسي طلبه',
@@ -134,6 +147,7 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     goals: ['serveGuest', 'noAngry'], rewardSeconds: 75, rewardShare: 0.8, ratingWin: 0.6, ratingLose: -0.3,
     props: ['confetti'], music: 'chant', minUpgrades: 28,
     tint: 'rgba(117,170,219,0.32)', intro: 'ميسي في المزرعة! 🐐',
+    twists: [{ at: 30, kind: 'rush', text: 'فانز زيادة جايين! 🏃' }],
   },
   {
     id: 'amrdiab', icon: '🎤', title: 'عمرو دياب جاي المزرعة!', hint: 'الجمهور كله جاي وراه، خدمهم بسرعة',
@@ -186,6 +200,7 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     goals: ['noAngry'], rewardSeconds: 70, rewardShare: 0.5, ratingWin: 0.4, ratingLose: -0.2,
     props: ['rain'], music: 'thunder', minUpgrades: 35, when: (w) => w.staff.machines.some((m) => m.running),
     tint: 'rgba(20,24,40,0.45)', intro: 'الكهربا قطعت! ⚡',
+    twists: [{ at: 30, kind: 'extend', text: 'العاصفة لسه شغالة! ⛈️' }],
   },
   {
     id: 'influencer', icon: '📱', title: 'إنفلونسر بيعمل لايف من المزرعة!', hint: 'خدمة سريعة = لايكات، لو الفيديو ضرب الزباين هتزيد',

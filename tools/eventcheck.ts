@@ -80,6 +80,28 @@ for (const def of SCENARIOS) {
   }
 }
 
+// ---- twists and star grades ----
+if (!only || only === 'trump') {
+  const w = fresh();
+  w.scenario.trigger('trump');
+  let twists = 0, stars = -1;
+  for (let i = 0; i < 400 / DT && w.scenario.phase !== 'idle'; i++) {
+    w.tick(DT);
+    w.events.drain((e) => { if (e.type === 'scenarioTwist') twists++; if (e.type === 'scenarioEnd') stars = e.id; });
+  }
+  ok(twists === 2, `trump: changes his order twice (got ${twists})`);
+  ok(stars === 0 && w.scenario.stars === 0, 'trump unattended: 0 stars');
+}
+{
+  // a fully passed event earns at least one star and more money than the old flat reward
+  const w = fresh();
+  w.scenario.trigger('wedding');
+  w.scenario.debugWin = true;
+  let stars = -1;
+  for (let i = 0; i < 400 / DT && w.scenario.phase !== 'idle'; i++) { w.tick(DT); w.events.drain((e) => { if (e.type === 'scenarioEnd') stars = e.id; }); }
+  ok(stars >= 1 && stars <= 3, `forced win earns 1-3 stars (got ${stars})`);
+}
+
 // ---- availability: never pick an event whose area is locked ----
 {
   const w = new SimWorld(1);

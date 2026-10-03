@@ -27,6 +27,8 @@ import { preventZoom } from './ui/noZoom';
 import { PressureHud } from './ui/pressureHud';
 import { ScenarioHud } from './ui/scenarioHud';
 import { ScenarioView } from './render/scenarioView';
+import { Cinematic } from './render/cinematic';
+import { LAYOUT } from './config/layout';
 import { clockFromDate } from './config/events';
 import { Modal, fmtAway, fmtMoney, ltr } from './ui/modal';
 import { DebugPanel } from './ui/debug';
@@ -68,6 +70,7 @@ const goalCard = new GoalCard(uiRoot);
 const pressureHud = new PressureHud(uiRoot);
 const scenarioHud = new ScenarioHud(uiRoot);
 const scenarioView = new ScenarioView(view.scene, view);
+const cinematic = new Cinematic(uiRoot, rig);
 sim.clock = clockFromDate(new Date());
 setInterval(() => { sim.clock = clockFromDate(new Date()); }, 60_000);
 
@@ -197,11 +200,26 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       else { sfx.sparkle(); toast.show('زبون VIP وصل! خدمه بنفسك ⭐'); }
       break;
     case 'scenarioWarn': sfx.alarm(); music.play(sim.scenario.def.music); break;
-    case 'scenarioStart': if (sim.scenario.def.intro) scenarioHud.showIntro(sim.scenario.def.intro, sim.scenario.def.color); break;
+    case 'scenarioStart': {
+      const d = sim.scenario.def;
+      if (d.intro) scenarioHud.showIntro(d.intro, d.color);
+      if (d.guest) {
+        // pan to the carpet between where the guest steps out and the stage (closer to the stage, clear of the trees)
+        const s = LAYOUT.vipStage;
+        sfx.sparkle();
+        cinematic.play(s.entry.x * 0.35 + s.seat.x * 0.65, s.entry.z * 0.35 + s.seat.z * 0.65);
+      }
+      break;
+    }
+    case 'scenarioTwist': {
+      const tw = sim.scenario.def.twists?.[e.n];
+      if (tw) { sfx.alarm(); toast.show(tw.text); }
+      break;
+    }
     case 'scenarioEnd':
       music.stop();
       if (e.n) sfx.fanfare();
-      scenarioHud.showResult(sim, !!e.n, e.value);
+      scenarioHud.showResult(sim, !!e.n, e.value, e.id);
       break;
     case 'rushEnd':
       if (e.n) { sfx.fanfare(); toast.show(`الزحمة عدّت من غير زعل! ${ltr(`+${e.value}`)} 🎉`); }
@@ -248,7 +266,8 @@ function frame(now: number): void {
   if (input.moved) hud.showHint(false);
   sim.input.x = input.x;
   sim.input.z = input.z;
-  sim.advance(real * debug.speed);
+  cinematic.update(real);
+  sim.advance(real * debug.speed * cinematic.timeScale);
   sim.events.drain(onEvent);
 
   const p = sim.player;

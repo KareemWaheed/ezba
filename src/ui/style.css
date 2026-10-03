@@ -182,6 +182,19 @@ html, body {
 #sc-result .r-icon { font-size: 40px; line-height: 1; }
 #sc-result .r-title { font-size: 22px; margin: 4px 0 6px; }
 #sc-result .r-reward { font-size: 26px; color: #2f8f3a; direction: ltr; margin-top: 6px; }
+#sc-result.show { animation: result-in 0.35s ease-out; }
+@keyframes result-in { from { transform: translate(-50%, -50%) scale(0.6); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+#sc-result .r-stars { font-size: 38px; line-height: 1; margin: 2px 0 6px; direction: ltr; letter-spacing: 4px; }
+#sc-result .r-stars span { color: #d8d2bf; display: inline-block; animation: star-pop 0.3s ease-out both; }
+#sc-result .r-stars span.on { color: #f5b301; text-shadow: 0 2px 0 #b07d00; }
+@keyframes star-pop { 0% { transform: scale(0); } 70% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+/* event entrance letterbox */
+#cine { position: fixed; inset: 0; z-index: 7; pointer-events: none; }
+#cine .cine-bar { position: absolute; left: 0; right: 0; height: 9vh; background: #000; transition: transform 0.4s ease; }
+#cine .cine-bar.top { top: 0; transform: translateY(-100%); }
+#cine .cine-bar.bottom { bottom: 0; transform: translateY(100%); }
+#cine.on .cine-bar { transform: translateY(0); }
 
 /* side buttons: tasks, album, settings */
 #side {

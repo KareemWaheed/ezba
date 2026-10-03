@@ -26,7 +26,9 @@ export type SimEventType =
   | 'cleaned'   // a table was cleaned (id = table)
   | 'scenarioWarn'  // a scenario event is coming (n = seconds)
   | 'scenarioStart'
-  | 'scenarioEnd' // value = reward, n = 1 if every goal passed
+  | 'scenarioEnd' // value = reward, n = 1 if every goal passed, id = stars (0-3)
+  | 'scenarioTwist' // a mid-event surprise (n = twist index)
+  | 'scenarioCue'   // a mechanic's timed cue (n = mechanic-specific value)
   | 'truck'       // a company truck is on its way (n = 1 for a rush order)
   | 'truckDone'   // a truck left (value = payment, n = 1 if the company was happy)
   | 'cut'         // a stalk was cut (product = crop, id = plot)
