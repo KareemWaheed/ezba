@@ -72,3 +72,8 @@ This file records the decisions made on top of it.
   when the field opens) drives only cosmetics: a sprung body simulated in the vehicle's own frame (bumps,
   lean in turns, tilt capped at 8°) and pooled chaff bodies (cap 150, halved when FPS < 40); until it
   loads, a simple shake and hand-written particles stand in.
+- Stage 4c — hired drivers (`field.driver`, up to 3): orange NPC tractors mow a plot in back-and-forth rows
+  (the one with the most grown stalks, each prefers its own), fill a 24-bundle hopper and unload at the stall.
+  They work during time away (stall money counts toward offline earnings at the usual 30%). Balance after
+  drivers: corn 5 / wheat 9 per bundle, fertilizer step 0.15 — a fully upgraded field earns about what the
+  shop does (~5k/min), drivers add ~4k/min of automation.

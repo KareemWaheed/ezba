@@ -1,7 +1,23 @@
 import { ECONOMY, type CropId } from '../config/economy';
 import { FIELDS, type PlotDef } from '../config/fields';
 import type { SimWorld } from './world';
-import { dist } from './math';
+import { dist, moveToward } from './math';
+
+/** A hired driver: mows its plot row by row, then unloads its hopper at the stall. */
+export interface Driver {
+  x: number; z: number; rot: number; speed: number;
+  state: 'cut' | 'toStall' | 'unload' | 'back';
+  /** Plot index it works. */
+  plot: number;
+  /** Waypoint index along the mowing path. */
+  wp: number;
+  hopper: number;
+  crop: CropId;
+  /** Seconds until the next bundle unloads. */
+  t: number;
+  /** 1..0 while cutting (drives the spinning cutter). */
+  cutting: number;
+}
 
 /** Runtime state of one crop plot: a grid of stalks, each grown (regrow = 0) or regrowing. */
 export class Plot {
@@ -51,9 +67,22 @@ export class FieldSystem {
   readonly hopper = { corn: 0, wheat: 0 } as Record<CropId, number>;
   hopperN = 0;
   private sellT = 0;
+  readonly drivers: Driver[] = [];
+  /** Mowing path per plot (back-and-forth rows, reach-spaced). */
+  private paths: { x: number; z: number }[][];
 
   constructor(private w: SimWorld) {
     this.plots = FIELDS.plots.map((d, i) => new Plot(d, i));
+    const gap = ECONOMY.field.driver.reach * 1.7;
+    this.paths = FIELDS.plots.map((d) => {
+      const b = d.box, pts: { x: number; z: number }[] = [];
+      let left = true;
+      for (let z = b.z1 - gap / 2; z > b.z0; z -= gap) {
+        pts.push({ x: left ? b.x0 + 0.4 : b.x1 - 0.4, z }, { x: left ? b.x1 - 0.4 : b.x0 + 0.4, z });
+        left = !left;
+      }
+      return pts;
+    });
   }
 
   get open(): boolean { return this.plots[0].open; }
@@ -90,6 +119,110 @@ export class FieldSystem {
   /** Reconcile from upgrade levels (called from UpgradeSystem.apply). */
   sync(): void {
     for (const p of this.plots) p.open = this.w.upgrades.level(p.def.unlockTrack) > 0;
+    while (this.drivers.length < this.w.upgrades.level('field.driver')) {
+      const u = this.unloadSpot(this.drivers.length, { x: 0, z: 0 });
+      this.drivers.push({ x: u.x, z: u.z, rot: Math.PI, speed: 0, state: 'back', plot: 0, wp: 0, hopper: 0, crop: 'corn', t: 0, cutting: 0 });
+    }
+  }
+
+  private spot = { x: 0, z: 0 };
+
+  /** Unload spot for driver i (side by side east of the stall's sell spot), written into `out`. */
+  unloadSpot(i: number, out: { x: number; z: number }): { x: number; z: number } {
+    out.x = FIELDS.stall.drop.x + 1.7 + i * 1.5;
+    out.z = FIELDS.stall.drop.z + 0.1;
+    return out;
+  }
+
+  private updateDrivers(dt: number): void {
+    const cfg = ECONOMY.field.driver, w = this.w;
+    const speed = cfg.speed * (1 + w.upgrades.level('field.engine') * ECONOMY.upgrades['field.engine'].step);
+    const reach = cfg.reach + w.upgrades.level('field.tool') * ECONOMY.upgrades['field.tool'].step * 0.5;
+    for (let i = 0; i < this.drivers.length; i++) {
+      const d = this.drivers[i];
+      d.cutting = Math.max(0, d.cutting - dt * 3);
+      switch (d.state) {
+        case 'back': {
+          // the open plot with the most grown stalks; drivers prefer "their" plot (by index) on ties
+          let best = -1, bestN = -1;
+          for (let k = 0; k < this.plots.length; k++) {
+            const p = this.plots[k];
+            if (!p.open) continue;
+            const n = p.grown + (k === i % this.plots.length ? 10 : 0);
+            if (n > bestN) { best = k; bestN = n; }
+          }
+          if (best < 0) { d.speed = 0; break; }
+          if (d.plot !== best) { d.plot = best; d.wp = 0; }
+          const t = this.paths[best][d.wp];
+          if (moveToward(d, t.x, t.z, speed, dt, 0.3)) d.state = 'cut';
+          break;
+        }
+        case 'cut': {
+          const p = this.plots[d.plot], path = this.paths[d.plot];
+          const t = path[d.wp];
+          if (moveToward(d, t.x, t.z, speed * 0.8, dt, 0.3)) d.wp = (d.wp + 1) % path.length;
+          if (p.grown > 0) {
+            const made = this.cutAround(p, d.x, d.z, reach, cfg.hopper - d.hopper);
+            if (made > 0) { d.hopper += made; d.crop = p.crop; }
+            if (this.lastCut > 0) d.cutting = 1;
+          }
+          if (d.hopper >= cfg.hopper || (p.grown === 0 && d.hopper > 0)) d.state = 'toStall';
+          break;
+        }
+        case 'toStall': {
+          const u = this.unloadSpot(i, this.spot);
+          if (moveToward(d, u.x, u.z, speed, dt, 0.2)) { d.state = 'unload'; d.t = 0; }
+          break;
+        }
+        case 'unload': {
+          d.speed = 0;
+          d.t -= dt;
+          if (d.t <= 0 && d.hopper > 0) {
+            d.t = cfg.unloadInterval;
+            d.hopper--;
+            const v = Math.round(ECONOMY.crops[d.crop].price * w.priceMult);
+            this.cash.value += v;
+            this.cash.bills = Math.min(40, this.cash.bills + 1);
+            w.stats.crops++;
+            if (!w.away) w.events.emit('cropSold', d.crop, d.x, d.z, v, 0, -1);
+          }
+          if (d.hopper <= 0) d.state = 'back';
+          break;
+        }
+      }
+    }
+  }
+
+  /** Stalks cut by the last cutAround() call. */
+  private lastCut = 0;
+
+  /**
+   * Cut grown stalks within r of (x, z) until `maxBundles` bundles are made; returns the bundles made
+   * (stalks cut -> lastCut). Golden stalks only pay out for the player.
+   */
+  private cutAround(p: Plot, x: number, z: number, r: number, maxBundles: number): number {
+    const cfg = ECONOMY.field, s = cfg.spacing, b = p.def.box, w = this.w;
+    const c0 = Math.max(0, Math.floor((x - r - b.x0) / s)), c1 = Math.min(p.cols - 1, Math.floor((x + r - b.x0) / s));
+    const r0 = Math.max(0, Math.floor((z - r - b.z0) / s)), r1 = Math.min(p.rows - 1, Math.floor((z + r - b.z0) / s));
+    const regrow = this.regrowTime(p);
+    let made = 0;
+    this.lastCut = 0;
+    for (let row = r0; row <= r1 && made < maxBundles; row++) {
+      for (let col = c0; col <= c1 && made < maxBundles; col++) {
+        const i = row * p.cols + col;
+        if (p.regrow[i] > 0) continue;
+        const sx = p.x(i), sz = p.z(i);
+        if (dist(x, z, sx, sz) > r) continue;
+        p.regrow[i] = regrow;
+        p.grown--;
+        p.golden[i] = 0;
+        this.lastCut++;
+        w.stats.stalks++;
+        if (!w.away) w.events.emit('cut', p.crop, sx, sz, 0, 0, p.index);
+        if (++p.partial >= cfg.stalksPerBundle) { p.partial = 0; made++; }
+      }
+    }
+    return made;
   }
 
   /** The plot the point is inside (open or not), or null. */
@@ -121,6 +254,7 @@ export class FieldSystem {
       }
     }
     this.cutting = Math.max(0, this.cutting - dt);
+    this.updateDrivers(dt);
   }
 
   /** Player in a field: cut what's in reach; at the stall: sell bundles; at the stall cash: collect. */

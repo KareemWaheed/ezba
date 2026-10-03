@@ -46,12 +46,15 @@ export class CharacterView {
   private phase = 0;
   private spd = 0;
   private hold = 0;
+  /** Ground shadow (hidden while riding a vehicle, where the root is lifted onto the seat). */
+  readonly shadow: THREE.Mesh;
   /** Called on each footfall while running (for dust puffs). */
   onStep: ((c: CharacterView) => void) | null = null;
 
   constructor(outfit: Outfit) {
     const g = charGeo(outfit);
-    this.root.add(this.body, blob(0.45));
+    this.shadow = blob(0.45);
+    this.root.add(this.body, this.shadow);
     this.body.add(new THREE.Mesh(g.torso, MAT));
     const limb = (geo: THREE.BufferGeometry, x: number, y: number) => {
       const m = new THREE.Mesh(geo, MAT);

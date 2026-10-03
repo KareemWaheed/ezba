@@ -3,6 +3,10 @@ import { ECONOMY } from '../config/economy';
 import type { SimWorld } from '../sim/world';
 import { MAT, PRIM, merge, part } from './geo';
 import type { PhysicsFx } from './physicsFx';
+import { CharacterView } from './character';
+
+/** Hired drivers wear the farm-staff outfit. */
+const DRIVER = { shirt: 0xf28c38, pants: 0x3b4a6b, skin: 0xd9a074, hair: 0x1d1d1d };
 
 const { box, cyl, cylLo } = PRIM;
 
@@ -24,20 +28,23 @@ interface Model {
 const wheel = (x: number, z: number, r: number, w: number) => part(cyl, 0x2b2b2b, x, r, z, 0, 0, Math.PI / 2, r, w, r);
 const hub = (x: number, z: number, r: number) => part(cylLo, 0xf2c94c, x, r, z, 0, 0, Math.PI / 2, r * 0.45, 0.02 + Math.abs(x) * 0.0, r * 0.45);
 
-/** Low-poly vehicles, facing +z (the player's forward). */
-const MODELS: Record<'tractor' | 'combine', Model> = {
-  tractor: {
-    body: merge([
-      part(box, 0x3f9b4a, 0, 0.75, 0.35, 0, 0, 0, 0.8, 0.6, 1.2),
-      part(box, 0x2f7a39, 0, 1.08, 0.5, 0, 0, 0, 0.7, 0.08, 0.9),
+/** Tractor body in a given paint (player: green, hired drivers: orange). */
+function tractorBody(paint: number, dark: number): THREE.BufferGeometry {
+  return merge([
+      part(box, paint, 0, 0.75, 0.35, 0, 0, 0, 0.8, 0.6, 1.2),
+      part(box, dark, 0, 1.08, 0.5, 0, 0, 0, 0.7, 0.08, 0.9),
       part(box, 0x333333, 0, 1.15, 0.85, 0, 0, 0, 0.12, 0.35, 0.12),
-      part(box, 0x3f9b4a, 0, 0.7, -0.45, 0, 0, 0, 1.1, 0.35, 0.8),
+      part(box, paint, 0, 0.7, -0.45, 0, 0, 0, 1.1, 0.35, 0.8),
       part(box, 0x222222, 0, 1.0, -0.45, 0, 0, 0, 0.5, 0.12, 0.45),
-      ...[[-0.45, -0.1], [0.45, -0.1], [-0.45, -0.8], [0.45, -0.8]].map(([x, z]) => part(box, 0x555555, x, 1.55, z, 0, 0, 0, 0.06, 1.0, 0.06)),
-      part(box, 0xf3efe3, 0, 2.05, -0.45, 0, 0, 0, 1.1, 0.08, 0.9),
       // cutter frame in front
       part(box, 0x777e88, 0, 0.35, 1.25, 0, 0, 0, 2.4, 0.12, 0.2),
-    ]),
+  ]);
+}
+
+/** Low-poly vehicles, facing +z (the player's forward). */
+const MODELS: Record<'tractor' | 'combine' | 'hired', Model> = {
+  tractor: {
+    body: tractorBody(0x3f9b4a, 0x2f7a39),
     wheels: merge([wheel(-0.62, -0.5, 0.55, 0.3), wheel(0.62, -0.5, 0.55, 0.3), wheel(-0.5, 0.7, 0.32, 0.22), wheel(0.5, 0.7, 0.32, 0.22),
       hub(-0.78, -0.5, 0.55), hub(0.78, -0.5, 0.55)]),
     spinner: merge([
@@ -67,7 +74,9 @@ const MODELS: Record<'tractor' | 'combine', Model> = {
     spinnerAt: [0, 0.95, 1.75],
     seat: [0, 1.75, 0.75],
   },
+  hired: null as unknown as Model,
 };
+MODELS.hired = { ...MODELS.tractor, body: tractorBody(0xf28c38, 0xc96a1f) };
 
 /** One vehicle: root follows the player (or sits parked), body is sprung, spinner turns while cutting. */
 class Vehicle {
@@ -77,7 +86,7 @@ class Vehicle {
   /** Combine only: grain level in the tank (scaled 0..1 in y). */
   readonly grain: THREE.Mesh | null = null;
 
-  constructor(scene: THREE.Scene, readonly m: Model, kind: 'tractor' | 'combine') {
+  constructor(scene: THREE.Scene, readonly m: Model, kind: 'tractor' | 'combine' | 'hired') {
     this.root.add(new THREE.Mesh(m.wheels, MAT), this.body);
     this.body.add(new THREE.Mesh(m.body, MAT));
     this.spinner = new THREE.Mesh(m.spinner, MAT);
@@ -101,13 +110,38 @@ export class VehicleView {
   private v: Record<'tractor' | 'combine', Vehicle>;
   private time = 0;
   private bob = 0;
+  private hired: { veh: Vehicle; char: CharacterView }[] = [];
 
-  constructor(scene: THREE.Scene, private fx: PhysicsFx) {
+  constructor(private scene: THREE.Scene, private fx: PhysicsFx) {
     this.v = { tractor: new Vehicle(scene, MODELS.tractor, 'tractor'), combine: new Vehicle(scene, MODELS.combine, 'combine') };
+  }
+
+  /** Hired drivers: orange tractors with a seated farmhand; a light shake while driving. */
+  private syncHired(sim: SimWorld, dt: number): void {
+    const ds = sim.field.drivers;
+    while (this.hired.length < ds.length) {
+      const veh = new Vehicle(this.scene, MODELS.hired, 'hired');
+      const char = new CharacterView(DRIVER);
+      char.shadow.visible = false;
+      this.scene.add(char.root);
+      this.hired.push({ veh, char });
+    }
+    for (let i = 0; i < ds.length; i++) {
+      const d = ds[i], h = this.hired[i];
+      h.veh.root.visible = true;
+      h.veh.root.position.set(d.x, 0, d.z);
+      h.veh.root.rotation.y = d.rot;
+      h.veh.body.position.y = d.speed > 0.3 ? Math.sin(this.time * 20 + i * 2) * 0.02 : 0;
+      if (d.cutting > 0) h.veh.spinner.rotation.x -= dt * 14;
+      h.char.update(d.x, d.z, d.rot, 0, dt, false, true);
+      h.veh.body.updateWorldMatrix(true, false);
+      h.char.root.position.copy(h.veh.body.localToWorld(_v.set(...h.veh.m.seat)));
+    }
   }
 
   sync(sim: SimWorld, dt: number, rand: () => number): void {
     this.time += dt;
+    this.syncHired(sim, dt);
     const f = sim.field, kind = f.vehicle, p = sim.player;
     this.v.tractor.root.visible = kind === 'tractor';
     this.v.combine.root.visible = kind === 'combine';

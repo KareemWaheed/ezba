@@ -33,8 +33,8 @@ export const ECONOMY = {
 
   /** Field crops (stage 4): sale price per bundle at the grain stall. */
   crops: {
-    corn: { price: 8 },
-    wheat: { price: 14 },
+    corn: { price: 5 },
+    wheat: { price: 9 },
   },
 
   /** Crop fields (stage 4): walk through with a tool to cut every stalk in reach. */
@@ -57,6 +57,8 @@ export const ECONOMY = {
     /** Vehicles: speed multiplier and extra cutting reach; the combine fills its own hopper. */
     tractor: { speedMult: 1.4, reach: 0.9, radius: 0.9 },
     combine: { speedMult: 1.55, reach: 1.9, hopper: 60, radius: 1.2 },
+    /** Hired drivers: NPC tractors mowing a plot back and forth, unloading at the stall. */
+    driver: { speed: 3.2, reach: 1.5, hopper: 24, unloadInterval: 0.12 },
   },
 
   /**
@@ -359,10 +361,12 @@ export const ECONOMY = {
     'field.tractor': { base: 90000, growth: 1, max: 1, step: 1 },
     /** Combine harvester: very wide path, bundles go into its hopper (unloads at the stall). */
     'field.combine': { base: 300000, growth: 1, max: 1, step: 1 },
+    /** Hired tractor drivers (+1 per level): they harvest on their own, also during time away. */
+    'field.driver': { base: 60000, growth: 2.2, max: 3, step: 1 },
     /** Bigger engine: vehicles drive faster, x (1 + step x level). */
     'field.engine': { base: 20000, growth: 2.3, max: 3, step: 0.12 },
     /** Fertilizer: crops regrow faster, time / (1 + step x level). */
-    'field.regrow': { base: 6000, growth: 2.2, max: 4, step: 0.3 },
+    'field.regrow': { base: 6000, growth: 2.2, max: 4, step: 0.15 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */

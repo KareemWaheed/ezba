@@ -247,6 +247,7 @@ function frame(now: number): void {
   sickle.rotation.x = sim.field.cutting > 0 ? Math.sin(now * 0.03) * 0.9 : 0;
   farm.field.quality = view.fps < 40 ? 0.5 : 1;
   farm.sync(sim, real);
+  player.shadow.visible = !driving;
   if (driving) farm.field.vehicles.seat(player.root, driving);
   farm.endFrame(real);
   if (farm.coinFlew) sfx.coin();

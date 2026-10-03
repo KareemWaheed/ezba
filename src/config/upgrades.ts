@@ -133,6 +133,10 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 10.8, z: -11.1 }, requires: [{ id: 'field.wheat', level: 1 }], requiresMaxed: 'field.tractor', milestone: true,
   },
   {
+    id: 'field.driver', icon: '🧑‍🌾', label: 'وظّف سوّاق جرار', msg: 'سوّاق جرار جديد بيحصد لوحده 🧑‍🌾',
+    pos: { x: 15.2, z: -11.1 }, requires: [{ id: 'field.tractor', level: 1 }], milestone: true,
+  },
+  {
     id: 'field.engine', icon: '⚙️', label: 'موتور أقوى', msg: 'العربية بقت أسرع ⚙️',
     pos: { x: 13.0, z: -11.1 }, requires: [{ id: 'field.tractor', level: 1 }],
   },
