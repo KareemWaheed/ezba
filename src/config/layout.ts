@@ -57,6 +57,8 @@ export const LAYOUT = {
     kick: { x: 3.6, z: 6.4 },
     cones: [{ x: 4.1, z: 5.3 }, { x: 4.7, z: 7.5 }, { x: 5.3, z: 5.3 }],
   },
+  /** Dance pads beside the VIP stage's crowd for the concert visit (diamond: west, east, north, south). */
+  dancePads: [{ x: -2.2, z: 11.7 }, { x: -0.2, z: 11.7 }, { x: -1.2, z: 10.7 }, { x: -1.2, z: 12.7 }],
   vipStage: {
     x: -6.4, z: 8.4, w: 3.2, d: 2.2,
     seat: { x: -6.4, z: 8.1 },

@@ -12,6 +12,7 @@ import type { StormMechanic } from '../src/sim/scenarios/storm';
 import type { InspectorMechanic } from '../src/sim/scenarios/inspector';
 import { FOOTBALL, type FootballMechanic } from '../src/sim/scenarios/football';
 import type { CommentsMechanic } from '../src/sim/scenarios/comments';
+import type { StageMechanic } from '../src/sim/scenarios/stage';
 import { LAYOUT } from '../src/config/layout';
 
 const DT = 1 / 30;
@@ -236,6 +237,41 @@ if (!only || only === 'influencer') {
   });
   ok(total >= 3 && done >= 2, `influencer: requests come in and get filled (${done}/${total})`);
   ok(goalOk(w, 'likes') === true, `influencer: serving requests fills the likes (${w.scenario.likes})`);
+}
+
+// ---- Amr Diab: dance pads on the beat ----
+if (!only || only === 'amrdiab') {
+  const w = fresh();
+  w.scenario.trigger('amrdiab');
+  runUntilIdle(w);
+  ok(goalOk(w, 'beatCombo') === false, 'amrdiab unattended: combo fails');
+}
+if (!only || only === 'amrdiab') {
+  const w = fresh();
+  w.scenario.trigger('amrdiab');
+  let best = 0;
+  runUntilIdle(w, (w) => {
+    const m = w.scenario.mech as StageMechanic;
+    if (!m.pads) return;
+    best = m.best;
+    const p = m.pads[m.lit];
+    w.player.x = p.x; w.player.z = p.z;
+  });
+  ok(best >= 16, `amrdiab: always on the lit pad builds a long combo (${best})`);
+  ok(goalOk(w, 'beatCombo') === true, 'amrdiab: combo goal passes');
+}
+if (!only || only === 'amrdiab') {
+  const w = fresh();
+  w.scenario.trigger('amrdiab');
+  let best = 0;
+  runUntilIdle(w, (w) => {
+    const m = w.scenario.mech as StageMechanic;
+    if (!m.pads) return;
+    best = m.best;
+    const p = m.pads[(m.lit + 1) % m.pads.length];
+    w.player.x = p.x; w.player.z = p.z;
+  });
+  ok(best === 0, `amrdiab: the wrong pad never counts (${best})`);
 }
 
 // ---- availability: never pick an event whose area is locked ----

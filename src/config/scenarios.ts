@@ -32,7 +32,8 @@ export type ScenarioGoal =
   | 'likes'          // fill the likes meter with fast services
   | 'herd'           // bring every escaped animal back
   | 'checkpoints'    // every stop on the inspector's route is fine
-  | 'goals';         // score goals on the yard pitch
+  | 'goals'          // score goals on the yard pitch
+  | 'beatCombo';     // a combo on the dance pads
 
 /** The special guest (served only by the player, like a VIP). */
 export interface GuestDef {
@@ -155,11 +156,11 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     twists: [{ at: 30, kind: 'rush', text: 'فانز زيادة جايين! 🏃' }],
   },
   {
-    id: 'amrdiab', icon: '🎤', title: 'عمرو دياب جاي المزرعة!', hint: 'الجمهور كله جاي وراه، خدمهم بسرعة',
+    id: 'amrdiab', icon: '🎤', title: 'عمرو دياب جاي المزرعة!', hint: 'ارقص مع الهضبة! اقف على المربع اللي بينوّر',
     color: '#111827', weight: 2, warning: 8, duration: 60, arrivalMult: 2.4, crowdShare: 0.85, crowd: 'concert', featured: null,
     patienceMult: 0.9, qtyMult: 1, tipMult: 3,
     guest: { name: 'عمرو دياب', look: 'amrdiab', qtyMult: 2, payMult: 12, patience: 70, entourage: 2 },
-    goals: ['serveGuest', 'noAngry'], rewardSeconds: 75, rewardShare: 0.8, ratingWin: 0.6, ratingLose: -0.3,
+    goals: ['serveGuest', 'beatCombo'], rewardSeconds: 75, rewardShare: 0.8, ratingWin: 0.6, ratingLose: -0.3, mechanic: 'stage',
     props: ['confetti'], music: 'pop', minUpgrades: 26,
     tint: 'rgba(80,70,200,0.3)', intro: 'الهضبة وصل! 🎤✨',
   },
@@ -228,6 +229,7 @@ export const SCENARIO_GOAL_LABEL: Record<ScenarioGoal, string> = {
   herd: 'رجّع الحيوانات',
   checkpoints: 'كل نقط التفتيش سليمة',
   goals: 'جوّن ٣ أهداف',
+  beatCombo: 'كومبو ٨ على الإيقاع',
 };
 
 /** How often scenarios happen (seconds of active play between them). */

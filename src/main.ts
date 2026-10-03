@@ -140,6 +140,7 @@ let dropRun = 0;
 /** Sounds for a mechanic's cues (n is mechanic-specific; see sim/scenarios/). */
 function cueSound(mech: string | undefined, n: number): void {
   if (mech === 'storm') { if (n === 1) sfx.angry(); else sfx.fixed(); }
+  if (mech === 'stage') { if (n === 1) sfx.tip(); else sfx.angry(); }
   if (mech === 'comments') { if (n === 1) sfx.sell(); else sfx.tip(); }
   if (mech === 'inspector') { if (n === 1) sfx.fixed(); else sfx.clunk(); }
   // football: 1 goal, 2 saved, 3 cone passed, 4 shot without the cones

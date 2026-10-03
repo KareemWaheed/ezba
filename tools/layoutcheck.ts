@@ -63,6 +63,10 @@ for (const d of UPGRADES) {
   }
 }
 
+// dance pads: clear floor too, away from tiles
+for (const p of LAYOUT.dancePads) for (const t of UPGRADES) if (Math.abs(t.pos.x - p.x) < TILE / 2 + 0.6 && Math.abs(t.pos.z - p.z) < TILE / 2 + 0.6) problems.push(`tile on a dance pad: ${t.id}`);
+for (const p of LAYOUT.dancePads) for (const s of SOLIDS) if (p.x > s.x0 - 0.6 && p.x < s.x1 + 0.6 && p.z > s.z0 - 0.6 && p.z < s.z1 + 0.6) problems.push(`solid on a dance pad (${p.x},${p.z})`);
+
 // the football pitch must be clear floor: no tiles (they'd pay while dribbling), no solids
 {
   const p = LAYOUT.pitch, R = TILE / 2;

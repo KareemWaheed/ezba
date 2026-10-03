@@ -8,6 +8,7 @@ import { StormMechanic } from './scenarios/storm';
 import { InspectorMechanic } from './scenarios/inspector';
 import { FootballMechanic } from './scenarios/football';
 import { CommentsMechanic } from './scenarios/comments';
+import { StageMechanic } from './scenarios/stage';
 
 /** Mechanic per id; ids without their own module yet fall back to BASIC. */
 const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
@@ -15,6 +16,7 @@ const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
   inspector: () => new InspectorMechanic(),
   football: () => new FootballMechanic(),
   comments: () => new CommentsMechanic(),
+  stage: () => new StageMechanic(),
 };
 
 export interface GoalState { goal: ScenarioGoal; ok: boolean; progress: number }
