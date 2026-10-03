@@ -13,6 +13,7 @@ import type { InspectorMechanic } from '../src/sim/scenarios/inspector';
 import { FOOTBALL, type FootballMechanic } from '../src/sim/scenarios/football';
 import type { CommentsMechanic } from '../src/sim/scenarios/comments';
 import type { StageMechanic } from '../src/sim/scenarios/stage';
+import type { ProcessionMechanic } from '../src/sim/scenarios/procession';
 import { LAYOUT } from '../src/config/layout';
 
 const DT = 1 / 30;
@@ -327,6 +328,36 @@ if (!only || only === 'president') {
   w.scenario.trigger('president');
   runUntilIdle(w, () => bot.update(DT));
   ok(w.scenario.lastGoals.find((g) => g.goal === 'serveGuest')?.ok === true, 'president: the active bot gets through security and serves');
+}
+
+// ---- procession: wedding zaffa, Japanese tour ----
+for (const id of ['wedding', 'japan'] as const) {
+  if (only && only !== id) continue;
+  {
+    const w = fresh();
+    w.scenario.trigger(id);
+    runUntilIdle(w);
+    ok(goalOk(w, 'trays') === false, `${id} unattended: trays fail`);
+  }
+  {
+    // walk up to the next hungry guest with what they want in hand; pose at the tour photo
+    const w = fresh();
+    w.scenario.trigger(id);
+    let served = 0, total = 0;
+    runUntilIdle(w, (w) => {
+      const m = w.scenario.mech as ProcessionMechanic;
+      if (!m.guests) return;
+      served = m.guests.filter((g) => g.served).length; total = m.guests.length;
+      if (m.photoAt) { w.player.x = m.photoAt.x; w.player.z = m.photoAt.z; return; }
+      const g = m.guests.find((x) => !x.served && x.x > -50);
+      if (!g) return;
+      if (!w.carry.has(g.want)) { w.carry.items.length = 0; w.carry.push(g.want); }
+      w.player.x = g.x + 0.4; w.player.z = g.z;
+    });
+    ok(total >= 6 && served >= 6, `${id}: guests get served on the move (${served}/${total})`);
+    ok(goalOk(w, 'trays') === true, `${id}: trays goal passes`);
+    if (id === 'japan') ok(goalOk(w, 'photo') === true, 'japan: the group photo is taken');
+  }
 }
 
 // ---- availability: never pick an event whose area is locked ----

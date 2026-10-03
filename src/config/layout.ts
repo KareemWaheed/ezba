@@ -57,6 +57,11 @@ export const LAYOUT = {
     kick: { x: 3.6, z: 6.4 },
     cones: [{ x: 4.1, z: 5.3 }, { x: 4.7, z: 7.5 }, { x: 5.3, z: 5.3 }],
   },
+  /** Route of a walking group (wedding zaffa, tour) from the west gate across the yard, and the tour's stops. */
+  procession: {
+    path: [{ x: -8.3, z: 13.2 }, { x: -3.5, z: 11.4 }, { x: 3.0, z: 11.4 }, { x: 6.6, z: 9.6 }, { x: 10.8, z: 9.6 }],
+    stops: [{ x: -3.5, z: 11.4 }, { x: 2.0, z: 11.4 }, { x: 6.6, z: 9.6 }],
+  },
   /** Dance pads beside the VIP stage's crowd for the concert visit (diamond: west, east, north, south). */
   dancePads: [{ x: -2.2, z: 11.7 }, { x: -0.2, z: 11.7 }, { x: -1.2, z: 10.7 }, { x: -1.2, z: 12.7 }],
   vipStage: {

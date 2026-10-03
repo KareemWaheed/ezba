@@ -27,6 +27,8 @@ export interface Mechanic {
   bonus?(w: SimWorld): boolean;
   /** Where the bot should go to work on this event (null = nothing to do). */
   botTarget?(w: SimWorld): { x: number; z: number } | null;
+  /** Keep the event going past its timer (e.g. a procession still walking). */
+  busy?(w: SimWorld): boolean;
   /** Drop all temporary state (event end, time away). Idempotent. */
   teardown(w: SimWorld): void;
 }

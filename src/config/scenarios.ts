@@ -35,7 +35,8 @@ export type ScenarioGoal =
   | 'goals'          // score goals on the yard pitch
   | 'beatCombo'      // a combo on the dance pads
   | 'inTime'         // the guest served with patience to spare
-  | 'photo';         // stood in the official photo
+  | 'photo'          // stood in the official photo
+  | 'trays';         // served the walking group
 
 /** The special guest (served only by the player, like a VIP). */
 export interface GuestDef {
@@ -167,11 +168,11 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     tint: 'rgba(80,70,200,0.3)', intro: 'الهضبة وصل! 🎤✨',
   },
   {
-    id: 'japan', icon: '🇯🇵', title: 'فوج سياح من اليابان!', hint: 'طلبات كبيرة وبقشيش حلو، متخليش حد يستنى',
+    id: 'japan', icon: '🇯🇵', title: 'فوج سياح من اليابان!', hint: 'هات لكل سايح طلبه واتصوّر معاهم في الآخر 📸',
     color: '#bc002d', weight: 2, warning: 8, duration: 60, arrivalMult: 2, crowdShare: 0.9, crowd: 'tourists', featured: null,
     patienceMult: 1.2, qtyMult: 1.8, tipMult: 2.5,
     guest: { name: 'المرشد السياحي', look: 'tourguide', qtyMult: 2, payMult: 8, patience: 90, entourage: 4 },
-    goals: ['serveGuest', 'noAngry'], rewardSeconds: 70, rewardShare: 0.7, ratingWin: 0.5, ratingLose: -0.2,
+    goals: ['trays', 'photo'], mechanic: 'procession', variant: 'tour', rewardSeconds: 70, rewardShare: 0.7, ratingWin: 0.5, ratingLose: -0.2,
     props: ['flags'], music: 'pop', minUpgrades: 22,
     flag: 'japan', tint: 'rgba(188,0,45,0.22)', intro: 'Konnichiwa! أهلاً بالسياح 🇯🇵📸',
   },
@@ -185,11 +186,11 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     flag: 'military', tint: 'rgba(85,107,47,0.32)', intro: 'تمام يا فندم! 🪖',
   },
   {
-    id: 'wedding', icon: '💍', title: 'زفة فرح معدية من هنا!', hint: 'المعازيم بيدّوا بقشيش كتير',
+    id: 'wedding', icon: '💍', title: 'زفة فرح معدية من هنا!', hint: 'الزفة معدية! خدّم المعازيم وهما ماشيين',
     color: '#d96aa7', weight: 2, warning: 6, duration: 55, arrivalMult: 2, crowdShare: 0.8, crowd: 'wedding',
     patienceMult: 1, qtyMult: 1.3, tipMult: 4,
     guest: { name: 'العريس', look: 'groom', qtyMult: 2, payMult: 10, patience: 80, entourage: 3 },
-    goals: ['serveGuest', 'noAngry'], rewardSeconds: 60, rewardShare: 0.5, ratingWin: 0.5, ratingLose: -0.2,
+    goals: ['trays', 'serveGuest'], mechanic: 'procession', variant: 'zaffa', rewardSeconds: 60, rewardShare: 0.5, ratingWin: 0.5, ratingLose: -0.2,
     props: ['band', 'confetti', 'flags'], music: 'zaffa', minUpgrades: 25,
     flag: 'wedding', tint: 'rgba(217,106,167,0.28)', intro: 'الزفة وصلت! 💃🥁',
   },
@@ -234,6 +235,7 @@ export const SCENARIO_GOAL_LABEL: Record<ScenarioGoal, string> = {
   beatCombo: 'كومبو ٨ على الإيقاع',
   inTime: 'وصّل قبل الوقت',
   photo: 'اتصوّر مع الضيف',
+  trays: 'خدّم ٦ وهما ماشيين',
 };
 
 /** How often scenarios happen (seconds of active play between them). */

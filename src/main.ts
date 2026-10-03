@@ -148,6 +148,13 @@ function cueSound(mech: string | undefined, n: number, v = 0): void {
     else if (n === 4) toast.show('الصورة طلعت من غيرك 😅 كمان مرة!');
     else if (n === 9) { sfx.angry(); toast.show('الحرس: لازم تعدّي على بوابة الأمن الأول! 🛂'); }
   }
+  // procession: 1 a walker got their order (value = paid), 2 photo countdown, 3 photo taken, 4 missed
+  if (mech === 'procession') {
+    if (n === 1) sfx.tip();
+    else if (n === 2) { sfx.alarm(); toast.show('المرشد: كله يتجمع للصورة! 📸 اقف معاهم'); }
+    else if (n === 3) { sfx.fanfare(); toast.show('Cheese! صورة حلوة 📸'); }
+    else if (n === 4) toast.show('الصورة اتاخدت من غيرك 😅');
+  }
   if (mech === 'stage') { if (n === 1) sfx.tip(); else sfx.angry(); }
   if (mech === 'comments') { if (n === 1) sfx.sell(); else sfx.tip(); }
   if (mech === 'inspector') { if (n === 1) sfx.fixed(); else sfx.clunk(); }

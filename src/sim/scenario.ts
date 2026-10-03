@@ -10,6 +10,7 @@ import { FootballMechanic } from './scenarios/football';
 import { CommentsMechanic } from './scenarios/comments';
 import { StageMechanic } from './scenarios/stage';
 import { MotorcadeMechanic } from './scenarios/motorcade';
+import { ProcessionMechanic } from './scenarios/procession';
 
 /** Mechanic per id; ids without their own module yet fall back to BASIC. */
 const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
@@ -19,6 +20,7 @@ const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
   comments: () => new CommentsMechanic(),
   stage: () => new StageMechanic(),
   motorcade: () => new MotorcadeMechanic(),
+  procession: () => new ProcessionMechanic(),
 };
 
 export interface GoalState { goal: ScenarioGoal; ok: boolean; progress: number }
@@ -374,7 +376,8 @@ export class ScenarioSystem {
       case 'active':
         this.updateTwists();
         // the event lasts at least until the guest has left the stage
-        if (this.t <= 0 && (!this.guest || this.guest.state === 'leave' || this.guest.state === 'gone')) { this.phase = 'settle'; this.settleT = 25; }
+        // ...and while the mechanic still has something going (at most 40 s over)
+        if (this.t <= 0 && (!this.guest || this.guest.state === 'leave' || this.guest.state === 'gone') && (this.t < -40 || !this.mech.busy?.(w))) { this.phase = 'settle'; this.settleT = 25; }
         break;
       case 'settle':
         this.settleT -= dt;
