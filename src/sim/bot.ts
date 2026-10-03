@@ -23,7 +23,7 @@ import { Rng } from './rng';
 export type BotProfile = 'active' | 'idle' | 'casual';
 
 type Task = 'tile' | 'stepOff' | 'drop' | 'cash' | 'pick' | 'serve' | 'wait' | 'fix' | 'golden' | 'feed'
-  | 'stoveIn' | 'stoveOut' | 'cafeDrop' | 'cafeServe' | 'clean' | 'tableCash' | 'dock' | 'harvest' | 'sellCrop';
+  | 'stoveIn' | 'stoveOut' | 'cafeDrop' | 'cafeServe' | 'clean' | 'tableCash' | 'dock' | 'harvest' | 'sellCrop' | 'event';
 
 /** Clearance kept from obstacles when routing around them. */
 const CLEAR = ECONOMY.player.radius + 0.25;
@@ -126,6 +126,9 @@ export class Bot {
       // player-only jobs first: jammed machines, golden animals, VIPs
       const jam = w.staff.machines.find((b) => b.broken);
       if (jam) { this.go('fix', jam.mx, jam.mz); return; }
+      // the running event's own objective (herd, chase, kick...) when it has one for us
+      const ev = w.scenario.active && this.profile === 'active' ? w.scenario.mech.botTarget?.(w) : null;
+      if (ev) { this.go('event', ev.x, ev.z); return; }
       const g = w.golden.animal;
       if (g && this.profile === 'active') { this.go('golden', g.x, g.z); return; }
       if (vipDelivery(w, this.vip)) { this.go('serve', this.vip.x, this.vip.z); return; }
