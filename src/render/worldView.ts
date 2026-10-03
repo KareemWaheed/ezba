@@ -82,7 +82,7 @@ export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
     part(box, 0x9fd3f0, hx + 1.5, 1.2, h.z1 + 0.01, 0, 0, 0, 0.8, 0.6, 0.04),
   );
 
-  // Farm café: checkered floor, hedges on the far sides, stove with a hood, café counter, awning
+  // Farm café: checkered floor, hedges on the far sides, kitchen machines, café counter, awning
   const cp = CAFE.plot;
   g.push(ground(cp, 0xf3e6c8, 0.014));
   for (let x = cp.x0; x < cp.x1 - 0.01; x += 1.2) {
@@ -96,15 +96,14 @@ export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
   for (const k of CAFE.kitchen) {
     const sb = k.box, sx = (sb.x0 + sb.x1) / 2, sz = (sb.z0 + sb.z1) / 2, sw = sb.x1 - sb.x0, sd = sb.z1 - sb.z0;
     if (k.id === 'stove') {
-      // egg stove: steel body, black top with a frying pan, hood
+      // egg stove: steel body, black top with a frying pan, steel backsplash against the wall
       g.push(
         part(box, 0xd8d8d8, sx, 0.5, sz, 0, 0, 0, sw, 1.0, sd),
         part(box, 0x3a3a3a, sx, 1.02, sz, 0, 0, 0, sw - 0.1, 0.04, sd - 0.1),
         part(cyl, 0x222222, sx - 0.45, 1.08, sz, 0, 0, 0, 0.32, 0.05, 0.32),
         part(box, 0x222222, sx - 0.05, 1.08, sz, 0, 0, 0, 0.5, 0.04, 0.06),
         part(cyl, 0xf6d24a, sx - 0.45, 1.12, sz, 0, 0, 0, 0.2, 0.02, 0.18),
-        part(box, 0xbfbfbf, sx, 2.3, sz - 0.1, 0, 0, 0, sw - 0.3, 0.5, sd - 0.2),
-        part(box, 0x9a9a9a, sx, 2.9, sz - 0.2, 0, 0, 0, 0.4, 0.8, 0.4),
+        part(box, 0xbfbfbf, sx, 1.55, sb.z0 + 0.06, 0, 0, 0, sw, 1.1, 0.12),
       );
     } else {
       // coffee machine: dark red body, chrome top, cups on the drip tray

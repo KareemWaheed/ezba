@@ -51,7 +51,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'shop.lanes', icon: '🛒', label: 'خط دفع جديد', msg: 'فتحت خط دفع جديد، زباين أكتر 🛒',
-    pos: { x: 7.4, z: 1.8 }, requires: [{ id: 'cashier', level: 1 }], milestone: true,
+    pos: { x: 7.6, z: 2.3 }, requires: [{ id: 'cashier', level: 1 }], milestone: true,
   },
   {
     id: 'eggs.machine', icon: '⚙️', label: 'سير للبيض', msg: 'سير البيض شغال لوحده ⚙️',
@@ -85,27 +85,27 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'cafe.tables', icon: '🪑', label: 'ترابيزة زيادة', msg: 'ترابيزة جديدة في الكافيه 🪑',
-    pos: { x: 13.0, z: 12.0 }, requires: [{ id: 'cafe.unlock', level: 1 }],
+    pos: { x: 13.3, z: 7.2 }, requires: [{ id: 'cafe.unlock', level: 1 }],
   },
   {
     id: 'cafe.nice', icon: '🌷', label: 'ترابيزات أشيك', msg: 'الكافيه بقى أشيك، الأسعار زادت 🌷',
-    pos: { x: 15.0, z: 12.0 }, requires: [{ id: 'cafe.tables', level: 2 }],
+    pos: { x: 13.3, z: 9.2 }, requires: [{ id: 'cafe.tables', level: 2 }],
   },
   {
     id: 'cafe.cleaner', icon: '🧹', label: 'وظّف عامل نظافة', msg: 'عامل النظافة بيمسح الترابيزات 🧹',
-    pos: { x: 17.0, z: 12.0 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+    pos: { x: 13.3, z: 11.2 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
   },
   {
     id: 'cafe.waiter', icon: '💁', label: 'وظّف كاشير الكافيه', msg: 'كاشير الكافيه بيخدم الزباين 💁',
-    pos: { x: 19.0, z: 12.0 }, requires: [{ id: 'cafe.cleaner', level: 1 }], milestone: true,
+    pos: { x: 19.4, z: 5.4 }, requires: [{ id: 'cafe.cleaner', level: 1 }], milestone: true,
   },
   {
     id: 'cafe.stove', icon: '🔥', label: 'مطبخ أسرع', msg: 'المطبخ بقى أسرع 🔥',
-    pos: { x: 11.0, z: 1.4 }, requires: [{ id: 'cafe.unlock', level: 1 }],
+    pos: { x: 19.4, z: 1.4 }, requires: [{ id: 'cafe.unlock', level: 1 }],
   },
   {
     id: 'cafe.helper', icon: '🧑‍🍳', label: 'وظّف مساعد مطبخ', msg: 'مساعد مطبخ جديد بيجيب البيض واللبن 🧑‍🍳',
-    pos: { x: 13.0, z: 10.0 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+    pos: { x: 19.4, z: 3.4 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
   },
   // Loading dock: company contracts with trucks
   {
@@ -118,7 +118,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'dock.size', icon: '📈', label: 'صفقات أكبر', msg: 'الشركات بقت تطلب كميات أكبر 📈',
-    pos: { x: 4.4, z: 12.4 }, requires: [{ id: 'dock.unlock', level: 1 }],
+    pos: { x: 4.1, z: 12.6 }, requires: [{ id: 'dock.unlock', level: 1 }],
   },
   // HR office: an unlockable walled yard west of the farm, with the staff upgrades inside
   {
@@ -127,27 +127,27 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'hr.speed', icon: '⚡', label: 'العمال أسرع', msg: 'العمال بقوا أسرع ⚡',
-    pos: { x: -15.2, z: 7.6 }, requires: [{ id: 'hr.office', level: 1 }],
+    pos: { x: -15.0, z: 6.8 }, requires: [{ id: 'hr.office', level: 1 }],
   },
   {
     id: 'hr.capacity', icon: '📦', label: 'العمال يشيلوا أكتر', msg: 'العمال بيشيلوا أكتر 📦',
-    pos: { x: -13.4, z: 7.6 }, requires: [{ id: 'hr.office', level: 1 }],
+    pos: { x: -12.9, z: 6.8 }, requires: [{ id: 'hr.office', level: 1 }],
   },
   {
     id: 'hr.cashier', icon: '💨', label: 'كاشير أسرع', msg: 'الكاشير بقى أسرع 💨',
-    pos: { x: -13.4, z: 5.4 }, requires: [{ id: 'hr.office', level: 1 }, { id: 'cashier', level: 1 }],
+    pos: { x: -12.9, z: 4.8 }, requires: [{ id: 'hr.office', level: 1 }, { id: 'cashier', level: 1 }],
   },
   {
     id: 'maint', icon: '🔧', label: 'صيانة', msg: 'المكن بقى يعطل أقل 🔧',
-    pos: { x: -15.2, z: 5.4 }, requires: [{ id: 'hr.office', level: 1 }, { id: 'eggs.machine', level: 1 }],
+    pos: { x: -15.0, z: 4.8 }, requires: [{ id: 'hr.office', level: 1 }, { id: 'eggs.machine', level: 1 }],
   },
   {
     id: 'rush.reward', icon: '🎁', label: 'مكافأة الزحمة', msg: 'مكافأة الزحمة زادت 🎁',
-    pos: { x: -13.4, z: 9.3 }, requires: [{ id: 'hr.office', level: 1 }],
+    pos: { x: -12.9, z: 8.8 }, requires: [{ id: 'hr.office', level: 1 }],
   },
   {
     id: 'rush.warning', icon: '📣', label: 'إنذار بدري', msg: 'هتعرف بالزحمة بدري ⏰',
-    pos: { x: -15.2, z: 9.3 }, requires: [{ id: 'hr.office', level: 1 }],
+    pos: { x: -15.0, z: 8.8 }, requires: [{ id: 'hr.office', level: 1 }],
   },
 ];
 

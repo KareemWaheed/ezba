@@ -54,3 +54,7 @@ This file records the decisions made on top of it.
   farm stock nobody buys. `npm run cafeflow -- [casual|active]` checks the first 10 café minutes (0 angry).
 - Egg belt costs 1000 so a casual player gets it in ~30–40 min; café cashier raised to 150k to keep full
   automation at day 4+.
+- Café layout v2 (screenshot review): kitchen line on the back wall — egg spot | egg pan + belt | serve |
+  coffee belt + machine | milk spot — both conveyors run straight down onto the counter; café tiles in the
+  free left/right columns; dirty tables show their own 🧽 bubble instead of a static sign. `npm run layoutcheck`
+  (also part of `npm run build`) fails on overlapping tiles, tiles on work spots, or tiles in solids.

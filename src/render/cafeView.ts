@@ -78,7 +78,8 @@ class TableView {
     if (eating) this.food.geometry = ITEM_GEO[eating];
     this.cash.set(Math.min(8, t.bills));
     this.cash.update(dt);
-    const frac = t.dirty && t.cleanT > 0 ? t.cleanT / ECONOMY.cafe.cleanTime : -1;
+    // every dirty free table shows a 🧽 bubble (asks to be cleaned); the ring fills while cleaning
+    const frac = t.dirty && !t.occupant ? t.cleanT / ECONOMY.cafe.cleanTime : -1;
     this.ring.sprite.visible = frac >= 0;
     const k = Math.round(frac * 20);
     if (frac >= 0 && k !== this.ringShown) {
@@ -145,8 +146,8 @@ export class CafeView {
     };
     for (const k of CAFE.kitchen) {
       mk(k.raw === 'egg' ? '🥚' : '🥛', k.input.x, k.input.z, 'rgba(255,214,140,0.35)', '#e8a23a');
-      const lb = new Label(220, 1.4);
-      lb.s.sprite.position.set((k.box.x0 + k.box.x1) / 2, 3.4, k.box.z1);
+      const lb = new Label(240, 2.0);
+      lb.s.sprite.position.set((k.box.x0 + k.box.x1) / 2, 2.8, (k.box.z0 + k.box.z1) / 2);
       this.root.add(lb.s.sprite);
       this.machineLabels.push(lb);
       this.machineKeys.push(-1);

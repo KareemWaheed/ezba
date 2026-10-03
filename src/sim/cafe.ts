@@ -150,7 +150,7 @@ export class CafeSystem {
       const conv = new Converter(KITCHEN_RECIPES[k.id], ECONOMY.cafe.stoveInputMax, ECONOMY.cafe.stoveOutputMax, (k.box.x0 + k.box.x1) / 2, k.box.z1 + 0.7);
       // each machine's dishes slide to the café counter on a short conveyor (no carrying needed)
       const belt = new Belt({
-        ax: k.box.x0 + 0.3, az: k.box.z1 + 0.25, bx: cb.x1 + 0.3 + i * 0.4, bz: cb.z0 - 0.15,
+        ax: k.beltX, az: k.box.z1 + 0.1, bx: k.beltX, bz: cb.z0 - 0.1,
         take: () => (this.counter[conv.recipes[0].output] >= ECONOMY.cafe.counterMax ? null : conv.takeAny()),
         deliver: (item) => { this.counter[item as DishId]++; },
       }, 100 + i, 0.8);
@@ -187,7 +187,7 @@ export class CafeSystem {
       m.belt.level = this.open ? 1 + up.level('cafe.stove') : 0;
     }
     // the café opens with one kitchen helper (piles are often drained by belts by then); the track adds more
-    w.staff.ensureWorkers(this.supply, this.open ? 1 + up.level('cafe.helper') : 0, 15, 4);
+    w.staff.ensureWorkers(this.supply, this.open ? 1 + up.level('cafe.helper') : 0, CAFE.helperHome.x, CAFE.helperHome.z);
     while (this.cleaners.length < up.level('cafe.cleaner')) this.cleaners.push(new Cleaner(this.cleaners.length));
   }
 
@@ -403,7 +403,7 @@ export class CafeSystem {
         case 'idle': {
           const i = this.tables.findIndex((t, k) => k < this.tableCount && t.dirty && !t.occupant && !t.claimed);
           if (i >= 0) { cl.table = i; this.tables[i].claimed = true; cl.state = 'toTable'; }
-          else moveToward(cl, 13.4 + cl.slot, 8.8, cfg.cleanerSpeed, dt, 0.2);
+          else moveToward(cl, CAFE.cleanerIdle.x, CAFE.cleanerIdle.z - cl.slot * 0.7, cfg.cleanerSpeed, dt, 0.2);
           break;
         }
         case 'toTable': {

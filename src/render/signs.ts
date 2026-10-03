@@ -50,10 +50,11 @@ export class SignsView {
     // café: shown until the player has served a few café customers
     const cafeNew = (w: SimWorld) => w.cafe.open && w.stats.cafeServed < 15;
     for (const k of CAFE.kitchen) {
-      add(k.raw === 'egg' ? '🍳 حط البيض هنا' : '☕ حط اللبن هنا', k.input.x, k.input.z + 0.3, cafeNew, 1.5, 'rgba(176,96,30,0.9)');
+      // low and nudged outward so they don't touch the serve sign between them
+      const out = k.input.x < CAFE.counter.serve.x ? -0.3 : 0.3;
+      add(k.raw === 'egg' ? '🍳 حط البيض هنا' : '☕ حط اللبن هنا', k.input.x + out, k.input.z + 0.3, cafeNew, 0.95, 'rgba(176,96,30,0.9)');
     }
-    add('🍽️ حط الأكل واخدم هنا', CAFE.counter.serve.x, CAFE.counter.serve.z - 0.2, cafeNew, 2.3, 'rgba(176,96,30,0.9)');
-    add('🧽 نضّف الترابيزات', 18.3, 8.0, cafeNew, 2.2, 'rgba(176,96,30,0.9)');
+    add('🍽️ اخدم هنا', CAFE.counter.serve.x, CAFE.counter.serve.z - 0.2, cafeNew, 2.6, 'rgba(176,96,30,0.9)');
     add('🍳 الطلبات للمنصة', LAYOUT.vipStage.drop.x, LAYOUT.vipStage.drop.z, (w) => w.scenario.guest?.state === 'order', 1.6, 'rgba(176,24,46,0.9)');
     add('🚚 حمّل العربية هنا', LAYOUT.dock.load.x, LAYOUT.dock.load.z, (w) => w.contracts.open && w.contracts.truck.state === 'loading' && w.stats.trucks < 4, 1.6, 'rgba(30,91,198,0.9)');
   }
