@@ -46,7 +46,7 @@ const first = (r: RunResult, id: UpgradeId, level = 1) => r.purchases.find((p) =
 const fmt = (x?: Purchase) => (x ? `${x.playMin.toFixed(0)} min (day ${x.day})` : 'never');
 
 /** When every worker/cashier/machine step of stages 1-3 has been bought at least once. */
-const AUTO: UpgradeId[] = ['eggs.worker', 'eggs.machine', 'cashier', 'milk.worker', 'milk.machine', 'cafe.helper', 'cafe.belt', 'cafe.waiter', 'cafe.cleaner'];
+const AUTO: UpgradeId[] = ['eggs.worker', 'eggs.machine', 'cashier', 'milk.worker', 'milk.machine', 'cafe.helper', 'cafe.waiter', 'cafe.cleaner'];
 function automated(r: RunResult): Purchase | undefined {
   const last = AUTO.map((id) => first(r, id));
   if (!last.every(Boolean)) return undefined;
@@ -77,7 +77,7 @@ export function checkTargets(eff: RunResult, casual: RunResult): TargetResult[] 
   };
   span('first worker', 'eggs.worker', 15, 35);
   span('cows', 'milk.unlock', 45, 160);
-  span('egg belt', 'eggs.machine', 70, 240);
+  span('egg belt', 'eggs.machine', 20, 40);
   span('café', 'cafe.unlock', 80, 320);
 
   const ea = automated(eff), ca = automated(casual);

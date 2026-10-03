@@ -98,7 +98,7 @@ export const SOLIDS: Box[] = [
   { ...LAYOUT.counter },
   ...hrWalls(),
   { ...LAYOUT.hrYard.building },
-  { ...CAFE.stove.box },
+  ...CAFE.kitchen.map((k) => ({ ...k.box })),
   { ...CAFE.counter.box },
   // hay bales lie along x (length 1.2, radius 0.5)
   ...LAYOUT.hay.map(([x, z]) => ({ x0: x - 0.6, x1: x + 0.6, z0: z - 0.5, z1: z + 0.5 })),

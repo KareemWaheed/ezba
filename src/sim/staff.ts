@@ -229,7 +229,7 @@ export class StaffSystem {
     // schedule and trigger jams for every running machine
     for (const m of this.machines) {
       if (!m.running || m.broken) continue;
-      if (m.breakT < 0) m.breakT = nextBreak(w);
+      if (m.breakT < 0) m.breakT = Math.max(ECONOMY.breakdowns.mean * 0.5, nextBreak(w));
       m.breakT -= dt;
       if (m.breakT <= 0) {
         m.broken = true;

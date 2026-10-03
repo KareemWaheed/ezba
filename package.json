@@ -10,7 +10,8 @@
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit",
     "simulate": "tsx tools/simulate.ts",
-    "simulate:check": "tsx tools/simulate.ts --check"
+    "simulate:check": "tsx tools/simulate.ts --check",
+    "cafeflow": "tsx tools/cafeflow.ts"
   },
   "dependencies": {
     "@fontsource/baloo-bhaijaan-2": "^5.3.0",

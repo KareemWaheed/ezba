@@ -93,15 +93,31 @@ export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
   }
   for (let x = cp.x0 + 0.5; x < cp.x1; x += 1.0) g.push(part(PRIM.sphLo, 0x4f9e3a, x, 0.35, cp.z0 - 0.3, 0, 0, 0, 0.55, 0.45, 0.45));
   for (let z = cp.z0 + 0.5; z < cp.z1; z += 1.0) g.push(part(PRIM.sphLo, 0x4f9e3a, cp.x1 + 0.3, 0.35, z, 0, 0, 0, 0.45, 0.45, 0.55));
-  const sb = CAFE.stove.box, sx = (sb.x0 + sb.x1) / 2, sz = (sb.z0 + sb.z1) / 2, sw = sb.x1 - sb.x0, sd = sb.z1 - sb.z0;
-  g.push(
-    part(box, 0xd8d8d8, sx, 0.5, sz, 0, 0, 0, sw, 1.0, sd),
-    part(box, 0x3a3a3a, sx, 1.02, sz, 0, 0, 0, sw - 0.1, 0.04, sd - 0.1),
-    part(cyl, 0x222222, sx - 0.6, 1.06, sz, 0, 0, 0, 0.25, 0.03, 0.25),
-    part(cyl, 0x222222, sx + 0.6, 1.06, sz, 0, 0, 0, 0.25, 0.03, 0.25),
-    part(box, 0xbfbfbf, sx, 2.3, sz - 0.1, 0, 0, 0, sw - 0.3, 0.5, sd - 0.2),
-    part(box, 0x9a9a9a, sx, 2.9, sz - 0.2, 0, 0, 0, 0.4, 0.8, 0.4),
-  );
+  for (const k of CAFE.kitchen) {
+    const sb = k.box, sx = (sb.x0 + sb.x1) / 2, sz = (sb.z0 + sb.z1) / 2, sw = sb.x1 - sb.x0, sd = sb.z1 - sb.z0;
+    if (k.id === 'stove') {
+      // egg stove: steel body, black top with a frying pan, hood
+      g.push(
+        part(box, 0xd8d8d8, sx, 0.5, sz, 0, 0, 0, sw, 1.0, sd),
+        part(box, 0x3a3a3a, sx, 1.02, sz, 0, 0, 0, sw - 0.1, 0.04, sd - 0.1),
+        part(cyl, 0x222222, sx - 0.45, 1.08, sz, 0, 0, 0, 0.32, 0.05, 0.32),
+        part(box, 0x222222, sx - 0.05, 1.08, sz, 0, 0, 0, 0.5, 0.04, 0.06),
+        part(cyl, 0xf6d24a, sx - 0.45, 1.12, sz, 0, 0, 0, 0.2, 0.02, 0.18),
+        part(box, 0xbfbfbf, sx, 2.3, sz - 0.1, 0, 0, 0, sw - 0.3, 0.5, sd - 0.2),
+        part(box, 0x9a9a9a, sx, 2.9, sz - 0.2, 0, 0, 0, 0.4, 0.8, 0.4),
+      );
+    } else {
+      // coffee machine: dark red body, chrome top, cups on the drip tray
+      g.push(
+        part(box, 0x6b2a20, sx, 0.5, sz, 0, 0, 0, sw, 1.0, sd),
+        part(box, 0xc0c0c0, sx, 1.45, sz - 0.15, 0, 0, 0, sw - 0.3, 0.9, sd - 0.4),
+        part(box, 0x2b2b2b, sx, 1.15, sz + 0.25, 0, 0, 0, sw - 0.6, 0.12, 0.3),
+        part(cyl, 0xffffff, sx - 0.3, 1.25, sz + 0.3, 0, 0, 0, 0.09, 0.14, 0.09),
+        part(cyl, 0xffffff, sx + 0.3, 1.25, sz + 0.3, 0, 0, 0, 0.09, 0.14, 0.09),
+        part(cyl, 0x8a5a32, sx, 2.0, sz - 0.15, 0, 0, 0, 0.18, 0.2, 0.18),
+      );
+    }
+  }
   const cb = CAFE.counter.box, ccx = (cb.x0 + cb.x1) / 2, ccz = (cb.z0 + cb.z1) / 2, ccw = cb.x1 - cb.x0;
   g.push(
     part(box, 0x7a4b2a, ccx, 0.45, ccz, 0, 0, 0, ccw, 0.9, cb.z1 - cb.z0),

@@ -24,7 +24,7 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
     part(sphLo, 0xffffff, 0.04, 0.12, 0.02, 0, 0, 0, 0.07, 0.03, 0.07),
     part(sphLo, 0xf2a73b, 0.04, 0.14, 0.02, 0, 0, 0, 0.035, 0.025, 0.035),
   ]),
-  milkcup: merge([
+  coffee: merge([
     part(box, 0xc98a4b, 0, 0.03, 0, 0, 0, 0, 0.5, 0.06, 0.34),
     part(cylLo, 0xd8eef7, -0.1, 0.2, 0, 0, 0, 0, 0.09, 0.28, 0.09),
     part(cylLo, 0xd8eef7, 0.1, 0.2, 0, 0, 0, 0, 0.09, 0.28, 0.09),
@@ -38,9 +38,9 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
 };
 
 /** Stacking height of one item. */
-export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, omelette: 0.17, milkcup: 0.36, bill: 0.11 };
+export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, omelette: 0.17, coffee: 0.36, bill: 0.11 };
 
-export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', omelette: '🍳', milkcup: '☕' };
+export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', omelette: '🍳', coffee: '☕' };
 
 export const ANIMAL_GEO: Record<ProducerKind, THREE.BufferGeometry> = {
   chicken: merge([

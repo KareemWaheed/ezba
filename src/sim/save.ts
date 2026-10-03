@@ -30,8 +30,8 @@ export interface SaveData {
   trust?: Record<string, number>;
   cafe?: {
     counter: Record<string, number>;
-    stoveIn: Record<string, number>;
-    stoveOut: Record<string, number>;
+    /** Per kitchen machine: raw items waiting and dishes ready. */
+    kitchen?: Record<string, { in: Record<string, number>; out: Record<string, number> }>;
     tables: { dirty: boolean; cash: number; bills: number }[];
     cash: { value: number; bills: number };
   };
@@ -77,8 +77,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     cafe: {
       // dishes on the café belt / in customers' hands go back on the counter
       counter: { ...w.cafe.counter },
-      stoveIn: { ...w.cafe.stove.input },
-      stoveOut: { ...w.cafe.stove.output },
+      kitchen: Object.fromEntries(w.cafe.machines.map((m) => [m.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])),
       tables: w.cafe.tables.map((t) => ({ dirty: t.dirty, cash: t.cash, bills: t.bills })),
       cash: { value: w.cafe.uncollected - w.cafe.tables.reduce((a, t) => a + t.cash, 0), bills: w.cafe.cash.bills },
     },
@@ -114,8 +113,12 @@ export function restore(w: SimWorld, s: SaveData): void {
   const cf = s.cafe, cafe = w.cafe;
   if (cf) {
     for (const k of Object.keys(cafe.counter) as (keyof typeof cafe.counter)[]) cafe.counter[k] = Math.max(0, Math.floor(num(cf.counter?.[k])));
-    for (const k of Object.keys(cafe.stove.input) as (keyof typeof cafe.stove.input)[]) cafe.stove.input[k] = Math.max(0, Math.floor(num(cf.stoveIn?.[k])));
-    for (const k of Object.keys(cafe.stove.output) as (keyof typeof cafe.stove.output)[]) cafe.stove.output[k] = Math.max(0, Math.floor(num(cf.stoveOut?.[k])));
+    for (const m of cafe.machines) {
+      const d = cf.kitchen?.[m.id];
+      if (!d) continue;
+      for (const k of Object.keys(m.conv.input) as (keyof typeof m.conv.input)[]) m.conv.input[k] = Math.max(0, Math.floor(num(d.in?.[k])));
+      for (const k of Object.keys(m.conv.output) as (keyof typeof m.conv.output)[]) m.conv.output[k] = Math.max(0, Math.floor(num(d.out?.[k])));
+    }
     cafe.tables.forEach((t, i) => { const d = cf.tables?.[i]; if (d) { t.dirty = !!d.dirty; t.cash = num(d.cash); t.bills = Math.floor(num(d.bills)); } });
     cafe.cash.value = num(cf.cash?.value);
     cafe.cash.bills = Math.floor(num(cf.cash?.bills));

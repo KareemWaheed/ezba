@@ -120,22 +120,22 @@ class Label {
 /** Everything that moves or changes in the café. */
 export class CafeView {
   private root = new THREE.Group();
-  private stoveOut: Record<DishId, InstancedStack>;
   private counter: Record<DishId, InstancedStack>;
   private counterLabel: Record<DishId, Label>;
-  private stoveLabel = new Label(320, 2.0);
-  private flame = new CanvasSprite(96, 96, 0.9);
+  /** Per kitchen machine: input-count label and a flame/steam sprite while working. */
+  private machineLabels: Label[] = [];
+  private machineFx: CanvasSprite[] = [];
+  private machineKeys: number[] = [];
   private cash: InstancedStack;
   private tables: TableView[];
   private customers = new Map<number, CustomerView>();
   private cleaners: { char: CharacterView; stack: CarrierView }[] = [];
   private time = 0;
-  private stoveKey = -1;
   /** Dish being eaten at each table this frame (rebuilt in one pass). */
   private diners: (DishId | null)[] = [];
 
   constructor(private scene: THREE.Scene) {
-    const s = CAFE.stove, cb = CAFE.counter;
+    const cb = CAFE.counter;
     scene.add(this.root);
     const mk = (icon: string, x: number, z: number, fill = 'rgba(255,255,255,0.3)', stroke = '#ffffff') => {
       const m = groundMarker(icon, 1.4, fill, stroke);
@@ -143,18 +143,25 @@ export class CafeView {
       m.position.z = z;
       this.root.add(m);
     };
-    mk('🥚', s.input.x, s.input.z);
-    mk('🍳', s.output.x, s.output.z);
+    for (const k of CAFE.kitchen) {
+      mk(k.raw === 'egg' ? '🥚' : '🥛', k.input.x, k.input.z, 'rgba(255,214,140,0.35)', '#e8a23a');
+      const lb = new Label(220, 1.4);
+      lb.s.sprite.position.set((k.box.x0 + k.box.x1) / 2, 3.4, k.box.z1);
+      this.root.add(lb.s.sprite);
+      this.machineLabels.push(lb);
+      this.machineKeys.push(-1);
+      const fx = new CanvasSprite(96, 96, 0.9);
+      const icon = k.id === 'stove' ? '🔥' : '♨️';
+      fx.draw((c) => { c.font = `70px ${EMOJI}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(icon, 48, 52); });
+      fx.sprite.position.set((k.box.x0 + k.box.x1) / 2 - (k.id === 'stove' ? 0.45 : 0), k.id === 'stove' ? 1.45 : 2.3, (k.box.z0 + k.box.z1) / 2);
+      this.root.add(fx.sprite);
+      this.machineFx.push(fx);
+    }
     mk('🍽️', cb.serve.x, cb.serve.z);
     mk('', CAFE.cash.x, CAFE.cash.z, 'rgba(94,198,208,0.35)', '#5ec6d0');
-    this.stoveOut = {} as Record<DishId, InstancedStack>;
     this.counter = {} as Record<DishId, InstancedStack>;
     this.counterLabel = {} as Record<DishId, Label>;
-    DISH_IDS.forEach((d, i) => {
-      const so = new InstancedStack(d, ECONOMY.cafe.stoveOutputMax, gridSlots(d, 2, 2, 0.42), s.box.x1 - 0.55, 1.07, s.box.z0 + 0.55 + i * 0.0, 0, 7);
-      so.group.position.x -= i * 1.0;
-      this.root.add(so.group);
-      this.stoveOut[d] = so;
+    DISH_IDS.forEach((d) => {
       const ct = new InstancedStack(d, ECONOMY.cafe.counterVisualMax, gridSlots(d, 2, 1, 0.42), cb.slots[d].x, 0.96, cb.slotZ);
       this.root.add(ct.group);
       this.counter[d] = ct;
@@ -163,10 +170,6 @@ export class CafeView {
       this.root.add(lb.s.sprite);
       this.counterLabel[d] = lb;
     });
-    this.stoveLabel.s.sprite.position.set((s.box.x0 + s.box.x1) / 2, 3.6, s.box.z1);
-    this.flame.draw((c) => { c.font = `70px ${EMOJI}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🔥', 48, 52); });
-    this.flame.sprite.position.set((s.box.x0 + s.box.x1) / 2 - 0.6, 1.45, (s.box.z0 + s.box.z1) / 2);
-    this.root.add(this.stoveLabel.s.sprite, this.flame.sprite);
     const bills = gridSlots('bill', 2, 3, 0.34);
     this.cash = new InstancedStack('bill', 36, bills, CAFE.cash.x, 0.03, CAFE.cash.z, 0.08, 9);
     this.root.add(this.cash.group);
@@ -180,10 +183,7 @@ export class CafeView {
     this.root.visible = cafe.open;
     for (const t of this.tables) t.root.visible = cafe.open && t.shown;
     if (!cafe.open) return;
-    const st = cafe.stove;
     for (const d of DISH_IDS) {
-      this.stoveOut[d].set(st.output[d]);
-      this.stoveOut[d].update(dt);
       const n = cafe.counter[d], vis = this.counter[d];
       vis.set(n);
       vis.update(dt);
@@ -191,17 +191,14 @@ export class CafeView {
       lb.s.sprite.visible = n > vis.max;
       if (n > vis.max) lb.set(`x${n}`);
     }
-    // stove input counts: rebuild the label text only when the numbers change
-    let key = 0;
-    for (const k in st.input) key = key * 100 + st.input[k as keyof typeof st.input];
-    if (key !== this.stoveKey) {
-      this.stoveKey = key;
-      const parts: string[] = [];
-      for (const k of Object.keys(st.input) as (keyof typeof st.input)[]) parts.push(`${ITEM_ICON[k]} ${st.input[k]}`);
-      this.stoveLabel.set(parts.join('   '));
-    }
-    this.flame.sprite.visible = !!st.cooking && !st.broken;
-    this.flame.sprite.scale.setScalar(0.8 + Math.sin(this.time * 14) * 0.12);
+    // each machine: "🥚 12" style input count (redrawn only when it changes) + flame/steam while working
+    cafe.machines.forEach((m, i) => {
+      const n = m.conv.input[m.raw];
+      if (n !== this.machineKeys[i]) { this.machineKeys[i] = n; this.machineLabels[i].set(`${m.icon} ${ITEM_ICON[m.raw]} ${n}`); }
+      const fx = this.machineFx[i];
+      fx.sprite.visible = !!m.conv.cooking && !m.conv.broken;
+      fx.sprite.scale.setScalar(0.8 + Math.sin(this.time * 14 + i) * 0.12);
+    });
     this.cash.set(cafe.cash.bills);
     this.cash.update(dt);
 

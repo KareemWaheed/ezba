@@ -1,7 +1,7 @@
 import { ECONOMY } from '../config/economy';
 import { LAYOUT, SOLIDS, SOLIDS_VERSION } from '../config/layout';
 import { CAFE } from '../config/cafe';
-import type { DishId, ProductId } from '../config/economy';
+import type { ProductId } from '../config/economy';
 import { dist, type Box } from './math';
 import type { SimWorld } from './world';
 import type { TileState } from './upgrades';
@@ -156,7 +156,10 @@ export class Bot {
       if (ps && !c.full() && ps.pile > 0 && dist(p.x, p.z, ps.def.pile.x, ps.def.pile.z) < 2) { this.go('pick', ps.def.pile.x, ps.def.pile.z); return; }
       if (this.toDock && c.items.some((it) => w.contracts.stillNeeds(it as ProductId) > -1)) { this.go('dock', LAYOUT.dock.load.x, LAYOUT.dock.load.z); return; }
       this.toDock = false;
-      if (this.supplying && c.items.some((it) => cafe.stove.wants(it as ProductId))) { this.go('stoveIn', CAFE.stove.input.x, CAFE.stove.input.z); return; }
+      if (this.supplying) {
+        const m = cafe.machines.find((x) => c.has(x.raw) && x.conv.wants(x.raw));
+        if (m) { this.go('stoveIn', m.input.x, m.input.z); return; }
+      }
       this.supplying = false;
       for (const s of w.stations) {
         if (s.open && c.has(s.def.product)) { this.go('drop', s.def.counter.dropX, s.def.counter.dropZ); return; }
@@ -214,8 +217,7 @@ export class Bot {
     const front = cafe.customers.find((x) => x.state === 'queue');
     const shopFront = this.serveLane() >= 0 ? w.customers.front(this.serveLane()) : null;
     const cafeUrgent = front && (!shopFront || front.patience / front.patienceMax < shopFront.patience / shopFront.patienceMax);
-    if (!cafe.waiter && front && front.lines.some((l) => l.left > 0 && cafe.counter[l.product] > 0) && cafeUrgent
-      && (front.table >= 0 || cafe.tables.some((t, i) => i < cafe.tableCount && !t.occupant && !t.dirty))) {
+    if (!cafe.waiter && front && front.lines.some((l) => l.left > 0 && cafe.counter[l.product] > 0) && cafeUrgent) {
       this.go('cafeServe', CAFE.counter.serve.x, CAFE.counter.serve.z);
       return true;
     }
@@ -227,14 +229,11 @@ export class Bot {
       }
     }
     if (cafe.cash.value >= 60) { this.go('cash', CAFE.cash.x, CAFE.cash.z); return true; }
-    // carry dishes to the counter (no dish belt yet)
-    let low = false;
-    for (const d of Object.keys(cafe.counter) as DishId[]) if (cafe.counter[d] < 3 && cafe.stove.output[d] > 0) low = true;
-    if (cafe.belt.level === 0 && (low || cafe.stove.outputCount >= ECONOMY.cafe.stoveOutputMax - 2)) { this.go('stoveOut', CAFE.stove.output.x, CAFE.stove.output.z); return true; }
     // keep the stove stocked (no kitchen helper yet)
     if (up.level('cafe.helper') === 0) {
       for (const s of w.stations) {
-        if (s.open && s.pile >= 3 && cafe.stove.input[s.def.product] < 6) {
+        const m = cafe.machineFor(s.def.product);
+        if (s.open && m && s.pile >= 3 && m.conv.input[s.def.product] < 6) {
           this.supplying = true;
           this.pickStation = s.index;
           this.go('pick', s.def.pile.x, s.def.pile.z);

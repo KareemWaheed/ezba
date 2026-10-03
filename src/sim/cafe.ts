@@ -1,6 +1,6 @@
 import { DISH_IDS, ECONOMY, type DishId, type ItemId, type ProductId } from '../config/economy';
 import { CAFE } from '../config/cafe';
-import { STOVE_RECIPES } from '../config/recipes';
+import { KITCHEN_RECIPES } from '../config/recipes';
 import { Converter } from './converter';
 import { Belt, type WorkerJob } from './staff';
 import { dist, moveToward, turnToward } from './math';
@@ -61,18 +61,32 @@ export class Cleaner {
   }
 }
 
-/** Kitchen helper job: eggs/milk from the piles into the stove. */
+/** One kitchen machine: its converter, the drop spot for its raw item, and the conveyor to the counter. */
+export interface KitchenMachine {
+  readonly id: string;
+  readonly name: string;
+  readonly icon: string;
+  readonly raw: ProductId;
+  readonly input: { x: number; z: number };
+  readonly conv: Converter;
+  readonly belt: Belt;
+}
+
+/** Kitchen helper job: eggs/milk from the piles (or shop-counter surplus) into the right machine. */
 class SupplyJob implements WorkerJob {
   readonly key = 'cafe.supply';
   private target: number[] = [];
   private fromCounter: boolean[] = [];
   constructor(private cafe: CafeSystem) {}
   loadAt(w: SimWorld, slot: number, out: { x: number; z: number }): void {
-    // pick the open station whose product the stove is lowest on
+    // the machine whose dish is shortest on the café counter (plus what it already has waiting)
     let best = -1, bestN = Infinity;
     for (const s of w.stations) {
-      if (!s.open || !this.cafe.stove.wants(s.def.product)) continue;
-      const n = this.cafe.stove.input[s.def.product] - s.pile * 0.01;
+      const m = this.cafe.machineFor(s.def.product);
+      if (!s.open || !m || !m.conv.wants(s.def.product)) continue;
+      let onCounter = 0;
+      for (const r of m.conv.recipes) onCounter += this.cafe.counter[r.output] ?? 0;
+      const n = onCounter + m.conv.input[s.def.product] * 1.5;
       if (n < bestN) { best = s.index; bestN = n; }
     }
     if (best < 0) best = this.target[slot] ?? w.stations.findIndex((s) => s.open);
@@ -87,65 +101,69 @@ class SupplyJob implements WorkerJob {
   take(w: SimWorld): ItemId | null {
     for (let slot = 0; slot < this.target.length; slot++) {
       const s = w.stations[this.target[slot]];
-      if (!s || !this.cafe.stove.wants(s.def.product)) continue;
+      const m = s && this.cafe.machineFor(s.def.product);
+      if (!s || !m || !m.conv.wants(s.def.product)) continue;
       if (this.fromCounter[slot]) {
         if (s.counter > ECONOMY.cafe.counterReserve) { s.counter--; return s.def.product; }
       } else if (s.pile > 0) { s.pile--; return s.def.product; }
     }
     return null;
   }
-  unloadAt(_w: SimWorld, slot: number, out: { x: number; z: number }): void {
-    out.x = CAFE.stove.input.x - 0.5 + slot * 0.5;
-    out.z = CAFE.stove.input.z + 0.4;
+  unloadAt(w: SimWorld, slot: number, out: { x: number; z: number }): void {
+    const s = w.stations[this.target[slot] ?? 0];
+    const m = (s && this.cafe.machineFor(s.def.product)) ?? this.cafe.machines[0];
+    out.x = m.input.x - 0.4 + slot * 0.4;
+    out.z = m.input.z + 0.5;
   }
   give(_w: SimWorld, item: ItemId): boolean {
-    return this.cafe.stove.accept(item as ProductId);
+    const m = this.cafe.machineFor(item as ProductId);
+    return !!m && m.conv.accept(item as ProductId);
   }
 }
 
 /** Zone radii in the café. */
-const R = { stoveIn: 1.2, stoveOut: 1.2, serve: 1.6, table: 1.15, cash: 1.3 } as const;
+const R = { machineIn: 1.2, serve: 1.6, table: 1.15, cash: 1.3 } as const;
 
 /**
- * Farm café: stove turns eggs/milk into dishes, café customers order at the café counter, carry
- * food to a free clean table, eat, and leave money plus a dirty table behind.
+ * Farm café: kitchen machines (egg stove, coffee machine) turn eggs/milk into dishes that slide to
+ * the café counter on their own; café customers order there, take food to a free clean table, eat,
+ * and leave money plus a dirty table behind.
  */
 export class CafeSystem {
   open = false;
-  readonly stove: Converter;
+  readonly machines: KitchenMachine[] = [];
   readonly counter = {} as Record<DishId, number>;
   readonly tables: Table[] = [];
   readonly cash = { value: 0, bills: 0 };
   readonly customers: CafeCustomer[] = [];
   readonly cleaners: Cleaner[] = [];
-  readonly belt: Belt;
   private nextId = 1;
   private spawnT = 3;
   private dropT = 0;
-  private pickT = 0;
   private supply: SupplyJob;
 
   constructor(private w: SimWorld) {
-    const s = CAFE.stove;
-    this.stove = new Converter(STOVE_RECIPES, ECONOMY.cafe.stoveInputMax, ECONOMY.cafe.stoveOutputMax, (s.box.x0 + s.box.x1) / 2, s.box.z1 + 0.7);
     for (const d of DISH_IDS) this.counter[d] = 0;
     for (const [x, z] of CAFE.tables) this.tables.push({ x, z, occupant: 0, dirty: false, cash: 0, bills: 0, cleanT: 0, claimed: false });
-    this.belt = new Belt({
-      ax: s.output.x + 0.5, az: s.output.z + 0.3, bx: CAFE.counter.box.x1 + 0.4, bz: CAFE.counter.box.z0 - 0.1,
-      take: () => this.takeNeeded(),
-      deliver: (item) => { this.counter[item as DishId]++; },
-    }, 100, 1.2);
+    const cb = CAFE.counter.box;
+    CAFE.kitchen.forEach((k, i) => {
+      const conv = new Converter(KITCHEN_RECIPES[k.id], ECONOMY.cafe.stoveInputMax, ECONOMY.cafe.stoveOutputMax, (k.box.x0 + k.box.x1) / 2, k.box.z1 + 0.7);
+      // each machine's dishes slide to the café counter on a short conveyor (no carrying needed)
+      const belt = new Belt({
+        ax: k.box.x0 + 0.3, az: k.box.z1 + 0.25, bx: cb.x1 + 0.3 + i * 0.4, bz: cb.z0 - 0.15,
+        take: () => (this.counter[conv.recipes[0].output] >= ECONOMY.cafe.counterMax ? null : conv.takeAny()),
+        deliver: (item) => { this.counter[item as DishId]++; },
+      }, 100 + i, 0.8);
+      w.staff.addBelt(belt);
+      w.staff.machines.push(conv);
+      this.machines.push({ id: k.id, name: k.name, icon: k.icon, raw: k.raw, input: k.input, conv, belt });
+    });
     this.supply = new SupplyJob(this);
-    w.staff.addBelt(this.belt);
-    w.staff.machines.push(this.stove);
   }
 
-  /** Take the cooked dish the café counter is lowest on (keeps every dish on offer). */
-  private takeNeeded(): DishId | null {
-    let best: DishId | null = null;
-    for (const d of DISH_IDS) if (this.stove.output[d] > 0 && (!best || this.counter[d] < this.counter[best])) best = d;
-    if (best) this.stove.output[best]--;
-    return best;
+  /** The kitchen machine that takes this raw item. */
+  machineFor(p: ProductId): KitchenMachine | undefined {
+    return this.machines.find((m) => m.raw === p);
   }
 
   /** Number of tables in use (by upgrade level). */
@@ -162,9 +180,12 @@ export class CafeSystem {
   sync(): void {
     const w = this.w, up = w.upgrades;
     this.open = up.level('cafe.unlock') > 0;
-    this.stove.enabled = this.open;
-    this.stove.speedMult = 1 + up.level('cafe.stove') * ECONOMY.upgrades['cafe.stove'].step;
-    this.belt.level = up.level('cafe.belt');
+    const speed = 1 + up.level('cafe.stove') * ECONOMY.upgrades['cafe.stove'].step;
+    for (const m of this.machines) {
+      m.conv.enabled = this.open;
+      m.conv.speedMult = speed;
+      m.belt.level = this.open ? 1 + up.level('cafe.stove') : 0;
+    }
     // the café opens with one kitchen helper (piles are often drained by belts by then); the track adds more
     w.staff.ensureWorkers(this.supply, this.open ? 1 + up.level('cafe.helper') : 0, 15, 4);
     while (this.cleaners.length < up.level('cafe.cleaner')) this.cleaners.push(new Cleaner(this.cleaners.length));
@@ -177,7 +198,9 @@ export class CafeSystem {
 
   /** Dishes on offer (recipes whose raw product is on the farm). */
   private menu(): DishId[] {
-    return this.stove.active(this.w).map((r) => r.output);
+    const out: DishId[] = [];
+    for (const m of this.machines) for (const r of m.conv.active(this.w)) out.push(r.output);
+    return out;
   }
 
   get interval(): number {
@@ -215,42 +238,20 @@ export class CafeSystem {
     return -1;
   }
 
-  /** Player walk-in zones: stove in/out, café counter, tables, café cash. */
+  /** Player walk-in zones: machine inputs, tables, café cash (serving = standing at the counter). */
   interact(dt: number): void {
     if (!this.open) return;
-    const w = this.w, p = w.player, c = w.carry, cfg = ECONOMY.player, s = CAFE.stove;
+    const w = this.w, p = w.player, c = w.carry, cfg = ECONOMY.player;
     this.dropT -= dt;
-    this.pickT -= dt;
-    // raw items into the stove
-    if (this.dropT <= 0 && dist(p.x, p.z, s.input.x, s.input.z) < R.stoveIn) {
-      for (let i = c.n - 1; i >= 0; i--) {
-        const it = c.items[i] as ProductId;
-        if (this.stove.wants(it)) {
-          c.items.splice(i, 1);
-          this.stove.accept(it);
-          this.dropT = cfg.dropInterval;
-          w.events.emit('drop', it, s.input.x, s.input.z, 0, c.n);
-          break;
-        }
-      }
-    }
-    // dishes out of the stove
-    if (this.pickT <= 0 && !c.full() && dist(p.x, p.z, s.output.x, s.output.z) < R.stoveOut) {
-      const d = this.stove.takeAny();
-      if (d) { c.push(d); this.pickT = cfg.pickInterval; w.events.emit('pick', d, s.output.x, s.output.z, 0, c.n); }
-    }
-    // dishes onto the café counter
-    const sv = CAFE.counter.serve;
-    if (this.dropT <= 0 && dist(p.x, p.z, sv.x, sv.z) < R.serve) {
-      for (let i = c.n - 1; i >= 0; i--) {
-        const it = c.items[i];
-        if (it in this.counter) {
-          c.items.splice(i, 1);
-          this.counter[it as DishId]++;
-          this.dropT = cfg.dropInterval;
-          w.events.emit('drop', it, CAFE.counter.slots[it as DishId].x, CAFE.counter.slotZ, 0, c.n);
-          break;
-        }
+    // raw items into whichever machine the player stands at (each takes its own raw item)
+    if (this.dropT <= 0) {
+      for (const m of this.machines) {
+        if (dist(p.x, p.z, m.input.x, m.input.z) >= R.machineIn || !c.has(m.raw) || !m.conv.wants(m.raw)) continue;
+        c.take(m.raw);
+        m.conv.accept(m.raw);
+        this.dropT = cfg.dropInterval;
+        w.events.emit('drop', m.raw, m.input.x, m.input.z, 0, c.n);
+        break;
       }
     }
     // tables: grab the money, clean if dirty
@@ -279,6 +280,15 @@ export class CafeSystem {
       this.cash.value = 0;
       this.cash.bills = 0;
     }
+  }
+
+  /** What a café customer pays for their order (counts toward a café rush's sales). */
+  private bill(c: CafeCustomer): number {
+    let value = 0;
+    for (const l of c.lines) value += l.qty * ECONOMY.dishes[l.product].price * this.w.priceMult;
+    value = Math.round(value * this.priceMult);
+    if (c.rush) this.w.rush.sales += value;
+    return value;
   }
 
   private clean(i: number): void {
@@ -315,7 +325,8 @@ export class CafeSystem {
               if (t >= 0) { c.table = t; this.tables[t].occupant = c.id; }
             }
             c.takeT -= dt;
-            if (c.table >= 0 && c.takeT <= 0) {
+            // no clean table: still served, they take it to go (pays at the café cash, no tip)
+            if (c.takeT <= 0) {
               const line = c.lines.find((l) => l.left > 0 && this.counter[l.product] > 0);
               if (line) {
                 this.counter[line.product]--;
@@ -325,7 +336,17 @@ export class CafeSystem {
                 c.takeT = ECONOMY.customers.takeInterval * (playerHere ? 1 : ECONOMY.cafe.waiterSlow);
                 c.servedT = 0.8;
                 w.events.emit('cafeTake', line.product, c.x, c.z, 0, c.qty - c.left, c.id);
-                if (c.left <= 0) { c.state = 'toTable'; w.stats.cafeServed++; }
+                if (c.left <= 0) {
+                  w.stats.cafeServed++;
+                  if (c.table >= 0) c.state = 'toTable';
+                  else {
+                    const value = this.bill(c);
+                    w.service.complete(c, value);
+                    this.cash.value += value;
+                    this.cash.bills += Math.min(6, c.qty);
+                    c.state = 'leave';
+                  }
+                }
               }
             }
           }
@@ -353,11 +374,8 @@ export class CafeSystem {
           c.eatT -= dt;
           if (c.eatT <= 0) {
             const t = this.tables[c.table];
-            let value = 0;
-            for (const l of c.lines) value += l.qty * ECONOMY.dishes[l.product].price * w.priceMult;
-            value = Math.round(value * this.priceMult);
+            const value = this.bill(c);
             // tips/combo/rating go through the shared service system
-            if (c.rush) w.rush.sales += value;
             const tip = w.service.complete(c, value);
             t.cash += value + tip;
             t.bills += Math.min(6, c.qty + (tip > 0 ? 1 : 0));
@@ -424,7 +442,7 @@ export class CafeSystem {
 
   update(dt: number): void {
     if (!this.open) return;
-    if (!this.w.scenario.powerCut) this.stove.update(dt, this.w);
+    if (!this.w.scenario.powerCut) for (const m of this.machines) m.conv.update(dt, this.w);
     this.updateCustomers(dt);
     this.updateCleaners(dt);
   }

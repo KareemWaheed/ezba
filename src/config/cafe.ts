@@ -9,16 +9,18 @@ import type { DishId } from './economy';
 export const CAFE = {
   plot: { x0: 12.2, x1: 20.6, z0: 0.4, z1: 12.4 } as Box,
   unlockedX1: 20.2,
-  /** Stove body (solid) and its two zones: drop raw items in, pick cooked dishes up. */
-  stove: {
-    box: { x0: 17.2, x1: 20.0, z0: 0.8, z1: 1.9 } as Box,
-    input: { x: 17.8, z: 2.7 },
-    output: { x: 19.5, z: 2.7 },
-  },
+  /**
+   * Kitchen machines side by side (each solid): drop the raw item at `input`; what it makes slides
+   * on its own little conveyor to the café counter. Recipes: config/recipes.ts (KITCHEN_RECIPES).
+   */
+  kitchen: [
+    { id: 'stove', name: 'طاسة البيض', icon: '🍳', raw: 'egg', box: { x0: 15.5, x1: 17.5, z0: 0.8, z1: 1.9 } as Box, input: { x: 16.5, z: 2.7 } },
+    { id: 'coffee', name: 'ماكينة القهوة', icon: '☕', raw: 'milk', box: { x0: 18.3, x1: 20.1, z0: 0.8, z1: 1.9 } as Box, input: { x: 19.2, z: 2.7 } },
+  ] as const,
   /** Café counter (solid). Dishes stack on it; the player drops dishes / serves from the kitchen side. */
   counter: {
     box: { x0: 12.9, x1: 15.5, z0: 4.6, z1: 5.4 } as Box,
-    slots: { omelette: { x: 13.6 }, milkcup: { x: 14.8 } } as Record<DishId, { x: number }>,
+    slots: { omelette: { x: 13.6 }, coffee: { x: 14.8 } } as Record<DishId, { x: number }>,
     slotZ: 5.0,
     /** Player drops dishes here and serves from here. */
     serve: { x: 14.2, z: 3.9 },

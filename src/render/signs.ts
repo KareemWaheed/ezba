@@ -49,8 +49,9 @@ export class SignsView {
     add('💵 الفلوس', LAYOUT.shop.cash.x, LAYOUT.shop.cash.z, (w) => early(w), 1.2);
     // café: shown until the player has served a few café customers
     const cafeNew = (w: SimWorld) => w.cafe.open && w.stats.cafeServed < 15;
-    add('🥚 حط البيض واللبن هنا', CAFE.stove.input.x, CAFE.stove.input.z + 0.3, cafeNew, 1.5, 'rgba(176,96,30,0.9)');
-    add('🍳 خد الأكل من هنا', CAFE.stove.output.x, CAFE.stove.output.z + 0.3, cafeNew, 3.1, 'rgba(176,96,30,0.9)');
+    for (const k of CAFE.kitchen) {
+      add(k.raw === 'egg' ? '🍳 حط البيض هنا' : '☕ حط اللبن هنا', k.input.x, k.input.z + 0.3, cafeNew, 1.5, 'rgba(176,96,30,0.9)');
+    }
     add('🍽️ حط الأكل واخدم هنا', CAFE.counter.serve.x, CAFE.counter.serve.z - 0.2, cafeNew, 2.3, 'rgba(176,96,30,0.9)');
     add('🧽 نضّف الترابيزات', 18.3, 8.0, cafeNew, 2.2, 'rgba(176,96,30,0.9)');
     add('🍳 الطلبات للمنصة', LAYOUT.vipStage.drop.x, LAYOUT.vipStage.drop.z, (w) => w.scenario.guest?.state === 'order', 1.6, 'rgba(176,24,46,0.9)');

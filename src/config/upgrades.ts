@@ -55,7 +55,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'eggs.machine', icon: '⚙️', label: 'سير للبيض', msg: 'سير البيض شغال لوحده ⚙️',
-    pos: { x: -5.4, z: -0.3 }, requires: [{ id: 'cashier', level: 1 }], milestone: true,
+    pos: { x: -5.4, z: -0.3 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true,
   },
   // Stage 2: cows
   {
@@ -76,7 +76,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'milk.machine', icon: '⚙️', label: 'سير للبن', msg: 'سير اللبن شغال لوحده ⚙️',
-    pos: { x: 9.0, z: -0.3 }, requires: [{ id: 'milk.worker', level: 1 }, { id: 'cashier', level: 1 }], milestone: true,
+    pos: { x: 9.0, z: -0.3 }, requires: [{ id: 'milk.worker', level: 1 }], milestone: true,
   },
   // Stage 3: farm café (east of the shop)
   {
@@ -100,16 +100,12 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 19.0, z: 12.0 }, requires: [{ id: 'cafe.cleaner', level: 1 }], milestone: true,
   },
   {
-    id: 'cafe.stove', icon: '🔥', label: 'بوتاجاز أسرع', msg: 'البوتاجاز بقى أسرع 🔥',
+    id: 'cafe.stove', icon: '🔥', label: 'مطبخ أسرع', msg: 'المطبخ بقى أسرع 🔥',
     pos: { x: 11.0, z: 1.4 }, requires: [{ id: 'cafe.unlock', level: 1 }],
   },
   {
     id: 'cafe.helper', icon: '🧑‍🍳', label: 'وظّف مساعد مطبخ', msg: 'مساعد مطبخ جديد بيجيب البيض واللبن 🧑‍🍳',
     pos: { x: 13.0, z: 10.0 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
-  },
-  {
-    id: 'cafe.belt', icon: '⚙️', label: 'سير الأطباق', msg: 'سير الأطباق شغال لوحده ⚙️',
-    pos: { x: 11.0, z: 4.2 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
   },
   // Loading dock: company contracts with trucks
   {

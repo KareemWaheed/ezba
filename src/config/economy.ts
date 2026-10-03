@@ -40,17 +40,17 @@ export const ECONOMY = {
   /** Café dishes (made on the stove from raw products, see config/recipes.ts): price per dish. */
   dishes: {
     omelette: { price: 18 },
-    milkcup: { price: 10 },
+    coffee: { price: 10 },
   },
 
   /** Farm café. */
   cafe: {
     /** Café customers per minute per table (x rating; breakfast rush multiplies it). */
-    perTable: 1.8,
+    perTable: 1.2,
     /** Dishes per order: 1..maxDishes. */
     maxDishes: 3,
     /** Patience while waiting in line or for a free clean table. */
-    patience: 60,
+    patience: 80,
     /** Seconds a customer sits and eats. */
     eatTime: 7,
     /** Seconds the player stands at a dirty table to clean it (cleaners take cleanerSlow x longer). */
@@ -59,11 +59,13 @@ export const ECONOMY = {
     cleanerSpeed: 2.6,
     /** Raw items the stove can hold per product, and dishes waiting in its output tray. */
     stoveInputMax: 24,
-    stoveOutputMax: 16,
+    stoveOutputMax: 8,
     /** Nicer tables: café prices x (1 + step x level) and patience +20% per level. */
     niceStep: 0.2,
-    /** Café counter visual stack cap (unlimited storage like the shop counter). */
+    /** Café counter visual stack cap. */
     counterVisualMax: 8,
+    /** Dishes per kind on the café counter before the kitchen conveyors pause (machines then fill and stop taking eggs/milk). */
+    counterMax: 12,
     /** Café cash register serves this many times slower than the player. */
     waiterSlow: 2.0,
     /** Kitchen helpers may take raw items from the shop counter's surplus, leaving this many for shop customers. */
@@ -280,7 +282,7 @@ export const ECONOMY = {
     /** Egg workers: +1 worker per level. */
     'eggs.worker': { base: 750, growth: 5, max: 2, step: 1 },
     /** Egg belt: level 1 builds it, later levels speed it up. */
-    'eggs.machine': { base: 12000, growth: 2.2, max: 4, step: 1 },
+    'eggs.machine': { base: 1000, growth: 3, max: 4, step: 1 },
     /** Open the cow pen (single level): milk station starts with producers.cow.start cows. */
     'milk.unlock': { base: 3800, growth: 1, max: 1, step: 1 },
     /** Bigger coop: fence moves out, +step chickens allowed per level. */
@@ -292,7 +294,7 @@ export const ECONOMY = {
     /** Milk workers: +1 worker per level. */
     'milk.worker': { base: 2500, growth: 3, max: 2, step: 1 },
     /** Milk belt: level 1 builds it, later levels speed it up. */
-    'milk.machine': { base: 45000, growth: 2.2, max: 4, step: 1 },
+    'milk.machine': { base: 6000, growth: 3, max: 4, step: 1 },
     /** Maintenance: breakdowns.mean x (1 + step x level). Never reaches zero breakdowns. */
     maint: { base: 3000, growth: 2, max: 4, step: 0.6 },
     /** Rush bonus share +step per level. */
@@ -305,14 +307,12 @@ export const ECONOMY = {
     'cafe.tables': { base: 2500, growth: 1.8, max: 4, step: 1 },
     /** Nicer tables: café prices and patience up. */
     'cafe.nice': { base: 8000, growth: 2.5, max: 2, step: 1 },
-    /** Stove cooks faster: time / (1 + step x level). */
+    /** Kitchen machines (stove + coffee) work faster: time / (1 + step x level). */
     'cafe.stove': { base: 3000, growth: 2, max: 4, step: 0.4 },
     /** Extra kitchen helpers (the café opens with one) carrying eggs/milk to the stove. */
     'cafe.helper': { base: 30000, growth: 3, max: 2, step: 1 },
-    /** Dish belt from the stove to the café counter (level 1 builds it, then faster). */
-    'cafe.belt': { base: 120000, growth: 2.2, max: 3, step: 1 },
     /** Café cashier at the café counter. */
-    'cafe.waiter': { base: 60000, growth: 1, max: 1, step: 1 },
+    'cafe.waiter': { base: 150000, growth: 1, max: 1, step: 1 },
     /** Cleaners clear dirty tables (+1 per level). */
     'cafe.cleaner': { base: 15000, growth: 3, max: 2, step: 1 },
     /** Loading dock: company trucks with supply contracts. */

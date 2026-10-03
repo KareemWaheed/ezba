@@ -46,3 +46,11 @@ This file records the decisions made on top of it.
 - Special guests never join the normal lines: they arrive by motorcade, walk a carpet to the VIP stage, pose
   while fans/press film, order, and the player delivers in person (from piles, or from the counter stock while
   the guest waits), then they eat on stage and leave.
+- Café rework after playtest ("can't sell, too many angry customers"): two kitchen machines side by side —
+  🍳 egg pan (eggs → omelette) and ☕ coffee machine (milk → coffee) — each with its own drop spot and a short
+  conveyor that slides dishes onto the café counter (no carrying dishes, no dish-belt upgrade). Customers no
+  longer need a clean table to be served: with none free they take it to go and pay at the café cash (no tip);
+  sit-down customers tip and tables raise arrivals. The counter caps at 12 per dish so the kitchen stops eating
+  farm stock nobody buys. `npm run cafeflow -- [casual|active]` checks the first 10 café minutes (0 angry).
+- Egg belt costs 1000 so a casual player gets it in ~30–40 min; café cashier raised to 150k to keep full
+  automation at day 4+.
