@@ -49,6 +49,9 @@ export class Station {
     this.area = { ...(def.area ?? { x0: 0, x1: 0, z0: 0, z1: 0 }) };
   }
 
+  /** Production stopped for now (an animal ran off in a storm). Never saved. */
+  paused = false;
+
   /** Has animals (eggs, milk); corn doesn't (golden animals, troughs, rushes and pens skip it). */
   get farmed(): boolean { return !!this.def.producer; }
 
@@ -83,7 +86,7 @@ export class Station {
         a.tx = rng.range(area.x0 + 0.7, area.x1 - 0.7);
         a.tz = rng.range(area.z0 + BACK, area.z1 - 0.7);
       }
-      a.t += dt;
+      if (!this.paused) a.t += dt;
       if (a.t >= interval) {
         if (!this.pileFull) {
           a.t -= interval;

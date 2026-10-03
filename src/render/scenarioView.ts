@@ -11,6 +11,14 @@ import { CustomerView } from './customers';
 import { CanvasSprite, EMOJI, FONT, rr } from './canvas';
 import { ITEM_GEO } from './models';
 import type { ItemId } from '../config/economy';
+import type { MechanicId } from '../sim/scenarios/mechanic';
+import type { MechanicView, MechanicViewFactory } from './scenarios/types';
+import { StormView } from './scenarios/storm';
+
+/** Each mechanic's own visuals (the shared ones — guest, stage, crowd, flags, weather — stay here). */
+const MECHANIC_VIEWS: Partial<Record<MechanicId, MechanicViewFactory>> = {
+  storm: (scene, view) => new StormView(scene, view),
+};
 
 const { box, cyl, sph } = PRIM;
 
@@ -108,6 +116,8 @@ export class ScenarioView {
   private _p = new THREE.Vector3();
   private _s = new THREE.Vector3();
   private particleKind: 'none' | 'confetti' | 'rain' = 'none';
+  /** The running mechanic's visuals (built when the event goes active). */
+  private mview: MechanicView | null = null;
 
   constructor(private scene: THREE.Scene, private view: Renderer) {
     scene.add(this.group);
@@ -122,6 +132,8 @@ export class ScenarioView {
   private has(d: ScenarioDef, p: ScenarioProp): boolean { return d.props.includes(p); }
 
   private clear(): void {
+    this.mview?.dispose();
+    this.mview = null;
     for (const o of [...this.group.children]) this.group.remove(o);
     for (const f of this.followers) this.scene.remove(f.char.root);
     for (const c of [...this.guards, ...this.fans]) this.scene.remove(c.root);
@@ -408,6 +420,9 @@ export class ScenarioView {
 
     this.syncGuest(sim, dt);
     this.syncFans(dt);
+    // the mechanic's own visuals come in once the event is live
+    if (!this.mview && sc.phase !== 'warn') this.mview = MECHANIC_VIEWS[d.mechanic ?? 'basic']?.(this.scene, this.view) ?? null;
+    this.mview?.sync(sim, dt);
 
     // band bobs, inspector paces
     this.band.forEach((b, k) => { b.body.position.y = Math.abs(Math.sin(this.time * 7 + k)) * 0.15; });
@@ -418,7 +433,7 @@ export class ScenarioView {
 
     // storm: darkness + lightning
     if (d.props.includes('rain')) {
-      this.view.setMood(0.42);
+      this.view.setMood(0.3);
       this.lightningT -= dt;
       if (this.lightningT <= 0) { this.view.lightning(); this.lightningT = 3 + Math.random() * 5; }
     }

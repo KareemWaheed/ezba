@@ -8,6 +8,7 @@ import { SimWorld } from '../src/sim/world';
 import { SCENARIOS, type ScenarioDef } from '../src/config/scenarios';
 import { serialize, restore, migrate, type SaveData } from '../src/sim/save';
 import { Bot } from '../src/sim/bot';
+import type { StormMechanic } from '../src/sim/scenarios/storm';
 
 const DT = 1 / 30;
 const only = process.argv[2];
@@ -100,6 +101,35 @@ if (!only || only === 'trump') {
   let stars = -1;
   for (let i = 0; i < 400 / DT && w.scenario.phase !== 'idle'; i++) { w.tick(DT); w.events.drain((e) => { if (e.type === 'scenarioEnd') stars = e.id; }); }
   ok(stars >= 1 && stars <= 3, `forced win earns 1-3 stars (got ${stars})`);
+}
+
+// ---- storm: herd the escaped animals ----
+if (!only || only === 'storm') {
+  const w = fresh();
+  w.scenario.trigger('storm');
+  runUntilIdle(w);
+  ok(goalOk(w, 'herd') === false, 'storm unattended: herd fails');
+  ok(w.stations.every((s) => !s.paused), 'storm: no station left paused');
+}
+if (!only || only === 'storm') {
+  const w = fresh();
+  w.scenario.trigger('storm');
+  let escaped = 0;
+  runUntilIdle(w, (w) => {
+    const m = w.scenario.mech as StormMechanic;
+    escaped = Math.max(escaped, m.total ?? 0);
+    const s = m.strays?.find((x) => !x.home);
+    if (s) { w.player.x = s.x; w.player.z = s.z; }
+  });
+  ok(escaped >= 3, `storm: animals escape (${escaped})`);
+  ok(goalOk(w, 'herd') === true, 'storm herded: herd passes');
+}
+if (!only || only === 'storm') {
+  // the bot goes after strays on its own
+  const w = fresh(), bot = new Bot(w, 'active');
+  w.scenario.trigger('storm');
+  runUntilIdle(w, () => bot.update(DT));
+  ok(goalOk(w, 'herd') === true, 'storm: the active bot herds them back');
 }
 
 // ---- availability: never pick an event whose area is locked ----

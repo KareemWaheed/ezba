@@ -4,9 +4,12 @@ import { LAYOUT } from '../config/layout';
 import { dist, moveToward, turnToward } from './math';
 import type { SimWorld } from './world';
 import { BASIC, type Mechanic, type MechanicId } from './scenarios/mechanic';
+import { StormMechanic } from './scenarios/storm';
 
 /** Mechanic per id; ids without their own module yet fall back to BASIC. */
-const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {};
+const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
+  storm: () => new StormMechanic(),
+};
 
 export interface GoalState { goal: ScenarioGoal; ok: boolean; progress: number }
 

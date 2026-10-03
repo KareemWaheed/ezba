@@ -29,7 +29,8 @@ export type ScenarioGoal =
   | 'serveGuest'     // the special guest gets served
   | 'noJams'         // no machine jammed when it ends
   | 'cleanTables'    // no dirty café tables when it ends
-  | 'likes';         // fill the likes meter with fast services
+  | 'likes'          // fill the likes meter with fast services
+  | 'herd';          // bring every escaped animal back
 
 /** The special guest (served only by the player, like a VIP). */
 export interface GuestDef {
@@ -194,10 +195,10 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     tint: 'rgba(47,181,154,0.25)', intro: 'التفتيش بدأ! 📋',
   },
   {
-    id: 'storm', icon: '⛈️', title: 'عاصفة! الكهربا قطعت', hint: 'السيور والبوتاجاز واقفين، شيل بإيدك',
+    id: 'storm', icon: '⛈️', title: 'عاصفة! الكهربا قطعت', hint: 'الحيوانات هربت في الضلمة! روح لها ترجع، والسيور واقفة',
     color: '#4b5563', weight: 2, warning: 6, duration: 50, arrivalMult: 0.8, crowdShare: 0,
     patienceMult: 1.2, qtyMult: 1, tipMult: 1.5, powerCut: true,
-    goals: ['noAngry'], rewardSeconds: 70, rewardShare: 0.5, ratingWin: 0.4, ratingLose: -0.2,
+    goals: ['herd', 'noAngry'], rewardSeconds: 80, rewardShare: 0.5, ratingWin: 0.4, ratingLose: -0.2, mechanic: 'storm',
     props: ['rain'], music: 'thunder', minUpgrades: 35, when: (w) => w.staff.machines.some((m) => m.running),
     tint: 'rgba(20,24,40,0.45)', intro: 'الكهربا قطعت! ⚡',
     twists: [{ at: 30, kind: 'extend', text: 'العاصفة لسه شغالة! ⛈️' }],
@@ -220,6 +221,7 @@ export const SCENARIO_GOAL_LABEL: Record<ScenarioGoal, string> = {
   noJams: 'مفيش أعطال',
   cleanTables: 'الترابيزات نضيفة',
   likes: 'كمّل اللايكات',
+  herd: 'رجّع الحيوانات',
 };
 
 /** How often scenarios happen (seconds of active play between them). */

@@ -135,6 +135,11 @@ function toScreen(x: number, y: number, z: number): THREE.Vector3 {
 
 /** Items dropped in the current unload run (for the arpeggio on big unloads). */
 let dropRun = 0;
+/** Sounds for a mechanic's cues (n is mechanic-specific; see sim/scenarios/). */
+function cueSound(mech: string | undefined, n: number): void {
+  if (mech === 'storm') { if (n === 1) sfx.angry(); else sfx.fixed(); }
+}
+
 function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void {
   farm.onEvent(e);
   switch (e.type) {
@@ -211,6 +216,7 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       }
       break;
     }
+    case 'scenarioCue': cueSound(sim.scenario.def.mechanic, e.n); break;
     case 'scenarioTwist': {
       const tw = sim.scenario.def.twists?.[e.n];
       if (tw) { sfx.alarm(); toast.show(tw.text); }
