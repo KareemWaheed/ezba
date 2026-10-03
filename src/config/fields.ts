@@ -24,6 +24,8 @@ export const FIELDS = {
     { id: 'wheat', crop: 'wheat', box: { x0: 6.5, x1: 14.5, z0: -18.6, z1: -12.4 }, unlockTrack: 'field.wheat' },
   ] as readonly PlotDef[],
   unlockedZ0: -19.0,
+  /** Vehicles only carry the player east of this (over the fields); the river dock is walked. */
+  driveX0: -4.6,
   /**
    * Grain stall with its back to the corn (solid); the player sells from the front (camera side)
    * at `drop` and the money piles up at `cash`.

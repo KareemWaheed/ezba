@@ -1,9 +1,10 @@
 import { ECONOMY, type UpgradeId } from '../config/economy';
 import { UPGRADES, UPGRADE_BY_ID, type UpgradeDef } from '../config/upgrades';
-import { FENCES, LAYOUT, SOLIDS_VERSION } from '../config/layout';
+import { FENCES, LAYOUT, SOLIDS_VERSION, addSolid } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import { FIELDS } from '../config/fields';
 import { FACTORY } from '../config/factories';
+import { RIVER } from '../config/river';
 import { dist } from './math';
 import type { SimWorld } from './world';
 
@@ -93,9 +94,14 @@ export class UpgradeSystem {
     }
     w.staff.sync();
     w.bounds.x0 = this.level('hr.office') > 0 ? LAYOUT.hrYard.unlockedX0 : LAYOUT.bounds.x0;
+    if (this.level('river.unlock') > 0) w.bounds.x0 = Math.min(w.bounds.x0, RIVER.unlockedX0);
     w.cafe.sync();
     w.field.sync();
     w.bounds.z0 = w.field.open ? FIELDS.unlockedZ0 : LAYOUT.bounds.z0;
+    w.river.sync();
+    if (w.river.open) { w.bounds.z0 = RIVER.unlockedZ0; addSolid('fishStall', RIVER.stall.box); }
+    const grill = FACTORY.machines.find((m) => m.id === 'grill');
+    if (grill && this.level(grill.unlockTrack) > 0) addSolid('grill', grill.box);
     w.contracts.sync();
     w.factory.sync();
     w.bounds.x1 = w.factory.open ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;

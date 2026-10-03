@@ -232,7 +232,7 @@ export class FieldSystem {
 
   update(dt: number): void {
     const cfg = ECONOMY.field, rng = this.w.rng, w = this.w, v = this.vehicle;
-    this.driving = this.open && !!v && !w.away && w.player.z < cfg.farmlandZ;
+    this.driving = this.open && !!v && !w.away && w.player.z < cfg.farmlandZ && w.player.x > FIELDS.driveX0;
     w.player.driveMult = this.driving && v
       ? cfg[v].speedMult * (1 + w.upgrades.level('field.engine') * ECONOMY.upgrades['field.engine'].step) : 1;
     w.player.radius = this.driving && v ? cfg[v].radius : ECONOMY.player.radius;

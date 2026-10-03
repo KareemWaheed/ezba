@@ -165,6 +165,35 @@ export const UPGRADES: readonly UpgradeDef[] = [
     id: 'factory.speed', icon: '⚙️', label: 'مكن أسرع', msg: 'مكن المصنع بقى أسرع ⚙️',
     pos: { x: 27.2, z: 7.8 }, requires: [{ id: 'factory.unlock', level: 1 }],
   },
+  // Stage 6: the river dock (north, past the fields)
+  {
+    id: 'river.unlock', icon: '⛵', label: 'مرسى النهر', msg: 'فتحت المرسى! مراكب صيد وقوارب للإيجار ⛵',
+    pos: { x: -6.6, z: -16.6 }, requires: [{ id: 'field.wheat', level: 1 }], milestone: true,
+  },
+  {
+    id: 'river.boats', icon: '🚤', label: 'مركب صيد', msg: 'مركب صيد جديد 🚤',
+    pos: { x: -15.0, z: -13.0 }, requires: [{ id: 'river.unlock', level: 1 }],
+  },
+  {
+    id: 'river.size', icon: '📦', label: 'مراكب أكبر', msg: 'المراكب بتجيب سمك أكتر 📦',
+    pos: { x: -12.9, z: -13.0 }, requires: [{ id: 'river.unlock', level: 1 }],
+  },
+  {
+    id: 'river.speed', icon: '💨', label: 'مراكب أسرع', msg: 'رحلة الصيد بقت أسرع 💨',
+    pos: { x: -10.8, z: -13.0 }, requires: [{ id: 'river.unlock', level: 1 }],
+  },
+  {
+    id: 'river.rowboats', icon: '🛶', label: 'قارب إيجار', msg: 'قارب إيجار زيادة 🛶',
+    pos: { x: -8.7, z: -13.0 }, requires: [{ id: 'river.unlock', level: 1 }],
+  },
+  {
+    id: 'river.grill', icon: '🍢', label: 'شوّاية سمك', msg: 'الشوّاية شغالة! سمك مشوي للكافيه 🍢',
+    pos: { x: -10.6, z: -16.9 }, requires: [{ id: 'river.unlock', level: 1 }, { id: 'cafe.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'river.worker', icon: '🧑‍✈️', label: 'وظّف عامل مرسى', msg: 'عامل المرسى بيشيل السمك ويربط القوارب 🧑‍✈️',
+    pos: { x: -8.6, z: -16.9 }, requires: [{ id: 'river.unlock', level: 1 }], milestone: true,
+  },
   // Loading dock: company contracts with trucks
   {
     id: 'dock.unlock', icon: '🚚', label: 'رصيف التحميل', msg: 'الشركات هتبعت عربيات تاخد منك بالجملة 🚚',

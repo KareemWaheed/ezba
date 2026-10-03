@@ -175,22 +175,21 @@ export class FactorySystem {
       m.conv.speedMult = speed;
     }
     const home = FACTORY.machines[0].input;
+    // (the porter also serves the river grill: farmRoute takes them through the gap between the pens)
     this.w.staff.ensureWorkers(this.supply, up.level('factory.worker'), home.x, home.z + 1.2);
     this.w.staff.ensureWorkers(this.porter, up.level('factory.porter'), home.x + 2, home.z + 1.2);
   }
 
   update(dt: number): void {
     const w = this.w;
-    if (!this.open) return;
     // the silo's auger tops the bakery up with wheat
     const bakery = this.machines[0].conv;
-    while (this.silo > 0 && bakery.wants('wheat')) { bakery.accept('wheat'); this.silo--; }
-    if (!w.scenario.powerCut) for (const m of this.machines) m.conv.update(dt, w);
+    while (this.open && this.silo > 0 && bakery.wants('wheat')) { bakery.accept('wheat'); this.silo--; }
+    if (!w.scenario.powerCut) for (const m of this.machines) if (m.open) m.conv.update(dt, w);
   }
 
   /** Player: ingredients into a machine at its input, finished items out at its output. */
   interact(dt: number): void {
-    if (!this.open) return;
     const w = this.w, p = w.player, c = w.carry, cfg = ECONOMY.player, R = ECONOMY.factory.zone;
     this.dropT -= dt;
     this.pickT -= dt;

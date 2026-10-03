@@ -36,6 +36,7 @@ export interface SaveData {
     cash: { value: number; bills: number };
   };
   album?: { seen: string[]; paid: string[] };
+  river?: { pile: number; cash: number; bills: number; untied: number };
   /** Factory machine buffers and the wheat silo. */
   factory?: { silo: number; machines: Record<string, { in: Record<string, number>; out: Record<string, number> }> };
   daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
@@ -89,6 +90,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     },
     field: { cash: w.field.cash.value, bills: w.field.cash.bills, hopper: { ...w.field.hopper } },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
+    river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },
     factory: { silo: w.factory.silo, machines: Object.fromEntries(w.factory.machines.map((m) => [m.def.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])) },
     daily: { day: w.daily.day, tasks: w.daily.tasks.map((t) => ({ ...t })) },
   };
@@ -134,6 +136,10 @@ export function restore(w: SimWorld, s: SaveData): void {
     cafe.cash.bills = Math.floor(num(cf.cash?.bills));
   }
   w.factory.silo = Math.max(0, Math.floor(num(s.factory?.silo)));
+  w.river.pile = Math.max(0, Math.floor(num(s.river?.pile)));
+  w.river.cash.value = num(s.river?.cash);
+  w.river.cash.bills = Math.floor(num(s.river?.bills));
+  w.river.pendingUntied = Math.max(0, Math.floor(num(s.river?.untied)));
   for (const m of w.factory.machines) {
     const d = s.factory?.machines?.[m.def.id];
     if (!d) continue;

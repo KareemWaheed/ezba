@@ -30,6 +30,7 @@ export const CAFE = {
       coffee: { x: 15.95, z: 4.85, cols: 2 },
       cake: { x: 13.8, z: 5.15, cols: 1 },
       cheese: { x: 15.1, z: 5.15, cols: 1 },
+      grilledFish: { x: 16.6, z: 5.15, cols: 1 },
     } as Record<DishId, { x: number; z: number; cols: number }>,
     /** Player drops dishes here and serves from here. */
     serve: { x: 15.1, z: 3.9 },

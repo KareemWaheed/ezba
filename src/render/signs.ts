@@ -3,6 +3,7 @@ import { LAYOUT } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import { FIELDS } from '../config/fields';
 import { FACTORY } from '../config/factories';
+import { RIVER } from '../config/river';
 import type { SimWorld } from '../sim/world';
 import { CanvasSprite, FONT, rr } from './canvas';
 
@@ -65,9 +66,16 @@ export class SignsView {
     // factory: until a porter takes the carrying over
     for (const [i, m] of FACTORY.machines.entries()) {
       const show = (w: SimWorld) => w.factory.machines[i].open && w.upgrades.level('factory.porter') === 0;
-      add(m.id === 'bakery' ? '🥚🌾 حط البيض والقمح' : '🥛 حط اللبن هنا', m.input.x - 0.3, m.input.z + 0.3, show, 0.95, 'rgba(176,96,30,0.9)');
-      add(m.id === 'bakery' ? '🍰 خد الكيك للكافيه' : '🥪 خد الساندويتش للكافيه', m.output.x + 0.3, m.output.z + 0.3, show, 1.9, 'rgba(176,96,30,0.9)');
+      const inText = m.id === 'bakery' ? '🥚🌾 حط البيض والقمح' : m.id === 'grill' ? '🐟 حط السمك هنا' : '🥛 حط اللبن هنا';
+      const outText = m.id === 'bakery' ? '🍰 خد الكيك للكافيه' : m.id === 'grill' ? '🍢 خد السمك المشوي للكافيه' : '🥪 خد الساندويتش للكافيه';
+      add(inText, m.input.x - 0.3, m.input.z + 0.3, show, 0.95, 'rgba(176,96,30,0.9)');
+      add(outText, m.output.x + 0.3, m.output.z + 0.3, show, 1.9, 'rgba(176,96,30,0.9)');
     }
+    // river dock: until the player has some practice
+    const riverNew = (w: SimWorld) => w.river.open && w.stats.rides < 5;
+    add('🐟 لمّ السمك من هنا', RIVER.pile.x, RIVER.pile.z + 0.6, riverNew, 1.6, 'rgba(30,91,198,0.92)');
+    add('🐟 بيع السمك هنا', RIVER.stall.drop.x, RIVER.stall.drop.z + 0.2, riverNew, 0.95, 'rgba(30,91,198,0.92)');
+    add('🪢 اربط القوارب هنا', RIVER.tie.x, RIVER.tie.z + 0.2, (w) => w.river.open && w.upgrades.level('river.worker') === 0 && w.river.rowboats.some((b) => b.state === 'untied'), 1.0, 'rgba(176,96,30,0.9)');
     add('🍳 الطلبات للمنصة', LAYOUT.vipStage.drop.x, LAYOUT.vipStage.drop.z, (w) => w.scenario.guest?.state === 'order', 1.6, 'rgba(176,24,46,0.9)');
     add('🚚 حمّل العربية هنا', LAYOUT.dock.load.x, LAYOUT.dock.load.z, (w) => w.contracts.open && w.contracts.truck.state === 'loading' && w.stats.trucks < 4, 1.6, 'rgba(30,91,198,0.9)');
   }

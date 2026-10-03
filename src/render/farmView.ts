@@ -22,6 +22,7 @@ import { SignsView } from './signs';
 import { DockView } from './dockView';
 import { FieldView } from './fieldView';
 import { FactoryView } from './factoryView';
+import { RiverView } from './riverView';
 import { UPGRADES } from '../config/upgrades';
 
 const _v = new THREE.Vector3();
@@ -114,6 +115,7 @@ export class FarmView {
   readonly dock: DockView;
   readonly field: FieldView;
   readonly factory: FactoryView;
+  readonly river: RiverView;
   /** True on frames where a coin flew into an upgrade tile (for the coin sound). */
   coinFlew = false;
   private payT = 0;
@@ -144,6 +146,7 @@ export class FarmView {
     this.pens = new PenView(scene, sim);
     this.field = new FieldView(scene, sim);
     this.factory = new FactoryView(scene);
+    this.river = new RiverView(scene);
     this.signs = new SignsView(scene, sim);
     this.dock = new DockView(scene);
     this.arrow = new THREE.Mesh(merge([
@@ -172,6 +175,7 @@ export class FarmView {
     this.dock.sync(sim);
     this.field.sync(sim, dt);
     this.factory.sync(sim, dt);
+    this.river.sync(sim, dt);
 
     // coins fly from the player into the tile being paid
     this.coinFlew = false;

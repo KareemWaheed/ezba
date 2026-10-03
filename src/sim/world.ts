@@ -17,6 +17,7 @@ import { ContractSystem } from './contracts';
 import { FieldSystem } from './field';
 import { AlbumSystem, DailySystem } from './meta';
 import { FactorySystem } from './factory';
+import { RiverSystem } from './river';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
@@ -43,13 +44,14 @@ export class SimWorld {
   readonly contracts: ContractSystem;
   readonly field: FieldSystem;
   readonly factory: FactorySystem;
+  readonly river: RiverSystem;
   readonly album: AlbumSystem;
   readonly daily: DailySystem;
   /** Real-world clock for seasonal events (the UI updates it; the simulator keeps the default). */
   clock: Clock = { weekday: 1, hour: 12, ramadan: false };
   readonly cash = { value: 0, bills: 0 };
   /** Lifetime counters (daily tasks, album and the simulator read these). */
-  readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0, tables: 0, cafeServed: 0, scenariosWon: 0, trucks: 0, stalks: 0, crops: 0, goldenStalks: 0 };
+  readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0, tables: 0, cafeServed: 0, scenariosWon: 0, trucks: 0, stalks: 0, crops: 0, goldenStalks: 0, rides: 0 };
   readonly events = new EventQueue();
   /** Walkable area; grows when walled plots are unlocked. */
   readonly bounds = { ...LAYOUT.bounds };
@@ -76,6 +78,7 @@ export class SimWorld {
     this.contracts = new ContractSystem(this);
     this.field = new FieldSystem(this);
     this.factory = new FactorySystem(this);
+    this.river = new RiverSystem(this);
     this.album = new AlbumSystem(this);
     this.daily = new DailySystem(this);
     this.upgrades = new UpgradeSystem(this);
@@ -133,6 +136,7 @@ export class SimWorld {
     this.cafe.update(dt);
     this.field.update(dt);
     this.factory.update(dt);
+    this.river.update(dt);
     if (!this.away) this.upgrades.update(dt);
   }
 
@@ -209,6 +213,7 @@ export class SimWorld {
     }
     this.field.interact(dt);
     this.factory.interact(dt);
+    this.river.interact(dt);
   }
 
   /** Advance by any amount of time in safe sub-steps. */

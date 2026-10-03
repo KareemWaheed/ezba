@@ -46,6 +46,19 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
     part(box, 0xf6d24a, 0.02, 0.13, 0.02, 0, 0, 0, 0.44, 0.03, 0.3),
     part(box, 0xe8b860, 0, 0.18, 0, 0, 0, 0, 0.42, 0.07, 0.28),
   ]),
+  // blue crate of fish
+  fish: merge([
+    part(box, 0x3d7fd9, 0, 0.12, 0, 0, 0, 0, 0.62, 0.24, 0.5),
+    ...[-0.16, 0, 0.16].map((x) => part(sphLo, 0x9fb7c9, x, 0.27, 0, 0, 0, 0, 0.07, 0.06, 0.2)),
+    ...[-0.16, 0, 0.16].map((x) => part(cone, 0x7f99ad, x, 0.27, 0.2, Math.PI / 2, 0, 0, 0.06, 0.08, 0.04)),
+  ]),
+  // grilled fish on a plate with a lemon slice
+  grilledFish: merge([
+    part(cyl, 0xffffff, 0, 0.03, 0, 0, 0, 0, 0.32, 0.05, 0.32),
+    part(sphLo, 0xb8692e, 0, 0.1, 0, 0, 0, 0, 0.1, 0.06, 0.24),
+    part(cone, 0x8a4a1e, 0, 0.1, 0.27, Math.PI / 2, 0, 0, 0.08, 0.1, 0.03),
+    part(cyl, 0xf6e04a, 0.18, 0.07, -0.12, 0, 0, 0, 0.06, 0.02, 0.06),
+  ]),
   // three cobs in green husks, tied with straw
   corn: merge([
     ...[-0.15, 0, 0.15].map((x) => part(cylLo, 0x6fae3a, x, 0.12, 0, Math.PI / 2, 0, 0, 0.09, 0.56, 0.09)),
@@ -65,9 +78,9 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
 };
 
 /** Stacking height of one item. */
-export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, omelette: 0.17, coffee: 0.36, cake: 0.32, cheese: 0.22, corn: 0.24, wheat: 0.28, bill: 0.11 };
+export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, omelette: 0.17, coffee: 0.36, cake: 0.32, cheese: 0.22, grilledFish: 0.18, fish: 0.3, corn: 0.24, wheat: 0.28, bill: 0.11 };
 
-export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', omelette: '🍳', coffee: '☕', cake: '🍰', cheese: '🥪', corn: '🌽', wheat: '🌾' };
+export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', omelette: '🍳', coffee: '☕', cake: '🍰', cheese: '🥪', grilledFish: '🍢', fish: '🐟', corn: '🌽', wheat: '🌾' };
 
 /** Standing crop stalks (one instance per stalk; scaled down to a stub when cut). */
 export const STALK_GEO: Record<FieldCrop, THREE.BufferGeometry> = {

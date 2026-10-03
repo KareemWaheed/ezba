@@ -94,3 +94,9 @@ This file records the decisions made on top of it.
   Converter machines. Wheat handed in at the grain stall fills the bakery silo (80) first. Supplier brings
   eggs/milk from shop surplus; porter carries cake/cheese to the café counter's front row; the player can do
   both. Café customers order cake/cheese only while some is on display.
+- M12 river (north edge past the fields, dock west of the corn): fishing boats (trip timer, crates onto the
+  fish pile), fish stall (instant sale), grill (factory machine at the dock: fish -> grilled fish for the café,
+  porters carry it), rowboat rental (visitors queue, ride a loop around the pier end, pay; returned boats must be
+  tied by the player at the tie spot or by a river worker). Fish stall / grill become solid only once built
+  (addSolid). Vehicles only take over east of the dock (FIELDS.driveX0) — the combine's radius made the dock
+  unworkable. Per the user, late stages may be overpowered: the "active beats automation" check covers days 1–4.

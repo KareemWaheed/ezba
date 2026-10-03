@@ -23,6 +23,8 @@ export const FACTORY = {
   machines: [
     { id: 'bakery', name: 'الفرن', icon: '🍰', makes: 'cake', unlockTrack: 'factory.unlock', box: { x0: 21.8, x1: 25.0, z0: 0.0, z1: 1.3 }, input: { x: 22.3, z: 2.2 }, output: { x: 24.5, z: 2.2 } },
     { id: 'dairy', name: 'مصنع الجبنة', icon: '🧀', makes: 'cheese', unlockTrack: 'factory.dairy', box: { x0: 21.8, x1: 25.0, z0: 5.0, z1: 6.3 }, input: { x: 22.3, z: 7.2 }, output: { x: 24.5, z: 7.2 } },
+    // stage 6: the grill stands at the river dock (porters carry grilled fish to the café too)
+    { id: 'grill', name: 'الشوّاية', icon: '🐟', makes: 'grilledFish', unlockTrack: 'river.grill', box: { x0: -14.6, x1: -12.8, z0: -17.6, z1: -16.8 }, input: { x: -14.7, z: -15.9 }, output: { x: -12.6, z: -15.9 } },
   ] as readonly FactoryDef[],
   /** Wheat silo beside the bakery (solid). */
   silo: { x: 26.3, z: 0.6, r: 0.75 },

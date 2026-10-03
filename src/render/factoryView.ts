@@ -44,6 +44,16 @@ function machineGeo(id: string, b: { x0: number; x1: number; z0: number; z1: num
       part(box, 0x7a3b2a, x + 1.0, 2.0, z - 0.2, 0, 0, 0, 0.4, 1.6, 0.4),
     ]);
   }
+  if (id === 'grill') {
+    // charcoal grill: steel box on legs, glowing coals, grate, fish on top
+    return merge([
+      part(box, 0x3a3a3a, x, 0.75, z, 0, 0, 0, w, 0.35, d),
+      part(box, 0xf28c38, x, 0.94, z, 0, 0, 0, w - 0.2, 0.03, d - 0.2),
+      ...[-0.5, 0, 0.5].map((dx) => part(box, 0x999999, x + dx, 0.98, z, 0, 0, 0, 0.04, 0.02, d - 0.1)),
+      ...[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, c]) => part(box, 0x2b2b2b, x + a * (w / 2 - 0.1), 0.3, z + c * (d / 2 - 0.1), 0, 0, 0, 0.08, 0.6, 0.08)),
+      part(box, 0x2b2b2b, x - w / 2 + 0.15, 1.35, z - d / 2 + 0.1, 0, 0, 0, 0.12, 0.9, 0.12),
+    ]);
+  }
   return merge([
     part(box, 0xdfe6ec, x, 0.55, z, 0, 0, 0, w, 1.1, d),
     part(box, 0x3d7fd9, x, 0.85, b.z1 + 0.01, 0, 0, 0, w - 0.2, 0.15, 0.04),
@@ -64,14 +74,14 @@ class MachineView {
   constructor(scene: THREE.Scene, private i: number) {
     const def = FACTORY.machines[i], b = def.box;
     const body = new THREE.Mesh(machineGeo(def.id, b), MAT);
-    const inIcon = def.id === 'bakery' ? '🥚' : '🥛';
+    const inIcon = def.id === 'bakery' ? '🥚' : def.id === 'grill' ? '🐟' : '🥛';
     const mi = groundMarker(inIcon, 1.5, 'rgba(255,214,140,0.35)', '#e8a23a');
     mi.position.set(def.input.x, 0, def.input.z);
-    const mo = groundMarker(def.id === 'bakery' ? '🍰' : '🥪', 1.5, 'rgba(255,255,255,0.3)', '#ffffff');
+    const mo = groundMarker(def.id === 'bakery' ? '🍰' : def.id === 'grill' ? '🍢' : '🥪', 1.5, 'rgba(255,255,255,0.3)', '#ffffff');
     mo.position.set(def.output.x, 0, def.output.z);
     this.out = new InstancedStack(def.makes, 16, gridSlots(def.makes, 2, 2, 0.45), def.output.x, 0.03, def.output.z - 0.2);
     this.tag.s.sprite.position.set((b.x0 + b.x1) / 2, 3.0, (b.z0 + b.z1) / 2);
-    this.puff.draw((c) => { c.font = `70px ${EMOJI}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(def.id === 'bakery' ? '🔥' : '♨️', 48, 52); });
+    this.puff.draw((c) => { c.font = `70px ${EMOJI}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(def.id === 'dairy' ? '♨️' : '🔥', 48, 52); });
     this.puff.sprite.position.set(def.id === 'bakery' ? b.x1 - 0.6 : b.x0 + 0.8, def.id === 'bakery' ? 3.0 : 2.8, (b.z0 + b.z1) / 2 - 0.2);
     this.root.add(body, mi, mo, this.out.group, this.tag.s.sprite, this.puff.sprite);
     this.root.visible = false;
@@ -83,7 +93,7 @@ class MachineView {
     this.root.visible = m.open;
     if (!m.open) return;
     const inp = m.conv.input;
-    this.tag.set(m.def.id === 'bakery' ? `🥚 ${inp.egg ?? 0}   🌾 ${inp.wheat ?? 0}` : `🥛 ${inp.milk ?? 0}`);
+    this.tag.set(m.def.id === 'bakery' ? `🥚 ${inp.egg ?? 0}   🌾 ${inp.wheat ?? 0}` : m.def.id === 'grill' ? `🐟 ${inp.fish ?? 0}` : `🥛 ${inp.milk ?? 0}`);
     this.out.set(m.conv.output[m.def.makes]);
     this.out.update(dt);
     this.puff.sprite.visible = !!m.conv.cooking && !m.conv.broken;

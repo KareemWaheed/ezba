@@ -66,8 +66,8 @@ export const LAYOUT = {
 
   /** Decorative trees around the edge (x, z). */
   trees: [
-    [-10, -11], [-17.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 13], [-16.5, 12.5], [-14, -1], [17.5, -12.5], [31, -3], [31.5, 4],
-    [31.5, 11], [-6.5, -21.5], [2, -22], [11, -22], [4, 17], [-5, 17.5],
+    [-18.5, -11], [-17.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 13], [-16.5, 12.5], [-14, -1], [17.5, -12.5], [31, -3], [31.5, 4],
+    [31.5, 11], [4, 17], [-5, 17.5],
   ] as const,
   hay: [[19.6, -7.6], [19.6, -6.0], [19.6, -4.4], [20.8, -6.8]] as const,
 } as const;
@@ -93,6 +93,15 @@ export const FENCES: Record<string, Box> = {
 /** Bumped whenever solids change, so cached routing can rebuild. */
 export const SOLIDS_VERSION = { v: 0 };
 
+const added = new Set<string>();
+/** Add a solid once (things built later on ground the player can already reach). */
+export function addSolid(key: string, b: Box): void {
+  if (added.has(key)) return;
+  added.add(key);
+  SOLIDS.push({ ...b });
+  SOLIDS_VERSION.v++;
+}
+
 /** Things the player can't walk through. Fence boxes are padded slightly at the back. */
 export const SOLIDS: Box[] = [
   FENCES.eggs,
@@ -102,7 +111,8 @@ export const SOLIDS: Box[] = [
   { ...LAYOUT.hrYard.building },
   ...CAFE.kitchen.map((k) => ({ ...k.box })),
   { ...FIELDS.stall.box },
-  ...FACTORY.machines.map((m) => ({ ...m.box })),
+  // the river grill and fish stall stand on reachable ground: they become solid once built (addSolid)
+  ...FACTORY.machines.filter((m) => m.id !== 'grill').map((m) => ({ ...m.box })),
   { x0: FACTORY.silo.x - FACTORY.silo.r, x1: FACTORY.silo.x + FACTORY.silo.r, z0: FACTORY.silo.z - FACTORY.silo.r, z1: FACTORY.silo.z + FACTORY.silo.r },
   { ...CAFE.counter.box },
   // hay bales lie along x (length 1.2, radius 0.5)

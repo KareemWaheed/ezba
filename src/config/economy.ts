@@ -33,9 +33,29 @@ export const ECONOMY = {
     corn: { price: 5 },
   },
 
-  /** Field crops sold at the grain stall (wheat; it also feeds the bakery). Corn is a shop product. */
+  /** Goods sold at stalls: wheat (grain stall; it also feeds the bakery), fish (fish stall; or the grill). */
   crops: {
     wheat: { price: 9 },
+    fish: { price: 12 },
+  },
+
+  /** Stage 6 river: fishing boats and rowboat rental. */
+  river: {
+    /** Seconds a fishing trip takes (divided by 1 + river.speed step x level). */
+    trip: 26,
+    /** Crates a boat brings back (+ river.size step per level). */
+    crates: 4,
+    /** Fish pile cap (boats wait to unload when it's full). */
+    pileMax: 40,
+    /** Rowboat rental: seconds per ride, payment per ride (x price growth), visitor arrivals. */
+    ride: 18,
+    ridePay: 40,
+    visitorEvery: 11,
+    visitorPatience: 60,
+    /** Seconds the player stands at the tie spot to tie one returned rowboat. */
+    tieTime: 0.8,
+    /** A river worker ties a returned boat after this many seconds. */
+    workerTie: 4,
   },
 
   /** Crop fields (stage 4): walk through with a tool to cut every stalk in reach. */
@@ -75,6 +95,8 @@ export const ECONOMY = {
     /** Stage 5: made in the factories, carried to the café counter. */
     cake: { price: 45 },
     cheese: { price: 30 },
+    /** Stage 6: grilled at the river dock, carried to the café counter. */
+    grilledFish: { price: 60 },
   },
 
   /** Stage 5 factories (bakery, dairy). */
@@ -397,6 +419,20 @@ export const ECONOMY = {
     'factory.porter': { base: 80000, growth: 2.5, max: 2, step: 1 },
     /** Corn workers (+1 per level): corn pile by the grain stall -> the shop counter. */
     'corn.worker': { base: 40000, growth: 2.5, max: 2, step: 1 },
+    /** Stage 6: the river dock with one fishing boat, the fish stall and two rental rowboats. */
+    'river.unlock': { base: 250000, growth: 1, max: 1, step: 1 },
+    /** Another fishing boat per level. */
+    'river.boats': { base: 60000, growth: 2.3, max: 2, step: 1 },
+    /** Bigger boats: + step crates per trip. */
+    'river.size': { base: 40000, growth: 2.2, max: 4, step: 2 },
+    /** Faster trips: trip / (1 + step x level). */
+    'river.speed': { base: 30000, growth: 2.2, max: 4, step: 0.25 },
+    /** Grill at the dock: fish -> grilled fish for the café. */
+    'river.grill': { base: 120000, growth: 1, max: 1, step: 1 },
+    /** Another rental rowboat per level (2 at the start). */
+    'river.rowboats': { base: 50000, growth: 2.2, max: 3, step: 1 },
+    /** River workers: carry fish to the grill/stall and tie returned rowboats. */
+    'river.worker': { base: 80000, growth: 2.5, max: 2, step: 1 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */

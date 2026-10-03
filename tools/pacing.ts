@@ -84,9 +84,10 @@ export function checkTargets(eff: RunResult, casual: RunResult): TargetResult[] 
   const ea = automated(eff), ca = automated(casual);
   add('stages 1-3 automated: efficient from day 4, casual by day 7', !!ea && ea.day >= 4 && !!ca && ca.day <= 7, `efficient ${fmt(ea)}${ea ? ' last ' + ea.id : ''}, casual ${fmt(ca)}${ca ? ' last ' + ca.id : ''}`);
 
-  // active play must beat automation alone; checked on every session once automation exists
-  const autoS = eff.sessions.filter((s) => s.autoPerMin > 0);
+  // active play must beat automation alone in the early game (stages 1-3, days 1-4); later stages are
+  // allowed to be overpowered (the user's call)
+  const autoS = eff.sessions.filter((s) => s.autoPerMin > 0 && s.day <= 4);
   const worst = autoS.reduce((m, s) => Math.min(m, s.activePerMin / s.autoPerMin), Infinity);
-  add('active player earns noticeably more than automation alone (>= 1.5x)', autoS.length === 0 || worst >= 1.5, autoS.length ? `worst ratio ${worst.toFixed(2)}x` : 'no automation yet');
+  add('days 1-4: active player earns noticeably more than automation alone (>= 1.5x)', autoS.length === 0 || worst >= 1.5, autoS.length ? `worst ratio ${worst.toFixed(2)}x` : 'no automation yet');
   return out;
 }
