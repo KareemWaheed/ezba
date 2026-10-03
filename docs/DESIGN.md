@@ -100,3 +100,8 @@ This file records the decisions made on top of it.
   tied by the player at the tie spot or by a river worker). Fish stall / grill become solid only once built
   (addSolid). Vehicles only take over east of the dock (FIELDS.driveX0) — the combine's radius made the dock
   unworkable. Per the user, late stages may be overpowered: the "active beats automation" check covers days 1–4.
+- M13 delivery orders: truck contracts take any goods (farm products, cake/cheese/grilled fish, wheat, fish) the
+  farm can make right now; orders mix up to 3 goods, amounts shrink for pricier goods (40 eggs vs ~9 cakes);
+  timed (rush) orders run 3 min and mixed ones pay an extra bonus. New companies: Domty, Tseppas, Sea Gull,
+  Misr Mills; Carrefour and the army order factory goods too. Dock workers still load shop products only —
+  factory/river goods are the player's job.

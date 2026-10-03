@@ -1,5 +1,5 @@
 import { CONTRACTS, COMPANIES, type CompanyDef } from '../config/contracts';
-import { ECONOMY, type ItemId, type ProductId } from '../config/economy';
+import { ECONOMY, priceOf, type ItemId } from '../config/economy';
 import { LAYOUT } from '../config/layout';
 import { dist } from './math';
 import type { WorkerJob } from './staff';
@@ -8,7 +8,7 @@ import type { SimWorld } from './world';
 export type TruckState = 'away' | 'arriving' | 'loading' | 'leaving';
 export type ContractKind = 'standing' | 'rush';
 
-export interface ContractLine { product: ProductId; want: number; loaded: number }
+export interface ContractLine { product: ItemId; want: number; loaded: number }
 
 export interface Truck {
   state: TruckState;
@@ -55,7 +55,7 @@ class DockJob implements WorkerJob {
     out.x = LAYOUT.dock.load.x - 0.6 + slot * 0.6;
     out.z = LAYOUT.dock.load.z - 0.3;
   }
-  give(_w: SimWorld, item: ItemId): boolean { return this.sys.load(item as ProductId); }
+  give(_w: SimWorld, item: ItemId): boolean { return this.sys.load(item as ItemId); }
   /** Only what the waiting truck still needs (nothing while no truck is loading). */
   room(w: SimWorld): number {
     let n = 0;
@@ -93,7 +93,7 @@ export class ContractSystem {
   }
 
   /** How many more of this product the loading truck wants beyond what the player carries. */
-  stillNeeds(p: ProductId): number {
+  stillNeeds(p: ItemId): number {
     const t = this.truck;
     if (t.state !== 'loading') return -1;
     let need = 0;
@@ -104,8 +104,18 @@ export class ContractSystem {
     return need - carried;
   }
 
+  /** Can the farm make this right now (so a company may order it)? */
+  available(it: ItemId): boolean {
+    const w = this.w;
+    if (w.stations.some((st) => st.open && st.def.product === it)) return true;
+    if (w.factory.machines.some((m) => m.open && m.def.makes === it)) return true;
+    if (it === 'wheat') return w.field.plots.some((p) => p.open && p.crop === 'wheat');
+    if (it === 'fish') return w.river.open;
+    return false;
+  }
+
   /** Put one item on the truck. */
-  load(p: ProductId): boolean {
+  load(p: ItemId): boolean {
     const t = this.truck;
     if (t.state !== 'loading') return false;
     const l = t.lines.find((x) => x.product === p && x.loaded < x.want);
@@ -117,8 +127,7 @@ export class ContractSystem {
 
   private pickCompany(): CompanyDef {
     const w = this.w;
-    const open = new Set(w.stations.filter((s) => s.open).map((s) => s.def.product));
-    const ok = COMPANIES.filter((c) => c.wants.some((p) => open.has(p)));
+    const ok = COMPANIES.filter((c) => c.wants.some((p) => this.available(p)));
     let total = 0;
     for (const c of ok) total += c.weight;
     let r = w.rng.next() * total;
@@ -132,12 +141,13 @@ export class ContractSystem {
     const rush = w.rng.chance(C.rush.chance);
     const k = rush ? C.rush : C.standing;
     const size = (1 + trust * C.sizeStep) * (1 + w.upgrades.level('dock.size') * ECONOMY.upgrades['dock.size'].step);
-    const open = new Set(w.stations.filter((s) => s.open).map((s) => s.def.product));
     t.company = c;
     t.kind = rush ? 'rush' : 'standing';
-    t.lines = c.wants.filter((p) => open.has(p)).map((p) => ({ product: p, want: Math.round(k.perProduct * size), loaded: 0 }));
+    // pricier goods come in smaller amounts (40 eggs, ~12 cakes)
+    const goods = c.wants.filter((p) => this.available(p)).slice(0, C.maxLines);
+    t.lines = goods.map((p) => ({ product: p, want: Math.max(3, Math.round(k.perProduct * size * Math.min(1, Math.max(0.3, C.valueRef / priceOf(p))))), loaded: 0 }));
     t.price = {};
-    for (const l of t.lines) t.price[l.product] = Math.round(ECONOMY.products[l.product].price * w.priceMult * k.priceMult * (1 + trust * C.priceStep) * 10) / 10;
+    for (const l of t.lines) t.price[l.product] = Math.round(priceOf(l.product) * w.priceMult * k.priceMult * (1 + trust * C.priceStep) * 10) / 10;
     t.state = 'arriving';
     t.drive = 0;
     t.t = C.drive;
@@ -151,8 +161,13 @@ export class ContractSystem {
     const complete = loaded >= want;
     let pay = Math.round(value);
     if (t.kind === 'rush') {
-      if (complete) pay = Math.round(value * (1 + C.rush.bonusMult));
-      else pay = Math.round(loaded * ECONOMY.products[t.lines[0]?.product ?? 'egg'].price * w.priceMult); // partial at the normal price
+      if (complete) pay = Math.round(value * (1 + C.rush.bonusMult + (t.lines.length > 1 ? C.rush.mixedBonus : 0)));
+      else {
+        // partial: only the normal price for what was loaded
+        pay = 0;
+        for (const l of t.lines) pay += l.loaded * priceOf(l.product) * w.priceMult;
+        pay = Math.round(pay);
+      }
     }
     const id = t.company.id;
     const good = t.kind === 'rush' ? complete : loaded >= want * C.fillGood;
