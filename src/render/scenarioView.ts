@@ -17,6 +17,7 @@ import { StormView } from './scenarios/storm';
 import { InspectorView } from './scenarios/inspector';
 import { FootballView } from './scenarios/football';
 import { StageView } from './scenarios/stage';
+import { MotorcadeView } from './scenarios/motorcade';
 import type { InspectorMechanic } from '../sim/scenarios/inspector';
 
 /** Each mechanic's own visuals (the shared ones — guest, stage, crowd, flags, weather — stay here). */
@@ -25,6 +26,7 @@ const MECHANIC_VIEWS: Partial<Record<MechanicId, MechanicViewFactory>> = {
   inspector: (scene) => new InspectorView(scene),
   football: (scene) => new FootballView(scene),
   stage: (scene) => new StageView(scene),
+  motorcade: (scene, view) => new MotorcadeView(scene, view),
 };
 
 const { box, cyl, sph } = PRIM;

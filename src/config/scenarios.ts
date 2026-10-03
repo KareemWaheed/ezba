@@ -33,7 +33,9 @@ export type ScenarioGoal =
   | 'herd'           // bring every escaped animal back
   | 'checkpoints'    // every stop on the inspector's route is fine
   | 'goals'          // score goals on the yard pitch
-  | 'beatCombo';     // a combo on the dance pads
+  | 'beatCombo'      // a combo on the dance pads
+  | 'inTime'         // the guest served with patience to spare
+  | 'photo';         // stood in the official photo
 
 /** The special guest (served only by the player, like a VIP). */
 export interface GuestDef {
@@ -108,29 +110,29 @@ export interface ScenarioDef {
 
 export const SCENARIOS: readonly ScenarioDef[] = [
   {
-    id: 'president', icon: '🇪🇬', title: 'الرئيس السيسي جاي يزور المزرعة!', hint: 'اخدمه بنفسك ومحدش يزعل',
+    id: 'president', icon: '🇪🇬', title: 'الرئيس السيسي جاي يزور المزرعة!', hint: 'هات طلبه وعدّي على بوابة الأمن الأول',
     color: '#c8a02c', weight: 2, warning: 10, duration: 70, arrivalMult: 0.6, crowdShare: 0.5, crowd: 'press',
     patienceMult: 1.2, qtyMult: 1, tipMult: 1,
     guest: { name: 'الرئيس', look: 'president', qtyMult: 2, payMult: 25, patience: 90, entourage: 4 },
-    goals: ['serveGuest', 'noAngry', 'noJams'], rewardSeconds: 120, rewardShare: 1.0, ratingWin: 1, ratingLose: -0.5,
+    goals: ['serveGuest', 'inTime'], mechanic: 'motorcade', variant: 'escort', rewardSeconds: 120, rewardShare: 1.0, ratingWin: 1, ratingLose: -0.5,
     props: ['motorcade', 'carpet', 'flags', 'guards'], music: 'anthem', minUpgrades: 40,
     flag: 'egypt', tint: 'rgba(212,175,55,0.35)', intro: 'الرئيس وصل! 🇪🇬',
   },
   {
-    id: 'macron', icon: '🇫🇷', title: 'الرئيس الفرنسي ماكرون في زيارة!', hint: 'اخدمه بنفسك ومحدش يزعل',
+    id: 'macron', icon: '🇫🇷', title: 'الرئيس الفرنسي ماكرون في زيارة!', hint: 'اخدمه وبعدين اقف جنبه في الصورة الرسمية 📸',
     color: '#0055a4', weight: 1, warning: 10, duration: 70, arrivalMult: 0.6, crowdShare: 0.5, crowd: 'press',
     patienceMult: 1.2, qtyMult: 1, tipMult: 1,
     guest: { name: 'ماكرون', look: 'macron', qtyMult: 2, payMult: 22, patience: 90, entourage: 4 },
-    goals: ['serveGuest', 'noAngry', 'noJams'], rewardSeconds: 110, rewardShare: 1.0, ratingWin: 1, ratingLose: -0.5,
+    goals: ['serveGuest', 'inTime', 'photo'], mechanic: 'motorcade', variant: 'photo', rewardSeconds: 110, rewardShare: 1.0, ratingWin: 1, ratingLose: -0.5,
     props: ['motorcade', 'carpet', 'flags', 'guards'], music: 'anthem', minUpgrades: 42,
     flag: 'france', tint: 'rgba(0,85,164,0.28)', intro: 'Bienvenue! ماكرون وصل 🇫🇷',
   },
   {
-    id: 'trump', icon: '🇺🇸', title: 'الرئيس الأمريكي ترامب جاي!', hint: 'طلب كبير جداً، اخدمه بنفسك',
+    id: 'trump', icon: '🇺🇸', title: 'الرئيس الأمريكي ترامب جاي!', hint: 'طلب كبير، وخلي بالك هيغيّر رأيه!',
     color: '#3c3b6e', weight: 1, warning: 10, duration: 70, arrivalMult: 0.6, crowdShare: 0.5, crowd: 'press',
     patienceMult: 1.1, qtyMult: 1, tipMult: 1,
     guest: { name: 'ترامب', look: 'trump', qtyMult: 3, payMult: 22, patience: 80, entourage: 4 },
-    goals: ['serveGuest', 'noAngry', 'noJams'], rewardSeconds: 110, rewardShare: 1.0, ratingWin: 1, ratingLose: -0.5,
+    goals: ['serveGuest', 'inTime'], mechanic: 'motorcade', variant: 'reorder', rewardSeconds: 110, rewardShare: 1.0, ratingWin: 1, ratingLose: -0.5,
     props: ['motorcade', 'carpet', 'flags', 'guards'], music: 'anthem', minUpgrades: 42,
     flag: 'usa', tint: 'rgba(178,34,52,0.25)', intro: 'ترامب وصل! 🇺🇸',
     twists: [{ at: 20, kind: 'reorder', text: 'ترامب غيّر رأيه! طلب جديد 😅' }, { at: 40, kind: 'reorder', text: 'ترامب غيّر رأيه تاني!! 🙄' }],
@@ -230,6 +232,8 @@ export const SCENARIO_GOAL_LABEL: Record<ScenarioGoal, string> = {
   checkpoints: 'كل نقط التفتيش سليمة',
   goals: 'جوّن ٣ أهداف',
   beatCombo: 'كومبو ٨ على الإيقاع',
+  inTime: 'وصّل قبل الوقت',
+  photo: 'اتصوّر مع الضيف',
 };
 
 /** How often scenarios happen (seconds of active play between them). */

@@ -274,6 +274,61 @@ if (!only || only === 'amrdiab') {
   ok(best === 0, `amrdiab: the wrong pad never counts (${best})`);
 }
 
+// ---- presidents: timed delivery; Sisi's security gate; Macron's photo ----
+/** Tick until the guest is waiting for their order. */
+function untilOrder(w: SimWorld): void {
+  for (let i = 0; i < 60 / DT && w.scenario.guest?.state !== 'order'; i++) { w.tick(DT); w.events.drain(() => {}); }
+}
+/** Put exactly the guest's order in the player's hands. */
+function carryOrder(w: SimWorld): void {
+  w.carry.items.length = 0;
+  w.carry.cap = 99;
+  for (const l of w.scenario.guest!.lines) for (let k = 0; k < l.left; k++) w.carry.push(l.product);
+}
+for (const id of ['president', 'macron', 'trump'] as const) {
+  if (only && only !== id) continue;
+  const w = fresh();
+  w.scenario.trigger(id);
+  runUntilIdle(w);
+  ok(goalOk(w, 'inTime') === false, `${id} unattended: in-time fails`);
+}
+if (!only || only === 'president') {
+  const w = fresh();
+  w.scenario.trigger('president');
+  untilOrder(w);
+  carryOrder(w);
+  const d = LAYOUT.vipStage.drop;
+  w.player.x = d.x; w.player.z = d.z;
+  tickFor(w, 4);
+  ok(!w.scenario.guestServed, 'president: guards refuse an order that skipped the security gate');
+  const g = LAYOUT.vipStage.gate;
+  w.player.x = g.x; w.player.z = g.z;
+  tickFor(w, 1);
+  w.player.x = d.x; w.player.z = d.z;
+  tickFor(w, 6);
+  ok(w.scenario.guestServed, 'president: through the gate, the order is delivered');
+  runUntilIdle(w);
+  ok(goalOk(w, 'inTime') === true, 'president: quick delivery is in time');
+}
+if (!only || only === 'macron') {
+  for (const pose of [false, true]) {
+    const w = fresh();
+    w.scenario.trigger('macron');
+    untilOrder(w);
+    carryOrder(w);
+    const d = LAYOUT.vipStage.drop, ph = LAYOUT.vipStage.photo;
+    w.player.x = d.x; w.player.z = d.z;
+    runUntilIdle(w, (w) => { if (pose && w.scenario.guestServed) { w.player.x = ph.x; w.player.z = ph.z; } });
+    ok(goalOk(w, 'photo') === pose, `macron: photo ${pose ? 'taken when standing on the marker' : 'missed when away from the marker'}`);
+  }
+}
+if (!only || only === 'president') {
+  const w = fresh(), bot = new Bot(w, 'active');
+  w.scenario.trigger('president');
+  runUntilIdle(w, () => bot.update(DT));
+  ok(w.scenario.lastGoals.find((g) => g.goal === 'serveGuest')?.ok === true, 'president: the active bot gets through security and serves');
+}
+
 // ---- availability: never pick an event whose area is locked ----
 {
   const w = new SimWorld(1);

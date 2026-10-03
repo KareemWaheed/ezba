@@ -138,8 +138,16 @@ function toScreen(x: number, y: number, z: number): THREE.Vector3 {
 /** Items dropped in the current unload run (for the arpeggio on big unloads). */
 let dropRun = 0;
 /** Sounds for a mechanic's cues (n is mechanic-specific; see sim/scenarios/). */
-function cueSound(mech: string | undefined, n: number): void {
+function cueSound(mech: string | undefined, n: number, v = 0): void {
   if (mech === 'storm') { if (n === 1) sfx.angry(); else sfx.fixed(); }
+  // motorcade: 1 security ok, 2 photo countdown (value = count), 3 photo taken, 4 missed, 9 turned away
+  if (mech === 'motorcade') {
+    if (n === 1) { sfx.fixed(); toast.show('الأمن: تمام، اتفضل 🛂✅'); }
+    else if (n === 2) { sfx.coin(); toast.show(`📸 ${v}...`); }
+    else if (n === 3) { sfx.fanfare(); toast.show('صورة تاريخية! 📸✨'); }
+    else if (n === 4) toast.show('الصورة طلعت من غيرك 😅 كمان مرة!');
+    else if (n === 9) { sfx.angry(); toast.show('الحرس: لازم تعدّي على بوابة الأمن الأول! 🛂'); }
+  }
   if (mech === 'stage') { if (n === 1) sfx.tip(); else sfx.angry(); }
   if (mech === 'comments') { if (n === 1) sfx.sell(); else sfx.tip(); }
   if (mech === 'inspector') { if (n === 1) sfx.fixed(); else sfx.clunk(); }
@@ -223,7 +231,7 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       }
       break;
     }
-    case 'scenarioCue': cueSound(sim.scenario.def.mechanic, e.n); break;
+    case 'scenarioCue': cueSound(sim.scenario.def.mechanic, e.n, e.value); break;
     case 'scenarioTwist': {
       const tw = sim.scenario.def.twists?.[e.n];
       if (tw) { sfx.alarm(); toast.show(tw.text); }

@@ -64,6 +64,10 @@ export const LAYOUT = {
     seat: { x: -6.4, z: 8.1 },
     drop: { x: -6.4, z: 10.1 },
     entry: { x: -11.5, z: 13.4 },
+    /** Security gate on the carpet (escort visits check the order here). */
+    gate: { x: -8.1, z: 11.1 },
+    /** Where the player stands for the official photo next to the guest. */
+    photo: { x: -5.3, z: 10.3 },
   },
   /** Loading dock for company trucks (bottom right). The player loads at `load`; trucks park at `bay`. */
   dock: {

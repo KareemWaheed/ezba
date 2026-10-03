@@ -17,6 +17,10 @@ export interface Mechanic {
   progress?(w: SimWorld, g: ScenarioGoal): number;
   /** An item was sold at a shop lane (byPlayer: the player was serving that lane). */
   onSell?(w: SimWorld, product: ProductId, byPlayer: boolean): void;
+  /** The guest's order may be handed over right now (e.g. not before the security check). */
+  canDeliver?(w: SimWorld): boolean;
+  /** A stop to make on the way to the stage with the guest's order (null = go straight). */
+  deliverVia?(w: SimWorld): { x: number; z: number } | null;
   /** Multiplies event customers' tips (on top of the event's own tipMult). */
   tipMult?(): number;
   /** Extra condition for the third star (e.g. a perfect run). */

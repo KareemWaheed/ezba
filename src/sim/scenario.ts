@@ -9,6 +9,7 @@ import { InspectorMechanic } from './scenarios/inspector';
 import { FootballMechanic } from './scenarios/football';
 import { CommentsMechanic } from './scenarios/comments';
 import { StageMechanic } from './scenarios/stage';
+import { MotorcadeMechanic } from './scenarios/motorcade';
 
 /** Mechanic per id; ids without their own module yet fall back to BASIC. */
 const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
@@ -17,6 +18,7 @@ const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
   football: () => new FootballMechanic(),
   comments: () => new CommentsMechanic(),
   stage: () => new StageMechanic(),
+  motorcade: () => new MotorcadeMechanic(),
 };
 
 export interface GoalState { goal: ScenarioGoal; ok: boolean; progress: number }
@@ -83,7 +85,7 @@ export class ScenarioSystem {
   private twistIx = 0;
   private twistMult = 1;
   /** Guest patience left (0..1) when they were served. */
-  private servedPatience = 0;
+  servedPatience = 0;
   /** Post-event arrival boost (e.g. the video went viral). */
   boostT = 0;
   boostMult = 1;
@@ -178,6 +180,12 @@ export class ScenarioSystem {
     if (!g || g.state !== 'order' || this.dropT > 0) return;
     const d = LAYOUT.vipStage.drop;
     if (dist(w.player.x, w.player.z, d.x, d.z) > 1.5) return;
+    if (this.mech.canDeliver && !this.mech.canDeliver(w)) {
+      // turned away (e.g. the guards want the security check first); say so once in a while
+      this.dropT = 3;
+      w.events.emit('scenarioCue', '', d.x, d.z, 0, 9);
+      return;
+    }
     for (const l of g.lines) {
       if (l.left <= 0 || !w.carry.has(l.product)) continue;
       w.carry.take(l.product);

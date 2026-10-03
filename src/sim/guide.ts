@@ -158,7 +158,7 @@ export function vipDelivery(w: SimWorld, out: { x: number; z: number }): boolean
   const c = w.carry;
   const need = g.lines.filter((l) => l.left > 0);
   if (need.some((l) => c.has(l.product)) && (c.full() || need.every((l) => c.items.filter((x) => x === l.product).length >= l.left))) {
-    out.x = LAYOUT.vipStage.drop.x; out.z = LAYOUT.vipStage.drop.z; return true;
+    return toStage(w, out);
   }
   for (const l of need) {
     if (c.full() || w.scenario.stillNeeds(l.product) <= 0) continue;
@@ -168,8 +168,16 @@ export function vipDelivery(w: SimWorld, out: { x: number; z: number }): boolean
     const ct = w.stations.find((s) => s.open && s.def.product === l.product && s.counter > 0 && !c.has(l.product));
     if (ct) { out.x = ct.def.counter.dropX; out.z = ct.def.counter.dropZ; return true; }
   }
-  if (need.some((l) => c.has(l.product))) { out.x = LAYOUT.vipStage.drop.x; out.z = LAYOUT.vipStage.drop.z; return true; }
+  if (need.some((l) => c.has(l.product))) return toStage(w, out);
   return false;
+}
+
+/** The stage's drop spot, or a stop the event wants first (e.g. the security gate). */
+function toStage(w: SimWorld, out: { x: number; z: number }): boolean {
+  const via = w.scenario.mech.deliverVia?.(w);
+  const t = via ?? LAYOUT.vipStage.drop;
+  out.x = t.x; out.z = t.z;
+  return true;
 }
 
 export interface Goal { def: UpgradeDef; cost: number; remaining: number }
