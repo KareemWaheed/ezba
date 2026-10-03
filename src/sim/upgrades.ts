@@ -2,6 +2,7 @@ import { ECONOMY, type UpgradeId } from '../config/economy';
 import { UPGRADES, UPGRADE_BY_ID, type UpgradeDef } from '../config/upgrades';
 import { FENCES, LAYOUT, SOLIDS_VERSION } from '../config/layout';
 import { CAFE } from '../config/cafe';
+import { FIELDS } from '../config/fields';
 import { dist } from './math';
 import type { SimWorld } from './world';
 
@@ -92,6 +93,8 @@ export class UpgradeSystem {
     w.staff.sync();
     w.bounds.x0 = this.level('hr.office') > 0 ? LAYOUT.hrYard.unlockedX0 : LAYOUT.bounds.x0;
     w.cafe.sync();
+    w.field.sync();
+    w.bounds.z0 = w.field.open ? FIELDS.unlockedZ0 : LAYOUT.bounds.z0;
     w.contracts.sync();
     w.bounds.x1 = w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
   }

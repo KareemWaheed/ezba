@@ -17,6 +17,10 @@ export interface Animal {
   hop: number;
 }
 
+/** Barns stand inside each pen along the back fence; animals stay in front of this strip. */
+export const BARN_DEPTH = 1.1;
+const BACK = BARN_DEPTH + 1.3;
+
 /** An item flying from an animal to its pile. Lands after `dur`. */
 export interface Flight { active: boolean; x: number; z: number; t: number; dur: number }
 
@@ -49,7 +53,7 @@ export class Station {
 
   addAnimal(rng: Rng): Animal {
     const a = this.area;
-    const x = rng.range(a.x0 + 0.6, a.x1 - 0.6), z = rng.range(a.z0 + 0.8, a.z1 - 0.6);
+    const x = rng.range(a.x0 + 0.6, a.x1 - 0.6), z = rng.range(a.z0 + BACK, a.z1 - 0.6);
     const animal: Animal = { x, z, rot: rng.range(0, 6.28), speed: 0, tx: x, tz: z, pause: rng.range(0, 2), t: rng.range(0, 2), hop: 0 };
     this.animals.push(animal);
     return animal;
@@ -73,7 +77,7 @@ export class Station {
       else if (moveToward(a, a.tx, a.tz, cfg.wanderSpeed, dt, 0.1)) {
         a.pause = rng.range(0.5, 2.5);
         a.tx = rng.range(area.x0 + 0.7, area.x1 - 0.7);
-        a.tz = rng.range(area.z0 + 0.9, area.z1 - 0.7);
+        a.tz = rng.range(area.z0 + BACK, area.z1 - 0.7);
       }
       a.t += dt;
       if (a.t >= interval) {

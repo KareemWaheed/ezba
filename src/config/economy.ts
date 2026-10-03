@@ -31,6 +31,29 @@ export const ECONOMY = {
     milk: { price: 4 },
   },
 
+  /** Field crops (stage 4): sale price per bundle at the grain stall. */
+  crops: {
+    corn: { price: 8 },
+    wheat: { price: 14 },
+  },
+
+  /** Crop fields (stage 4): walk through with a tool to cut every stalk in reach. */
+  field: {
+    /** Grid spacing of the stalks. */
+    spacing: 0.6,
+    /** Stalks that make one carried bundle. */
+    stalksPerBundle: 3,
+    /** Seconds until a cut stalk is grown again (divided by 1 + field.regrow step x level). */
+    regrow: { corn: 30, wheat: 40 },
+    /** Cutting reach of the hand sickle; field.tool adds its step per level. */
+    toolRadius: 0.9,
+    /** Chance a regrown stalk is golden; cutting it pays goldenReward x price growth. */
+    goldenChance: 0.015,
+    goldenReward: 60,
+    /** Seconds between two bundles sold at the stall. */
+    sellInterval: 0.06,
+  },
+
   /**
    * Market prices rise as the farm grows: every upgrade bought adds this much to all sale prices
    * (eggs, milk, dishes, contracts, rewards). Keeps big upgrades reachable as costs climb.
@@ -321,6 +344,14 @@ export const ECONOMY = {
     'dock.worker': { base: 18000, growth: 3, max: 2, step: 1 },
     /** Bigger trucks / bigger deals: contract sizes x (1 + step x level). */
     'dock.size': { base: 12000, growth: 2.4, max: 3, step: 0.4 },
+    /** Open the corn field (stage 4) north of the pens, with the grain stall. */
+    'field.unlock': { base: 25000, growth: 1, max: 1, step: 1 },
+    /** Wider cutting reach: radius + step per level (sickle -> bigger blades -> double blades). */
+    'field.tool': { base: 4000, growth: 2.2, max: 5, step: 0.3 },
+    /** Open the wheat field next to the corn (pricier crop). */
+    'field.wheat': { base: 60000, growth: 1, max: 1, step: 1 },
+    /** Fertilizer: crops regrow faster, time / (1 + step x level). */
+    'field.regrow': { base: 6000, growth: 2.2, max: 4, step: 0.3 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */
@@ -367,15 +398,20 @@ export const ECONOMY = {
 export type ProductId = keyof typeof ECONOMY.products;
 /** Café dishes. */
 export type DishId = keyof typeof ECONOMY.dishes;
+/** Field crops (cut, carried as bundles, sold at the grain stall). */
+export type CropId = keyof typeof ECONOMY.crops;
 /** Anything that can be carried. */
-export type ItemId = ProductId | DishId;
+export type ItemId = ProductId | DishId | CropId;
 
 export const PRODUCT_IDS = Object.keys(ECONOMY.products) as ProductId[];
 export const DISH_IDS = Object.keys(ECONOMY.dishes) as DishId[];
-export const ITEM_IDS: ItemId[] = [...PRODUCT_IDS, ...DISH_IDS];
+export const CROP_IDS = Object.keys(ECONOMY.crops) as CropId[];
+export const ITEM_IDS: ItemId[] = [...PRODUCT_IDS, ...DISH_IDS, ...CROP_IDS];
 
 export function priceOf(item: ItemId): number {
-  return item in ECONOMY.products ? ECONOMY.products[item as ProductId].price : ECONOMY.dishes[item as DishId].price;
+  if (item in ECONOMY.products) return ECONOMY.products[item as ProductId].price;
+  if (item in ECONOMY.crops) return ECONOMY.crops[item as CropId].price;
+  return ECONOMY.dishes[item as DishId].price;
 }
 export type ProducerKind = keyof typeof ECONOMY.producers;
 export type UpgradeId = keyof typeof ECONOMY.upgrades;

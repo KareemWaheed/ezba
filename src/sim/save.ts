@@ -35,6 +35,8 @@ export interface SaveData {
     tables: { dirty: boolean; cash: number; bills: number }[];
     cash: { value: number; bills: number };
   };
+  /** Grain stall money not collected yet (stalks restart fully grown). */
+  field?: { cash: number; bills: number };
 }
 
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
@@ -81,6 +83,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
       tables: w.cafe.tables.map((t) => ({ dirty: t.dirty, cash: t.cash, bills: t.bills })),
       cash: { value: w.cafe.uncollected - w.cafe.tables.reduce((a, t) => a + t.cash, 0), bills: w.cafe.cash.bills },
     },
+    field: { cash: w.field.cash.value, bills: w.field.cash.bills },
   };
 }
 
@@ -123,6 +126,8 @@ export function restore(w: SimWorld, s: SaveData): void {
     cafe.cash.value = num(cf.cash?.value);
     cafe.cash.bills = Math.floor(num(cf.cash?.bills));
   }
+  w.field.cash.value = num(s.field?.cash);
+  w.field.cash.bills = Math.floor(num(s.field?.bills));
   w.cash.value = num(s.cash?.value);
   w.cash.bills = Math.floor(num(s.cash?.bills));
   up.apply();

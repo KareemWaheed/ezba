@@ -58,3 +58,10 @@ This file records the decisions made on top of it.
   coffee belt + machine | milk spot — both conveyors run straight down onto the counter; café tiles in the
   free left/right columns; dirty tables show their own 🧽 bubble instead of a static sign. `npm run layoutcheck`
   (also part of `npm run build`) fails on overlapping tiles, tiles on work spots, or tiles in solids.
+- Stage 4a — crop fields (north of the pens, through the gap between coop and cow pen): corn plot opens
+  with `field.unlock`, wheat plot with `field.wheat`. Walking through cuts every grown stalk within the tool
+  radius (`field.tool` widens it); 3 stalks = 1 bundle on the stack; stalks regrow (`field.regrow` speeds it);
+  rare golden stalks pay a bonus. Bundles sell at the grain stall (instant trader, money piles at the stall).
+  Crops are player-only income for now (no offline earnings) — vehicles and hired drivers come in 4b/4c.
+  Barns moved inside the pens (the strip behind is the field walkway) and fade see-through while the
+  player is behind them.

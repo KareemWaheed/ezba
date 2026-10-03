@@ -107,6 +107,23 @@ export const UPGRADES: readonly UpgradeDef[] = [
     id: 'cafe.helper', icon: '🧑‍🍳', label: 'وظّف مساعد مطبخ', msg: 'مساعد مطبخ جديد بيجيب البيض واللبن 🧑‍🍳',
     pos: { x: 19.4, z: 3.3 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
   },
+  // Stage 4: crop fields north of the pens
+  {
+    id: 'field.unlock', icon: '🌽', label: 'غيط الدرة', msg: 'فتحت غيط الدرة! امشي فيه واحصد 🌽',
+    pos: { x: 1.5, z: -7.5 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'field.tool', icon: '🔪', label: 'منجل أعرض', msg: 'المنجل بقى بيحصد أوسع 🔪',
+    pos: { x: 3.4, z: -11.1 }, requires: [{ id: 'field.unlock', level: 1 }],
+  },
+  {
+    id: 'field.regrow', icon: '🌱', label: 'سماد', msg: 'الزرع بيطلع أسرع 🌱',
+    pos: { x: 5.6, z: -11.1 }, requires: [{ id: 'field.unlock', level: 1 }],
+  },
+  {
+    id: 'field.wheat', icon: '🌾', label: 'غيط القمح', msg: 'فتحت غيط القمح! القمح أغلى 🌾',
+    pos: { x: 8.6, z: -11.1 }, requires: [{ id: 'field.tool', level: 2 }], milestone: true,
+  },
   // Loading dock: company contracts with trucks
   {
     id: 'dock.unlock', icon: '🚚', label: 'رصيف التحميل', msg: 'الشركات هتبعت عربيات تاخد منك بالجملة 🚚',

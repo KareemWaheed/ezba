@@ -26,7 +26,7 @@ export interface SessionStat {
   /** Offline money credited for the following break. */
   offline: number;
   /** Per-session breakdown for --verbose. */
-  detail: { shopServed: number; cafeServed: number; angry: number; shopSales: number; cafeSales: number; tips: number; rush: number; golden: number; trucks: number; rating: number };
+  detail: { shopServed: number; cafeServed: number; angry: number; shopSales: number; cafeSales: number; tips: number; rush: number; golden: number; trucks: number; crops: number; rating: number };
 }
 export interface RunResult {
   profile: string;
@@ -79,6 +79,7 @@ export function checkTargets(eff: RunResult, casual: RunResult): TargetResult[] 
   span('cows', 'milk.unlock', 45, 160);
   span('egg belt', 'eggs.machine', 20, 40);
   span('café', 'cafe.unlock', 80, 320);
+  span('corn field', 'field.unlock', 110, 400);
 
   const ea = automated(eff), ca = automated(casual);
   add('stages 1-3 automated: efficient from day 4, casual by day 7', !!ea && ea.day >= 4 && !!ca && ca.day <= 7, `efficient ${fmt(ea)}${ea ? ' last ' + ea.id : ''}, casual ${fmt(ca)}${ca ? ' last ' + ca.id : ''}`);

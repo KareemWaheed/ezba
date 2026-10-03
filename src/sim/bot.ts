@@ -1,11 +1,12 @@
 import { ECONOMY } from '../config/economy';
 import { LAYOUT, SOLIDS, SOLIDS_VERSION } from '../config/layout';
 import { CAFE } from '../config/cafe';
-import type { ProductId } from '../config/economy';
+import { CROP_IDS, type CropId, type ProductId } from '../config/economy';
+import { FIELDS } from '../config/fields';
 import { dist, type Box } from './math';
 import type { SimWorld } from './world';
 import type { TileState } from './upgrades';
-import { vipDelivery } from './guide';
+import { nearestStalk, unservedLane, vipDelivery } from './guide';
 import { Rng } from './rng';
 
 /**
@@ -22,7 +23,7 @@ import { Rng } from './rng';
 export type BotProfile = 'active' | 'idle' | 'casual';
 
 type Task = 'tile' | 'stepOff' | 'drop' | 'cash' | 'pick' | 'serve' | 'wait' | 'fix' | 'golden' | 'feed'
-  | 'stoveIn' | 'stoveOut' | 'cafeDrop' | 'cafeServe' | 'clean' | 'tableCash' | 'dock';
+  | 'stoveIn' | 'stoveOut' | 'cafeDrop' | 'cafeServe' | 'clean' | 'tableCash' | 'dock' | 'harvest' | 'sellCrop';
 
 /** Clearance kept from obstacles when routing around them. */
 const CLEAR = ECONOMY.player.radius + 0.25;
@@ -81,6 +82,9 @@ export class Bot {
   private supplying = false;
   /** Current raw-item trip is for the truck at the loading dock. */
   private toDock = false;
+  /** Crop being harvested this trip (null = not harvesting). */
+  private harvesting: CropId | null = null;
+  private stalk = { x: 0, z: 0 };
 
   constructor(private w: SimWorld, readonly profile: BotProfile) {}
 
@@ -151,6 +155,13 @@ export class Bot {
       const cafe = w.cafe;
       // dishes go to the café counter
       if (c.items.some((it) => it in cafe.counter)) { this.go('cafeDrop', CAFE.counter.serve.x, CAFE.counter.serve.z); return; }
+      // crops: keep cutting until full (or the plot is bare), then sell at the stall
+      if (c.items.some((it) => (CROP_IDS as string[]).includes(it))) {
+        if (this.harvesting && !c.full() && nearestStalk(w, this.stalk, this.harvesting)) { this.go('harvest', this.stalk.x, this.stalk.z); return; }
+        this.harvesting = null;
+        this.go('sellCrop', FIELDS.stall.drop.x, FIELDS.stall.drop.z);
+        return;
+      }
       // once a trip has started, fill up while the pile still has items, then unload
       const ps = w.stations[this.pickStation];
       if (ps && !c.full() && ps.pile > 0 && dist(p.x, p.z, ps.def.pile.x, ps.def.pile.z) < 2) { this.go('pick', ps.def.pile.x, ps.def.pile.z); return; }
@@ -166,12 +177,14 @@ export class Bot {
       }
     }
     if (w.cash.value > 0 && (cashNeeded || w.cash.bills >= 20)) { this.go('cash', shop.cash.x, shop.cash.z); return; }
+    if (w.field.cash.value > 0 && (cashNeeded || w.field.cash.bills >= 30)) { this.go('cash', FIELDS.stall.cash.x, FIELDS.stall.cash.z); return; }
     // keep the troughs full (player-only production boost)
     const fc = ECONOMY.feed;
     const hungry = this.profile === 'active' ? w.stations.find((s) => s.open && s.boostT < fc.duration * fc.refillBelow) : undefined;
     if (hungry && c.n === 0) { this.go('feed', hungry.def.trough.x, hungry.def.trough.z + 0.5); return; }
     if (this.dockTask()) return;
     if (this.cafeTask()) return;
+    if (this.fieldTask()) return;
     // fetch from the fullest pile once it can fill (most of) a trip
     let best = -1, bestN = 0;
     for (const s of w.stations) if (s.open && s.pile > bestN) { best = s.index; bestN = s.pile; }
@@ -192,6 +205,25 @@ export class Bot {
     if (w.cash.value > 0) { this.go('cash', shop.cash.x, shop.cash.z); return; }
     const s0 = w.stations.find((s) => s.open);
     if (s0) this.go('wait', s0.def.pile.x, s0.def.pile.z + 0.6);
+  }
+
+  /**
+   * Harvest when the shop doesn't need the player (every waiting lane is staffed) and a plot has
+   * enough grown stalks for a full trip; the pricier crop first.
+   */
+  private fieldTask(): boolean {
+    const w = this.w, f = w.field, c = w.carry;
+    if (!f.open || c.n > 0 || unservedLane(w) >= 0) return false;
+    if (w.stations.some((s) => s.open && s.pile >= ECONOMY.pile.max * 0.75)) return false;
+    const need = c.cap * ECONOMY.field.stalksPerBundle;
+    for (let i = f.plots.length - 1; i >= 0; i--) {
+      const p = f.plots[i];
+      if (!p.open || p.grown < need || !nearestStalk(w, this.stalk, p.crop)) continue;
+      this.harvesting = p.crop;
+      this.go('harvest', this.stalk.x, this.stalk.z);
+      return true;
+    }
+    return false;
   }
 
   /** Load the waiting truck by hand while there are no dock workers. */

@@ -39,6 +39,8 @@ export const sfx = {
   },
   drop(): void { tone(380, 0.07, 'triangle', 0.05, 0, 0.8); },
   sell(): void { tone(700, 0.05, 'square', 0.02); },
+  /** Blade through stalks (callers throttle it). */
+  swish(): void { tone(2200, 0.05, 'sawtooth', 0.012, 0, 0.35); },
   kaching(): void { tone(1046, 0.08, 'square', 0.035); tone(1568, 0.16, 'square', 0.035, 0.07); },
   coin(): void { tone(1318, 0.05, 'square', 0.025); },
   angry(): void { tone(180, 0.25, 'sawtooth', 0.03, 0, 0.7); },

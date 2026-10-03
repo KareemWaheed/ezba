@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { LAYOUT } from '../config/layout';
 import { CAFE } from '../config/cafe';
+import { FIELDS } from '../config/fields';
 import type { SimWorld } from '../sim/world';
 import { CanvasSprite, FONT, rr } from './canvas';
 
@@ -55,6 +56,11 @@ export class SignsView {
       add(k.raw === 'egg' ? '🍳 حط البيض هنا' : '☕ حط اللبن هنا', k.input.x + out, k.input.z + 0.3, cafeNew, 0.95, 'rgba(176,96,30,0.9)');
     }
     add('🍽️ اخدم هنا', CAFE.counter.serve.x, CAFE.counter.serve.z - 0.2, cafeNew, 2.6, 'rgba(176,96,30,0.9)');
+    // field: until the player has sold a few bundles
+    const fieldNew = (w: SimWorld) => w.field.open && w.stats.crops < 30;
+    const corn = FIELDS.plots[0].box;
+    add('🌽 امشي في الغيط واحصد', (corn.x0 + corn.x1) / 2, corn.z1 - 1.2, fieldNew, 2.2, 'rgba(63,155,74,0.92)');
+    add('🌽 بيع المحصول هنا', FIELDS.stall.drop.x, FIELDS.stall.drop.z + 0.2, fieldNew, 0.9, 'rgba(63,155,74,0.92)');
     add('🍳 الطلبات للمنصة', LAYOUT.vipStage.drop.x, LAYOUT.vipStage.drop.z, (w) => w.scenario.guest?.state === 'order', 1.6, 'rgba(176,24,46,0.9)');
     add('🚚 حمّل العربية هنا', LAYOUT.dock.load.x, LAYOUT.dock.load.z, (w) => w.contracts.open && w.contracts.truck.state === 'loading' && w.stats.trucks < 4, 1.6, 'rgba(30,91,198,0.9)');
   }

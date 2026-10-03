@@ -28,7 +28,10 @@ export type SimEventType =
   | 'scenarioStart'
   | 'scenarioEnd' // value = reward, n = 1 if every goal passed
   | 'truck'       // a company truck is on its way (n = 1 for a rush order)
-  | 'truckDone';  // a truck left (value = payment, n = 1 if the company was happy)
+  | 'truckDone'   // a truck left (value = payment, n = 1 if the company was happy)
+  | 'cut'         // a stalk was cut (product = crop, id = plot)
+  | 'goldenStalk' // a golden stalk was cut (value = reward)
+  | 'cropSold';   // a bundle was sold at the grain stall (value)
 
 export interface SimEvent {
   type: SimEventType;

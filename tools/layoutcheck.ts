@@ -7,6 +7,7 @@ import { UPGRADES } from '../src/config/upgrades';
 import { STATIONS } from '../src/config/stations';
 import { LAYOUT, SOLIDS } from '../src/config/layout';
 import { CAFE } from '../src/config/cafe';
+import { FIELDS } from '../src/config/fields';
 import { ECONOMY } from '../src/config/economy';
 import { ZONE } from '../src/sim/world';
 
@@ -40,7 +41,16 @@ const zones: { name: string; x: number; z: number; r: number; owner?: string }[]
   { name: 'café serve', ...CAFE.counter.serve, r: 1.6 },
   { name: 'café cash', ...CAFE.cash, r: 1.3 },
   ...CAFE.tables.map(([x, z], i) => ({ name: `café table ${i}`, x, z, r: 1.15 })),
+  { name: 'grain stall drop', ...FIELDS.stall.drop, r: 1.25 },
+  { name: 'grain stall cash', ...FIELDS.stall.cash, r: 1.3 },
 ];
+// tiles inside a crop plot would be paid into while harvesting
+for (const d of UPGRADES) {
+  for (const p of FIELDS.plots) {
+    const b = p.box, R = 0.9;
+    if (d.pos.x > b.x0 - R && d.pos.x < b.x1 + R && d.pos.z > b.z0 - R && d.pos.z < b.z1 + R) problems.push(`tile on a field: ${d.id} in ${p.id}`);
+  }
+}
 
 for (let i = 0; i < UPGRADES.length; i++) {
   const a = UPGRADES[i];

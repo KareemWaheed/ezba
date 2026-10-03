@@ -147,7 +147,7 @@ export type LockId = 'pen' | 'hrYard' | 'cafe';
 
 const LOCK_MAT = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false });
 
-function lockOverlay(scene: THREE.Scene, r: Box, extra?: THREE.Object3D): THREE.Group {
+export function lockOverlay(scene: THREE.Scene, r: Box, extra?: THREE.Object3D): THREE.Group {
   const grp = new THREE.Group();
   const shade = new THREE.Mesh(new THREE.PlaneGeometry(r.x1 - r.x0, r.z1 - r.z0).rotateX(-Math.PI / 2), LOCK_MAT);
   shade.position.set((r.x0 + r.x1) / 2, 0.03, (r.z0 + r.z1) / 2);

@@ -20,6 +20,7 @@ import { CafeView } from './cafeView';
 import { PenView } from './penView';
 import { SignsView } from './signs';
 import { DockView } from './dockView';
+import { FieldView } from './fieldView';
 import { UPGRADES } from '../config/upgrades';
 
 const _v = new THREE.Vector3();
@@ -110,6 +111,7 @@ export class FarmView {
   readonly pens: PenView;
   readonly signs: SignsView;
   readonly dock: DockView;
+  readonly field: FieldView;
   /** True on frames where a coin flew into an upgrade tile (for the coin sound). */
   coinFlew = false;
   private payT = 0;
@@ -138,6 +140,7 @@ export class FarmView {
     this.pressure = new PressureView(scene, sim);
     this.cafe = new CafeView(scene);
     this.pens = new PenView(scene, sim);
+    this.field = new FieldView(scene, sim);
     this.signs = new SignsView(scene, sim);
     this.dock = new DockView(scene);
     this.arrow = new THREE.Mesh(merge([
@@ -161,9 +164,10 @@ export class FarmView {
     this.staff.sync(sim, dt, this.flyers, pop);
     this.pressure.sync(sim, dt);
     this.cafe.sync(sim, dt);
-    this.pens.sync(dt);
+    this.pens.sync(dt, p.x, p.z);
     this.signs.sync(sim, dt);
     this.dock.sync(sim);
+    this.field.sync(sim, dt);
 
     // coins fly from the player into the tile being paid
     this.coinFlew = false;
@@ -183,6 +187,7 @@ export class FarmView {
 
   /** Cosmetic reactions to sim events. */
   onEvent(e: SimEvent): void {
+    this.field.onEvent(e);
     if (e.type === 'buy') this.tiles.bump(UPGRADES[e.id].id);
     if (e.type === 'goldenCaught') {
       _v.set(e.x, 0.8, e.z);

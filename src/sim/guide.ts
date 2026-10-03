@@ -1,5 +1,7 @@
 import { LAYOUT } from '../config/layout';
 import { CAFE } from '../config/cafe';
+import { FIELDS } from '../config/fields';
+import { CROP_IDS, type CropId } from '../config/economy';
 import { UPGRADES, type UpgradeDef } from '../config/upgrades';
 import type { SimWorld } from './world';
 
@@ -33,6 +35,7 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
   }
   if (best) { out.x = best.pos.x; out.z = best.pos.z; return true; }
   if (cafeAction(w, out)) return true;
+  if (fieldAction(w, out)) return true;
   if (dockAction(w, out)) return true;
   if (up.bought >= EARLY_UPGRADES) return false;
   return nextAction(w, out);
@@ -73,6 +76,34 @@ function dockAction(w: SimWorld, out: { x: number; z: number }): boolean {
   if (c.full()) return false;
   for (const s of w.stations) if (s.open && s.pile >= 2 && ct.stillNeeds(s.def.product) > 0) { out.x = s.def.pile.x; out.z = s.def.pile.z; return true; }
   return false;
+}
+
+/** Teaches the field loop (cut, then sell at the stall) for the first bundles. */
+const FIELD_TUTORIAL = 40;
+
+function fieldAction(w: SimWorld, out: { x: number; z: number }): boolean {
+  const f = w.field, c = w.carry;
+  if (!f.open || w.stats.crops >= FIELD_TUTORIAL) return false;
+  const crops = c.items.some((it) => (CROP_IDS as string[]).includes(it));
+  // full (or the field is bare): go sell
+  if (crops && (c.full() || f.ready === 0)) { out.x = FIELDS.stall.drop.x; out.z = FIELDS.stall.drop.z; return true; }
+  if (c.full()) return false;
+  return nearestStalk(w, out);
+}
+
+/** Nearest grown stalk in any open plot (for the guide and the bot). */
+export function nearestStalk(w: SimWorld, out: { x: number; z: number }, crop?: CropId): boolean {
+  const p0 = w.player;
+  let best = Infinity;
+  for (const p of w.field.plots) {
+    if (!p.open || p.grown === 0 || (crop && p.crop !== crop)) continue;
+    for (let i = 0; i < p.size; i++) {
+      if (p.regrow[i] > 0) continue;
+      const dx = p.x(i) - p0.x, dz = p.z(i) - p0.z, d = dx * dx + dz * dz;
+      if (d < best) { best = d; out.x = p.x(i); out.z = p.z(i); }
+    }
+  }
+  return best < Infinity;
 }
 
 /** Teaches the café loop until the first few café customers are served. */

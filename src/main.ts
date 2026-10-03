@@ -14,6 +14,7 @@ import { DustFx } from './render/dust';
 import { buildWorld } from './render/worldView';
 import { FarmView } from './render/farmView';
 import { CarrierView } from './render/stacks';
+import { PRIM, merge, part } from './render/geo';
 import { Input } from './ui/input';
 import { Hud } from './ui/hud';
 import { music, sfx, unlockAudio } from './audio';
@@ -45,6 +46,14 @@ const playerStack = new CarrierView(player.root);
 let stepSide = 1;
 player.onStep = (c) => { stepSide = -stepSide; dust.emit(c.root.position.x, c.root.position.z, c.root.rotation.y, stepSide * 0.6); };
 view.scene.add(player.root);
+// sickle in the right hand while standing in an open field; swings while cutting
+const sickle = player.attach(merge([
+  part(PRIM.box, 0x8a5a32, 0, -0.12, 0.08, 0.3, 0, 0, 0.06, 0.06, 0.32),
+  part(PRIM.box, 0xd9dde3, 0, -0.1, 0.32, 0, 0.5, 0, 0.04, 0.03, 0.3),
+  part(PRIM.box, 0xd9dde3, 0.12, -0.1, 0.42, 0, 1.3, 0, 0.04, 0.03, 0.22),
+]), 'hand');
+sickle.visible = false;
+let swishT = 0;
 
 const input = new Input(uiRoot);
 input.onGesture = unlockAudio;
@@ -133,6 +142,18 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       if (e.n === 0) { if (dropRun >= 6) sfx.arpeggio(dropRun); dropRun = 0; }
       break;
     case 'sell': sfx.sell(); break;
+    case 'cut': {
+      const t = performance.now();
+      if (t - swishT > 90) { swishT = t; sfx.swish(); }
+      break;
+    }
+    case 'cropSold': sfx.sell(); break;
+    case 'goldenStalk': {
+      sfx.fanfare();
+      const s = toScreen(e.x, 2, e.z);
+      hud.float(`✨ +${e.value}`, s.x, s.y);
+      break;
+    }
     case 'paid': sfx.kaching(); break;
     case 'tip': {
       sfx.tip();
@@ -220,6 +241,9 @@ function frame(now: number): void {
   const p = sim.player;
   player.update(p.x, p.z, p.rot, p.speed, real, sim.carry.n > 0);
   playerStack.update(sim.carry.items, Math.min(1, p.speed / ECONOMY.player.speed), real);
+  const inField = sim.field.plotAt(p.x, p.z)?.open ?? false;
+  sickle.visible = inField;
+  sickle.rotation.x = sim.field.cutting > 0 ? Math.sin(now * 0.03) * 0.9 : 0;
   farm.sync(sim, real);
   farm.endFrame(real);
   if (farm.coinFlew) sfx.coin();
