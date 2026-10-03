@@ -188,7 +188,7 @@ export class CustomerSystem {
       if (c.playerItems * 2 >= c.qty && c.patience / c.patienceMax >= ECONOMY.tips.fastAbove) sc.likes++;
     }
     let tip = w.service.complete(c, value);
-    if (inEvent) tip = Math.round(tip * sc.def.tipMult);
+    if (inEvent) tip = Math.round(tip * sc.def.tipMult * (sc.mech.tipMult?.() ?? 1));
     w.cash.value += value + tip;
     w.cash.bills += c.qty + (tip > 0 ? 2 : 0);
     w.events.emit('paid', c.lines[0].product, c.x, c.z, value, c.qty, c.id);

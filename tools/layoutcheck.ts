@@ -63,6 +63,13 @@ for (const d of UPGRADES) {
   }
 }
 
+// the football pitch must be clear floor: no tiles (they'd pay while dribbling), no solids
+{
+  const p = LAYOUT.pitch, R = TILE / 2;
+  for (const t of UPGRADES) if (t.pos.x > p.x0 - R && t.pos.x < p.x1 + R && t.pos.z > p.z0 - R && t.pos.z < p.z1 + R) problems.push(`tile on the football pitch: ${t.id}`);
+  for (const s of SOLIDS) if (s.x0 < p.x1 && s.x1 > p.x0 && s.z0 < p.z1 && s.z1 > p.z0) problems.push(`solid on the football pitch (${s.x0},${s.z0})`);
+}
+
 for (let i = 0; i < UPGRADES.length; i++) {
   const a = UPGRADES[i];
   for (let j = i + 1; j < UPGRADES.length; j++) {

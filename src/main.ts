@@ -139,6 +139,8 @@ let dropRun = 0;
 function cueSound(mech: string | undefined, n: number): void {
   if (mech === 'storm') { if (n === 1) sfx.angry(); else sfx.fixed(); }
   if (mech === 'inspector') { if (n === 1) sfx.fixed(); else sfx.clunk(); }
+  // football: 1 goal, 2 saved, 3 cone passed, 4 shot without the cones
+  if (mech === 'football') { if (n === 1) { sfx.fanfare(); toast.show('جووون! ⚽🔥 الفانز هيدفعوا أكتر'); } else if (n === 2) sfx.clunk(); else if (n === 3) sfx.coin(); else toast.show('لازم تلف على كل الأقماع الأول! 🔶'); }
 }
 
 function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void {

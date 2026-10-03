@@ -10,6 +10,7 @@ import { serialize, restore, migrate, type SaveData } from '../src/sim/save';
 import { Bot } from '../src/sim/bot';
 import type { StormMechanic } from '../src/sim/scenarios/storm';
 import type { InspectorMechanic } from '../src/sim/scenarios/inspector';
+import { FOOTBALL, type FootballMechanic } from '../src/sim/scenarios/football';
 
 const DT = 1 / 30;
 const only = process.argv[2];
@@ -159,6 +160,57 @@ if (!only || only === 'inspector') {
   w.scenario.trigger('inspector');
   runUntilIdle(w, () => bot.update(DT));
   ok(goalOk(w, 'checkpoints') === true, 'inspector: the active bot passes');
+}
+
+// ---- football: Salah penalties, Messi dribble ----
+/** Walk the player behind the ball (on the far side from `aim`) and push it toward `aim`. */
+function dribbleTo(w: SimWorld, aim: { x: number; z: number }): void {
+  const m = w.scenario.mech as FootballMechanic, b = m.ball;
+  if (!b) return;
+  // start on the pitch (it's on the customers' side of the counter)
+  if (w.player.z < FOOTBALL.z0) { w.player.x = FOOTBALL.x0 + 0.3; w.player.z = FOOTBALL.kick.z; }
+  const dx = aim.x - b.x, dz = aim.z - b.z, d = Math.hypot(dx, dz) || 1;
+  const bx = b.x - (dx / d) * 0.55, bz = b.z - (dz / d) * 0.55;
+  const p = w.player, px = bx - p.x, pz = bz - p.z, pd = Math.hypot(px, pz);
+  // get behind the ball first (without touching it), then run through it
+  if (pd > 0.25) { const k = Math.min(1, pd); w.input.x = (px / pd) * k; w.input.z = (pz / pd) * k; }
+  else { w.input.x = dx / d; w.input.z = dz / d; }
+}
+for (const id of ['salah', 'messi'] as const) {
+  if (only && only !== id) continue;
+  {
+    const w = fresh();
+    w.scenario.trigger(id);
+    runUntilIdle(w);
+    ok(goalOk(w, 'goals') === false, `${id} unattended: goals fail`);
+  }
+  {
+    const w = fresh();
+    w.scenario.trigger(id);
+    let scored = 0;
+    runUntilIdle(w, (w) => {
+      const m = w.scenario.mech as FootballMechanic;
+      if (!m.ball) return;
+      scored = m.scored;
+      dribbleTo(w, m.nextAim(w));
+    });
+    w.input.x = w.input.z = 0;
+    ok(scored >= 3, `${id}: a player following the aim scores 3 (${scored})`);
+  }
+}
+if (!only || only === 'messi') {
+  // straight at the goal, skipping the cones: nothing counts
+  const w = fresh();
+  w.scenario.trigger('messi');
+  let scored = 0;
+  runUntilIdle(w, (w) => {
+    const m = w.scenario.mech as FootballMechanic;
+    if (!m.ball) return;
+    scored = m.scored;
+    dribbleTo(w, FOOTBALL.goal);
+  });
+  w.input.x = w.input.z = 0;
+  ok(scored === 0, `messi: skipping the cones scores nothing (${scored})`);
 }
 
 // ---- availability: never pick an event whose area is locked ----

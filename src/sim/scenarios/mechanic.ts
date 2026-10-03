@@ -14,6 +14,8 @@ export interface Mechanic {
   goal(w: SimWorld, g: ScenarioGoal): boolean | undefined;
   /** 0..1 progress for the HUD bar of an owned goal. */
   progress?(w: SimWorld, g: ScenarioGoal): number;
+  /** Multiplies event customers' tips (on top of the event's own tipMult). */
+  tipMult?(): number;
   /** Extra condition for the third star (e.g. a perfect run). */
   bonus?(w: SimWorld): boolean;
   /** Where the bot should go to work on this event (null = nothing to do). */

@@ -47,6 +47,16 @@ export const LAYOUT = {
    * VIP stage for scenario guests (president, stars...): they arrive from `entry` (motorcade side),
    * walk the carpet to the stage, pose, order, and the player delivers to `drop` in person.
    */
+  /**
+   * Mini football pitch for the star footballers' visits (right of the shop lanes). The goal mouth is
+   * on the east line; the ball starts at `kick`; Messi's cones zigzag across the middle.
+   */
+  pitch: {
+    x0: 2.9, x1: 6.3, z0: 4.8, z1: 8.0,
+    goal: { x: 6.3, z0: 5.8, z1: 7.0 },
+    kick: { x: 3.6, z: 6.4 },
+    cones: [{ x: 4.1, z: 5.3 }, { x: 4.7, z: 7.5 }, { x: 5.3, z: 5.3 }],
+  },
   vipStage: {
     x: -6.4, z: 8.4, w: 3.2, d: 2.2,
     seat: { x: -6.4, z: 8.1 },

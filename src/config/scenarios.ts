@@ -31,7 +31,8 @@ export type ScenarioGoal =
   | 'cleanTables'    // no dirty café tables when it ends
   | 'likes'          // fill the likes meter with fast services
   | 'herd'           // bring every escaped animal back
-  | 'checkpoints';   // every stop on the inspector's route is fine
+  | 'checkpoints'    // every stop on the inspector's route is fine
+  | 'goals';         // score goals on the yard pitch
 
 /** The special guest (served only by the player, like a VIP). */
 export interface GuestDef {
@@ -98,6 +99,8 @@ export interface ScenarioDef {
   when?: (w: SimWorld) => boolean;
   /** The event's own rules (sim/scenarios/). */
   mechanic?: MechanicId;
+  /** Which flavour of the mechanic (e.g. football: 'penalty' | 'dribble'). */
+  variant?: string;
   /** Mid-event surprises, in order. */
   twists?: readonly Twist[];
 }
@@ -132,21 +135,21 @@ export const SCENARIOS: readonly ScenarioDef[] = [
     twists: [{ at: 20, kind: 'reorder', text: 'ترامب غيّر رأيه! طلب جديد 😅' }, { at: 40, kind: 'reorder', text: 'ترامب غيّر رأيه تاني!! 🙄' }],
   },
   {
-    id: 'salah', icon: '⚽', title: 'محمد صلاح جاي المزرعة!', hint: 'الفانز هيطلبوا زيه، خدمهم بسرعة',
+    id: 'salah', icon: '⚽', title: 'محمد صلاح جاي المزرعة!', hint: 'ضربات جزاء! جوّن في الحارس وكل جون الفانز يدفعوا أكتر',
     color: '#c8102e', weight: 3, warning: 8, duration: 60, arrivalMult: 2.6, crowdShare: 0.85, crowd: 'fanRed', featured: null,
     patienceMult: 0.9, qtyMult: 1, tipMult: 3,
     guest: { name: 'محمد صلاح', look: 'salah', qtyMult: 2, payMult: 12, patience: 70, entourage: 2 },
-    goals: ['serveGuest', 'noAngry'], rewardSeconds: 75, rewardShare: 0.8, ratingWin: 0.6, ratingLose: -0.3,
+    goals: ['serveGuest', 'goals'], rewardSeconds: 75, rewardShare: 0.8, ratingWin: 0.6, ratingLose: -0.3, mechanic: 'football', variant: 'penalty',
     props: ['confetti'], music: 'chant', minUpgrades: 28,
     tint: 'rgba(200,16,46,0.28)', intro: 'مو صلاح وصل! ⚽🔥',
     twists: [{ at: 30, kind: 'rush', text: 'فانز زيادة جايين! 🏃' }],
   },
   {
-    id: 'messi', icon: '🐐', title: 'ميسي في المزرعة!', hint: 'زحمة فانز! كله عايز اللي ميسي طلبه',
+    id: 'messi', icon: '🐐', title: 'ميسي في المزرعة!', hint: 'لف الكورة حوالين الأقماع وبعدين جوّن!',
     color: '#4a90d9', weight: 2, warning: 8, duration: 60, arrivalMult: 2.6, crowdShare: 0.85, crowd: 'fanBlue', featured: null,
     patienceMult: 0.9, qtyMult: 1, tipMult: 3,
     guest: { name: 'ميسي', look: 'messi', qtyMult: 2, payMult: 12, patience: 70, entourage: 2 },
-    goals: ['serveGuest', 'noAngry'], rewardSeconds: 75, rewardShare: 0.8, ratingWin: 0.6, ratingLose: -0.3,
+    goals: ['serveGuest', 'goals'], rewardSeconds: 75, rewardShare: 0.8, ratingWin: 0.6, ratingLose: -0.3, mechanic: 'football', variant: 'dribble',
     props: ['confetti'], music: 'chant', minUpgrades: 28,
     tint: 'rgba(117,170,219,0.32)', intro: 'ميسي في المزرعة! 🐐',
     twists: [{ at: 30, kind: 'rush', text: 'فانز زيادة جايين! 🏃' }],
@@ -224,6 +227,7 @@ export const SCENARIO_GOAL_LABEL: Record<ScenarioGoal, string> = {
   likes: 'كمّل اللايكات',
   herd: 'رجّع الحيوانات',
   checkpoints: 'كل نقط التفتيش سليمة',
+  goals: 'جوّن ٣ أهداف',
 };
 
 /** How often scenarios happen (seconds of active play between them). */
