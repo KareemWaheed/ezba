@@ -2,6 +2,7 @@ import { ECONOMY, ITEM_IDS, type ItemId, type UpgradeId } from '../config/econom
 import { SimWorld } from './world';
 import { LEGACY } from '../config/legacy';
 import { FIELDS } from '../config/fields';
+import type { GameMode } from '../config/paths';
 
 /**
  * Versioned save format. Bump SAVE_VERSION when the shape changes and add a migration from the
@@ -12,6 +13,8 @@ export const SAVE_VERSION = 1;
 
 export interface SaveData {
   v: number;
+  /** Which game this is (each mode has its own save slot; absent = farm). */
+  mode?: GameMode;
   /** Wall-clock ms when saved (for offline earnings). */
   t: number;
   /** Sim time played (s). */
@@ -82,7 +85,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     stations[s.def.id] = { open: s.open, pile: s.pile + s.pending, counter: s.counter + moving };
   }
   return {
-    v: SAVE_VERSION, t: now, time: w.time, money: w.money, rng: w.rng.state,
+    v: SAVE_VERSION, mode: w.mode, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
     rating: w.service.rating, legacy: w.legacy, vipT: w.customers.vipT,
@@ -219,9 +222,9 @@ export function restore(w: SimWorld, s: SaveData): void {
  */
 export function legacyReset(w: SimWorld, now: number): SaveData | null {
   if (w.legacyMissing.length > 0) return null;
-  const f = new SimWorld((now % 1_000_000_007) >>> 0 || 1);
+  const f = new SimWorld((now % 1_000_000_007) >>> 0 || 1, w.mode);
   f.legacy = w.legacy + 1;
-  f.money = LEGACY.startMoney * f.legacy;
+  f.money = f.path.startMoney + LEGACY.startMoney * f.legacy;
   for (const k of Object.keys(f.stats) as (keyof typeof f.stats)[]) f.stats[k] = w.stats[k];
   for (const id of w.album.seen) f.album.seen.add(id);
   for (const id of w.album.paid) f.album.paid.add(id);

@@ -298,3 +298,23 @@ html, body {
 #modal .o-farm { background: #3fae5a; box-shadow: 0 3px 0 #2c7d40; }
 #modal .o-price { color: #2c7d40; }
 #modal .t-claim small { font-size: 12px; font-weight: 700; }
+
+/* start screen: farm first or supermarket first */
+#title {
+  position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: linear-gradient(180deg, rgba(143, 209, 79, 0.92), rgba(233, 176, 106, 0.95)); direction: rtl;
+}
+#title .ti-box { position: relative; width: min(100%, 420px); display: flex; flex-direction: column; gap: 12px; text-align: center; }
+#title .ti-logo { font-size: 54px; font-weight: 800; color: #fff; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.25); line-height: 1.1; }
+#title .ti-sub { font-size: 20px; font-weight: 800; color: var(--ink); }
+#title .ti-card {
+  font: inherit; border: 0; border-radius: 22px; padding: 14px 16px; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px;
+  align-items: center; text-align: right; background: var(--panel); color: var(--ink); box-shadow: 0 5px 0 rgba(0, 0, 0, 0.2);
+}
+#title .ti-card.now { outline: 3px solid var(--accent); }
+#title .ti-icon { grid-row: span 3; font-size: 52px; }
+#title .ti-card b { font-size: 24px; }
+#title .ti-line { font-size: 14px; font-weight: 600; }
+#title .ti-btn { justify-self: start; margin-top: 6px; background: var(--bill); color: #fff; font-weight: 800; border-radius: 12px; padding: 4px 14px; box-shadow: 0 3px 0 var(--bill-edge); }
+#title .ti-note { font-size: 13px; font-weight: 600; color: var(--ink); opacity: 0.8; }
+#title .ti-x { position: absolute; top: -6px; left: 0; width: 40px; height: 40px; border-radius: 12px; border: 0; font-size: 20px; background: var(--panel); }

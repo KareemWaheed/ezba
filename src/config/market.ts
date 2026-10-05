@@ -40,11 +40,11 @@ export const MARKET = {
     { x0: 27.35, x1: 27.6, z0: 15.6, z1: 25.0 },
   ] as Box[],
   products: [
-    { item: 'egg', name: 'بيض', sell: 6, cost: 4, farm: true },
-    { item: 'milk', name: 'لبن', sell: 11, cost: 7, farm: true },
-    { item: 'rice', name: 'رز', sell: 30, cost: 16, farm: false },
+    { item: 'egg', name: 'بيض', sell: 6, cost: 3, farm: true },
+    { item: 'milk', name: 'لبن', sell: 11, cost: 6, farm: true },
+    { item: 'rice', name: 'رز', sell: 30, cost: 15, farm: false },
     { item: 'pasta', name: 'مكرونة', sell: 24, cost: 12, farm: false },
-    { item: 'corn', name: 'درة', sell: 13, cost: 9, farm: true },
+    { item: 'corn', name: 'درة', sell: 13, cost: 7, farm: true },
     { item: 'oil', name: 'زيت', sell: 60, cost: 30, farm: false },
     { item: 'tea', name: 'شاي', sell: 40, cost: 20, farm: false },
     { item: 'chips', name: 'شيبسي', sell: 14, cost: 7, farm: false },
@@ -67,6 +67,8 @@ export const MARKET = {
     serveR: 1.1,
   },
   cash: { x: 13.6, z: 22.9, r: 1.0 },
+  /** Where a supermarket-first game starts the player (inside, between the checkout and the shelves). */
+  startSpot: { x: 18.0, z: 24.4 },
   /** Shoppers come in from the road south-east and leave the same way. */
   spawn: { x: 21.0, z: 30.5 },
   exit: { x: 17.5, z: 30.5 },

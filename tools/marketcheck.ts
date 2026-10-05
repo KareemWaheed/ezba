@@ -7,7 +7,7 @@
 import { SimWorld } from '../src/sim/world';
 import { ECONOMY, type UpgradeId } from '../src/config/economy';
 import { MARKET, SHELVES } from '../src/config/market';
-import { serialize, restore, migrate } from '../src/sim/save';
+import { serialize, restore, migrate, legacyReset } from '../src/sim/save';
 import { simulateAway } from '../src/sim/offline';
 import { Bot } from '../src/sim/bot';
 import { LAYOUT } from '../src/config/layout';
@@ -34,6 +34,31 @@ function farm(market: Partial<Record<UpgradeId, number>> = { 'market.unlock': 1 
 const at = (w: SimWorld, x: number, z: number, s: number) => { for (let i = 0; i < s / DT; i++) { w.player.x = x; w.player.z = z; w.tick(DT); w.events.drain(() => {}); } };
 const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.tick(DT); w.events.drain(() => {}); } };
 
+// ---- the supermarket-first game ----
+{
+  const w = new SimWorld(3, 'market'), m = w.market, up = w.upgrades;
+  ok(m.open && m.shelves.filter((s) => s.open).every((s) => s.stock > 0), 'a supermarket game starts with an open, stocked store');
+  ok(w.stations.every((s) => !s.open), 'the farm starts closed (the coop too)');
+  const tiles = up.tiles.map((t) => t.def.id);
+  ok(!tiles.includes('market.unlock') && !tiles.includes('cashier') && tiles.includes('market.cashier'), `store tiles from the start, no farm-shop tiles (${tiles.join(', ')})`);
+  ok(up.cost('market.cashier') < 1000, `store upgrades are early-game prices here (cashier ${up.cost('market.cashier')})`);
+  run(w, 120);
+  ok(w.customers.list.length === 0 && m.shoppers.length > 0, 'no farm-shop customers, shoppers in the store');
+  up.levels['market.cashier'] = 1;
+  up.levels['eggs.unlock'] = 1;
+  up.apply();
+  up.refresh();
+  ok(w.stations[0].open && up.tiles.some((t) => t.def.id === 'eggs.animals'), 'buying the coop opens the chickens');
+  const w2 = new SimWorld(1, 'market');
+  restore(w2, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
+  ok(w2.stations[0].open && w2.market.open && w2.upgrades.level('eggs.unlock') === 1, 'a supermarket save loads back');
+  ok(!w.legacyMissing.some((d) => w.path.hidden.includes(d.id)), 'hidden tiles never block the 🏆 bigger ezba');
+  for (const d of w.legacyMissing) w.upgrades.levels[d.id] = 1;
+  const nx = new SimWorld(1, 'market');
+  restore(nx, migrate(JSON.parse(JSON.stringify(legacyReset(w, Date.now())!)))!);
+  ok(nx.mode === 'market' && nx.legacy === 1 && nx.market.open && !nx.stations[0].open, 'a bigger ezba stays a supermarket game');
+}
+
 // ---- locked until bought ----
 {
   const w = farm({});
@@ -44,8 +69,14 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
 // ---- the hand loop ----
 {
   const w = farm(), m = w.market;
+  // with stock in the store an order needs the money; an (almost) empty store gets supplier credit
   w.money = 0;
-  ok(!m.order('rice'), 'an order needs the money');
+  m.store.pasta = ECONOMY.supermarket.creditBelow;
+  ok(!m.order('rice'), 'an order needs the money while the store has stock');
+  m.store.pasta = 0;
+  ok(m.order('rice') && w.money < 0, `an empty store orders on credit (money ${Math.round(w.money)})`);
+  ok(!m.order('rice') || w.money >= -ECONOMY.supermarket.creditMax * w.priceMult - m.boxCost('rice'), 'credit has a limit');
+  m.incoming.length = 0;
   w.money = 1e6;
   const open = m.shelves.filter((s) => s.open).map((s) => s.def.item);
   ok(open.length === 4, `first shelf row opens with the store (${open.join(', ')})`);

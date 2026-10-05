@@ -34,6 +34,8 @@ export class MetaMenus {
   private legacyReady = false;
   /** Called once when the farm becomes ready to sell for a bigger one. */
   onLegacyReady: (() => void) | null = null;
+  /** Settings' "switch game" button (opens the start screen). */
+  onSwitchGame: (() => void) | null = null;
   private installEvt: InstallPrompt | null = null;
   private t = 0;
 
@@ -164,6 +166,7 @@ export class MetaMenus {
     const card = this.modal.open(`
       <div class="m-title">⚙️ الإعدادات</div>
       <button class="m-btn s-sound" data-sound>${isMuted() ? '🔇 الصوت مقفول' : '🔊 الصوت شغال'}</button>
+      <button class="m-btn s-switch" data-switch>🔁 ${this.sim.mode === 'market' ? 'روح للمزرعة 🐔' : 'روح للسوبر ماركت 🛒'}</button>
       ${install}
       <div class="m-note">بتشتغل من غير نت، وتقدمك بيتحفظ لوحده</div>
       <button class="m-btn" data-close>تمام</button>`, () => { this.open = null; });
@@ -172,6 +175,7 @@ export class MetaMenus {
       try { localStorage.setItem(SOUND_KEY, isMuted() ? '1' : '0'); } catch { /* storage blocked */ }
       this.showSettings();
     });
+    card.querySelector('[data-switch]')?.addEventListener('click', () => { this.modal.close(); this.onSwitchGame?.(); });
     card.querySelector('[data-install]')?.addEventListener('click', () => {
       const e = this.installEvt;
       this.installEvt = null;

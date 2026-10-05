@@ -73,12 +73,15 @@ export const ECONOMY = {
     emptyWait: 4,
     emptyPenalty: 15,
     /** Patience in the checkout line. */
-    patience: 70,
+    patience: 90,
     /** Seconds a shopper takes per item off a shelf, and the player per item at the checkout. */
     takeInterval: 0.4,
     scanInterval: 0.22,
     /** Auto-reorder buys a box when a product's storeroom stock drops below this. */
     autoBelow: 10,
+    /** Supplier credit: with fewer items than this in the whole store, boxes can be ordered into debt (down to -creditMax). */
+    creditBelow: 12,
+    creditMax: 600,
   },
 
   /** Stage 6 river: fishing boats and rowboat rental. */
@@ -402,6 +405,8 @@ export const ECONOMY = {
   upgrades: {
     /** +1 chicken per level. */
     'eggs.animals': { base: 40, growth: 1.55, max: 8, step: 1 },
+    /** Supermarket path only: open the chicken coop (the farm opens backwards). */
+    'eggs.unlock': { base: 1800, growth: 1, max: 1, step: 1 },
     /** +step carry capacity per level. */
     'player.capacity': { base: 60, growth: 1.7, max: 6, step: 2 },
     /** +step running speed multiplier per level. */

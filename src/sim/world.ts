@@ -24,6 +24,8 @@ import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
 import { LEGACY } from '../config/legacy';
+import { PATHS, type GameMode, type PathDef } from '../config/paths';
+import { MARKET } from '../config/market';
 import { UPGRADES } from '../config/upgrades';
 
 /** Radii of the walk-in zones (units). */
@@ -56,7 +58,7 @@ export class SimWorld {
   clock: Clock = { weekday: 1, hour: 12, ramadan: false };
   readonly cash = { value: 0, bills: 0 };
   /** Lifetime counters (daily tasks, album and the simulator read these). */
-  readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0, tables: 0, cafeServed: 0, scenariosWon: 0, trucks: 0, stalks: 0, crops: 0, goldenStalks: 0, rides: 0, marketServed: 0 };
+  readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0, tables: 0, cafeServed: 0, scenariosWon: 0, trucks: 0, stalks: 0, crops: 0, goldenStalks: 0, rides: 0, marketServed: 0, marketStocked: 0 };
   readonly events = new EventQueue();
   /**
    * What the player can't walk through: the static layout (its fence boxes are shared and move as pens
@@ -82,9 +84,15 @@ export class SimWorld {
   private dropT = 0;
   private trashT = 0;
 
-  constructor(seed = 1) {
+  /** The upgrade path of this game (config/paths.ts). */
+  readonly path: PathDef;
+
+  /** `mode`: farm first (the classic game) or supermarket first (the farm opens backwards). */
+  constructor(seed = 1, readonly mode: GameMode = 'farm') {
+    this.path = PATHS[mode];
     this.rng = new Rng(seed);
-    this.player = createPlayer(LAYOUT.spawn.x, LAYOUT.spawn.z);
+    const sp = mode === 'market' ? MARKET.startSpot : LAYOUT.spawn;
+    this.player = createPlayer(sp.x, sp.z);
     this.carry = new Carrier(ECONOMY.player.capacity);
     this.stations = STATIONS.map((d, i) => new Station(d, i));
     this.customers = new CustomerSystem(this);
@@ -102,8 +110,16 @@ export class SimWorld {
     this.album = new AlbumSystem(this);
     this.daily = new DailySystem(this);
     this.upgrades = new UpgradeSystem(this);
+    for (const [id, n] of Object.entries(this.path.startLevels)) this.upgrades.levels[id as keyof typeof this.upgrades.levels] = n;
+    this.money = this.path.startMoney;
     this.upgrades.apply();
     this.upgrades.refresh();
+    // a new store opens with some stock so the first shoppers can buy right away
+    for (const s of this.market.shelves) {
+      if (!s.open) continue;
+      s.stock = this.path.startShelf;
+      this.market.store[s.def.item] = this.path.startStore;
+    }
   }
 
   /** What the animals produce per second at shop prices (scales rewards: events, tasks, album). */
@@ -112,7 +128,8 @@ export class SimWorld {
     for (const st of this.stations) {
       if (st.open && st.def.producer) v += (st.animals.length / ECONOMY.producers[st.def.producer].interval) * ECONOMY.products[st.def.product].price * this.priceMult;
     }
-    return v;
+    // the supermarket's margin (so rewards scale on the supermarket path before the farm exists)
+    return v + this.market.marginPerSec;
   }
 
   /** Sale price multiplier from farm growth (see ECONOMY.market). */
@@ -122,7 +139,7 @@ export class SimWorld {
 
   /** Milestone upgrades not bought yet (all bought = the farm can be sold for a bigger one). */
   get legacyMissing(): typeof UPGRADES[number][] {
-    return UPGRADES.filter((d) => d.milestone && this.upgrades.level(d.id) === 0);
+    return UPGRADES.filter((d) => d.milestone && !this.path.hidden.includes(d.id) && this.upgrades.level(d.id) === 0);
   }
 
   /** Open checkout lanes (1 at the start). */

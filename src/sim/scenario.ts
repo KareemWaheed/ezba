@@ -150,7 +150,10 @@ export class ScenarioSystem {
   }
 
   private pick(): ScenarioDef | null {
-    const w = this.w, ok = SCENARIOS.filter((s) => w.upgrades.bought >= s.minUpgrades && (!s.when || s.when(w)));
+    const w = this.w;
+    // the events are built around the farm shop's lines, which the supermarket path doesn't have
+    if (w.mode === 'market') return null;
+    const ok = SCENARIOS.filter((s) => w.upgrades.bought >= s.minUpgrades && (!s.when || s.when(w)));
     if (!ok.length) return null;
     let total = 0;
     for (const s of ok) total += s.weight;

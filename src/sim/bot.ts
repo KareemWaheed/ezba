@@ -1,6 +1,7 @@
 import { ECONOMY } from '../config/economy';
 import { LAYOUT, SOLIDS_VERSION } from '../config/layout';
 import { CAFE } from '../config/cafe';
+import { MARKET } from '../config/market';
 import type { ProductId } from '../config/economy';
 import { FIELDS, FIELD_CROPS, type FieldCrop } from '../config/fields';
 import { dist, type Box } from './math';
@@ -23,7 +24,8 @@ import { Rng } from './rng';
 export type BotProfile = 'active' | 'idle' | 'casual';
 
 type Task = 'tile' | 'stepOff' | 'drop' | 'cash' | 'pick' | 'serve' | 'wait' | 'fix' | 'golden' | 'feed'
-  | 'stoveIn' | 'stoveOut' | 'cafeDrop' | 'cafeServe' | 'clean' | 'tableCash' | 'dock' | 'harvest' | 'sellCrop' | 'event';
+  | 'stoveIn' | 'stoveOut' | 'cafeDrop' | 'cafeServe' | 'clean' | 'tableCash' | 'dock' | 'harvest' | 'sellCrop' | 'event'
+  | 'stock' | 'storeroom' | 'checkout' | 'desk' | 'marketCash';
 
 /** Clearance kept from obstacles when routing around them. */
 const CLEAR = ECONOMY.player.radius + 0.25;
@@ -93,13 +95,23 @@ export class Bot {
   /** `skip`: upgrade tracks this bot never buys (a check that wants a farm without some stage). */
   constructor(private w: SimWorld, readonly profile: BotProfile, private skip?: (id: string) => boolean) {}
 
+  /** Money kept back for stock on the supermarket path (boxes the store needs right now). */
+  private reserve(): number {
+    const w = this.w, m = w.market;
+    if (w.mode !== 'market' || !m.open || w.upgrades.level('market.auto') > 0) return 0;
+    let r = 0;
+    // (only shelves about to run dry: a player tops those up first, the rest can wait for the next sales)
+    for (const s of m.shelves) if (s.open && s.stock <= 3 && m.stocked(s.def.item) < ECONOMY.supermarket.box && m.farmSpare(s.def.item) <= 0) r += m.boxCost(s.def.item);
+    return r;
+  }
+
   private cheapestAffordable(): TileState | null {
-    const up = this.w.upgrades;
+    const up = this.w.upgrades, budget = this.w.money - this.reserve();
     let best: TileState | null = null, bestR = Infinity;
     for (const t of up.tiles) {
       if (this.skip?.(t.def.id)) continue;
       const r = up.remaining(t.def.id);
-      if (r <= this.w.money + 1e-6 && r < bestR) { best = t; bestR = r; }
+      if (r <= budget + 1e-6 && r < bestR) { best = t; bestR = r; }
     }
     return best;
   }
@@ -154,6 +166,7 @@ export class Bot {
       this.go('tile', tile.def.pos.x, tile.def.pos.z);
       return;
     }
+    if (this.profile !== 'idle' && this.marketTask()) return;
     const cashNeeded = w.money + w.cash.value >= this.cheapestRemaining();
     if (this.profile === 'idle') {
       if (w.cash.value > 0) this.go('cash', shop.cash.x, shop.cash.z);
@@ -233,6 +246,45 @@ export class Bot {
       this.go('harvest', this.stalk.x, this.stalk.z);
       return true;
     }
+    return false;
+  }
+
+  /**
+   * Supermarket chores (it's the whole early game on the supermarket path): shelve what's in hand, run the
+   * checkout while there's no cashier, collect the cash for the next upgrade, fetch for low shelves, and
+   * order at the desk what the storeroom lacks (farm surplus first). False = nothing to do in the store.
+   */
+  private marketTask(): boolean {
+    const w = this.w, m = w.market, c = w.carry, cfg = ECONOMY.supermarket;
+    if (!m.open) return false;
+    const marketMode = w.mode === 'market';
+    // shelve: anything in hand that has a shelf with room
+    const shelf = m.shelves.find((s) => s.open && c.has(s.def.item) && s.stock < cfg.shelfMax);
+    if (shelf) { this.go('stock', shelf.def.front.x, shelf.def.front.z); return true; }
+    // the line: serve it while there's no cashier (on the farm path only when nothing else is urgent)
+    const queue = m.shoppers.filter((x) => x.state === 'queue').length;
+    if (!m.cashier && queue > 0 && (marketMode || queue >= 3)) {
+      const s = MARKET.checkout.serve;
+      this.go('checkout', s.x, s.z);
+      return true;
+    }
+    if (m.cash.value > 0 && (w.money + m.cash.value >= this.cheapestRemaining() || m.cash.bills >= 20)) {
+      this.go('marketCash', MARKET.cash.x, MARKET.cash.z);
+      return true;
+    }
+    if (c.n > 0) return false;
+    // fetch for shelves running low
+    if (m.shelves.some((s) => s.open && s.stock <= cfg.shelfMax / 2 && m.store[s.def.item] > 0) && (marketMode || w.upgrades.level('market.stocker') === 0)) {
+      this.go('storeroom', MARKET.store.x, MARKET.store.z);
+      return true;
+    }
+    // order what's low in the storeroom (once standing at the desk; auto-reorder takes over when bought)
+    if (w.upgrades.level('market.auto') > 0) return false;
+    const low = m.shelves.filter((s) => s.open && m.stocked(s.def.item) < cfg.box && s.stock < cfg.shelfMax);
+    const affordable = low.filter((s) => m.farmSpare(s.def.item) > 0 || w.money >= m.boxCost(s.def.item));
+    if (!affordable.length) return false;
+    if (!m.atDesk) { this.go('desk', MARKET.desk.x, MARKET.desk.z); return true; }
+    for (const s of affordable) if (!m.orderFromFarm(s.def.item)) m.order(s.def.item);
     return false;
   }
 

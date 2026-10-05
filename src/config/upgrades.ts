@@ -30,6 +30,11 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: -7.6, z: -0.2 }, requires: [], maxBonus: { by: 'eggs.expand', per: 6 },
   },
   {
+    // supermarket path only (hidden on the farm path): the coop opens; the chickens tile then takes this spot
+    id: 'eggs.unlock', icon: '🐔', label: 'افتح العشة', msg: 'فتحت عشة الفراخ! البيض بقى ببلاش للسوبر ماركت 🐔',
+    pos: { x: -7.6, z: -0.2 }, requires: [{ id: 'market.cashier', level: 1 }], milestone: true,
+  },
+  {
     id: 'eggs.expand', icon: '🏗️', label: 'كبّر العشة', msg: 'العشة كبرت! مكان لفراخ أكتر 🏗️',
     pos: { x: -7.6, z: -0.2 }, requires: [{ id: 'eggs.worker', level: 1 }], requiresMaxed: 'eggs.animals', milestone: true,
   },

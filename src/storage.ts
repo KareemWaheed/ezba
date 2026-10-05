@@ -1,6 +1,28 @@
 import { SAVE_VERSION, migrate, type SaveData } from './sim/save';
+import type { GameMode } from './config/paths';
 
-const KEY = 'ezba-save';
+const MODE_KEY = 'ezba.mode';
+/** Each game has its own save slot (the farm keeps the original key, so old saves load as the farm). */
+const keyOf = (m: GameMode) => (m === 'market' ? 'ezba-save-market' : 'ezba-save');
+
+/** The game picked on the start screen (null = never picked: show the start screen). */
+export function chosenMode(): GameMode | null {
+  try { const m = localStorage.getItem(MODE_KEY); return m === 'farm' || m === 'market' ? m : null; } catch { return null; }
+}
+
+/** The game this page runs: the one picked, else the farm. */
+export const MODE: GameMode = chosenMode() ?? 'farm';
+const KEY = keyOf(MODE);
+
+/** Remember the picked game (the caller reloads the page when it changes). */
+export function chooseMode(m: GameMode): void {
+  try { localStorage.setItem(MODE_KEY, m); } catch { /* storage blocked: stays on the farm */ }
+}
+
+/** Whether a game has a save to continue. */
+export function hasSave(m: GameMode): boolean {
+  try { return !!localStorage.getItem(keyOf(m)); } catch { return false; }
+}
 
 /** Read and migrate the save. Keeps a copy of the pre-migration save in case a migration is buggy. */
 export function loadSave(): SaveData | null {

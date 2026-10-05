@@ -46,7 +46,7 @@ export class OrderPanel {
         <div class="t-body"><div class="t-label">${p.name} · <span class="o-price">${ltr(fmtMoney(m.sellPrice(it)))} 💰</span></div>
           <div class="t-sub">على الرف ${ltr(`${s.stock}/${ECONOMY.supermarket.shelfMax}`)} · في المخزن ${ltr(`${m.store[it]}`)}${coming ? ` · 🚚 ${ltr(`+${coming}`)}` : ''}</div></div>
         ${farmBtn}
-        <button class="t-claim" data-buy="${it}" ${room && w.money >= cost ? '' : 'disabled'}>📦 +${box}<br><small>${ltr(fmtMoney(cost))}</small></button>
+        <button class="t-claim" data-buy="${it}" ${room && (w.money >= cost || m.onCredit(it)) ? '' : 'disabled'}>📦 +${box}<br><small>${w.money < cost && m.onCredit(it) ? 'على النوتة 📒' : ltr(fmtMoney(cost))}</small></button>
       </div>`;
     }).join('');
     const card = this.modal.open(`
