@@ -1,6 +1,7 @@
 import { ECONOMY } from '../config/economy';
 import { LAYOUT } from '../config/layout';
 import { CAFE } from '../config/cafe';
+import { MARKET } from '../config/market';
 import { FIELDS } from '../config/fields';
 import type { FieldCrop } from '../config/fields';
 import { UPGRADES, type UpgradeDef } from '../config/upgrades';
@@ -40,11 +41,32 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
     if (r <= w.money && r < bestR) { best = t.def; bestR = r; }
   }
   if (best) { out.x = best.pos.x; out.z = best.pos.z; return true; }
+  if (marketAction(w, out)) return true;
   if (cafeAction(w, out)) return true;
   if (fieldAction(w, out)) return true;
   if (dockAction(w, out)) return true;
   if (up.bought >= EARLY_UPGRADES) return false;
   return nextAction(w, out);
+}
+
+/**
+ * Supermarket hint (the first stretch of a supermarket-first game, or the first shoppers of a farm's
+ * store): stock what's in hand, run the checkout while there's no cashier, fetch for an empty shelf,
+ * order what the storeroom lacks, pick up the cash.
+ */
+export function marketAction(w: SimWorld, out: { x: number; z: number }): boolean {
+  const m = w.market, c = w.carry;
+  if (!m.open) return false;
+  if (w.mode === 'market' ? w.upgrades.bought >= 14 : w.stats.marketServed >= 25) return false;
+  const shelf = m.shelves.find((s) => s.open && c.has(s.def.item) && s.stock < ECONOMY.supermarket.shelfMax);
+  if (shelf) { out.x = shelf.def.front.x; out.z = shelf.def.front.z; return true; }
+  if (!m.cashier && m.shoppers.some((x) => x.state === 'queue')) { out.x = MARKET.checkout.serve.x; out.z = MARKET.checkout.serve.z; return true; }
+  if (c.n === 0 && m.shelves.some((s) => s.open && s.stock < 4 && m.store[s.def.item] > 0)) { out.x = MARKET.store.x; out.z = MARKET.store.z; return true; }
+  if (!m.incoming.length && m.shelves.some((s) => s.open && s.stock < 4 && m.store[s.def.item] === 0 && w.money >= m.boxCost(s.def.item))) {
+    out.x = MARKET.desk.x; out.z = MARKET.desk.z; return true;
+  }
+  if (m.cash.value > 0 && c.n === 0) { out.x = MARKET.cash.x; out.z = MARKET.cash.z; return true; }
+  return false;
 }
 
 /** Early-game hint: the next step of the carry-and-sell loop. */

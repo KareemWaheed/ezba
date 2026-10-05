@@ -40,18 +40,24 @@ export const MARKET = {
     { x0: 27.35, x1: 27.6, z0: 15.6, z1: 25.0 },
   ] as Box[],
   products: [
-    { item: 'egg', name: 'بيض', sell: 6, cost: 4, farm: true },
-    { item: 'milk', name: 'لبن', sell: 11, cost: 7, farm: true },
-    { item: 'rice', name: 'رز', sell: 30, cost: 16, farm: false },
+    // row 1 (opens with the store): staples
+    { item: 'egg', name: 'بيض', sell: 6, cost: 3, farm: true },
+    { item: 'milk', name: 'لبن', sell: 11, cost: 6, farm: true },
+    { item: 'rice', name: 'رز', sell: 30, cost: 15, farm: false },
     { item: 'pasta', name: 'مكرونة', sell: 24, cost: 12, farm: false },
-    { item: 'corn', name: 'درة', sell: 13, cost: 9, farm: true },
+    { item: 'bread', name: 'عيش بلدي', sell: 8, cost: 4, farm: false },
+    // row 2: pantry and fresh vegetables
+    { item: 'corn', name: 'درة', sell: 13, cost: 7, farm: true },
     { item: 'oil', name: 'زيت', sell: 60, cost: 30, farm: false },
     { item: 'tea', name: 'شاي', sell: 40, cost: 20, farm: false },
     { item: 'chips', name: 'شيبسي', sell: 14, cost: 7, farm: false },
+    { item: 'tomato', name: 'طماطم', sell: 12, cost: 6, farm: false },
+    // row 3: deli, drinks and more vegetables
     { item: 'cheese', name: 'جبنة', sell: 70, cost: 50, farm: true },
     { item: 'cake', name: 'كيك', sell: 90, cost: 64, farm: true },
     { item: 'fish', name: 'سمك', sell: 28, cost: 20, farm: true },
     { item: 'soda', name: 'بيبسي', sell: 18, cost: 9, farm: false },
+    { item: 'potato', name: 'بطاطس', sell: 10, cost: 5, farm: false },
   ] as readonly MarketProduct[],
   /** Storeroom: the player/stockers pick here (what the shelves need most); racks show the stock. */
   store: { x: 25.7, z: 19.6, r: 1.0, racks: { x0: 26.55, x1: 27.3, z0: 16.4, z1: 23.6 } as Box },
@@ -67,6 +73,8 @@ export const MARKET = {
     serveR: 1.1,
   },
   cash: { x: 13.6, z: 22.9, r: 1.0 },
+  /** Where a supermarket-first game starts the player (inside, between the checkout and the shelves). */
+  startSpot: { x: 18.0, z: 24.4 },
   /** Shoppers come in from the road south-east and leave the same way. */
   spawn: { x: 21.0, z: 30.5 },
   exit: { x: 17.5, z: 30.5 },
@@ -74,13 +82,28 @@ export const MARKET = {
 } as const;
 
 const ROWS = [17.2, 19.8, 22.4];
-const COLS = [16.3, 18.6, 20.9, 23.2];
+const COLS = [15.0, 17.05, 19.1, 21.15, 23.2];
+/** Half the width of a shelf unit (4 items across each board). */
+const HALF_W = 0.75;
 
-/** 3 rows x 4 shelves, in MARKET.products order (row r opens with market.shelves level r). */
+/** 3 rows x 5 shelves, in MARKET.products order (row r opens with market.shelves level r). */
 export const SHELVES: readonly ShelfDef[] = MARKET.products.map((p, i) => {
-  const r = Math.floor(i / 4), x = COLS[i % 4], z = ROWS[r];
-  return { item: p.item, row: r, box: { x0: x - 0.9, x1: x + 0.9, z0: z - 0.3, z1: z + 0.3 }, front: { x, z: z + 0.95 } };
+  const r = Math.floor(i / COLS.length), x = COLS[i % COLS.length], z = ROWS[r];
+  return { item: p.item, row: r, box: { x0: x - HALF_W, x1: x + HALF_W, z0: z - 0.3, z1: z + 0.3 }, front: { x, z: z + 0.95 } };
 });
+
+/**
+ * Price tags (set at the order desk, per product): x price, and how much that changes how often a
+ * shopper wants it (cheap sells more, dear sells less).
+ */
+export const PRICE_TAGS = [
+  { mult: 0.85, demand: 1.5, label: 'رخيص' },
+  { mult: 1, demand: 1, label: 'عادي' },
+  { mult: 1.2, demand: 0.65, label: 'غالي' },
+  { mult: 1.45, demand: 0.4, label: 'غالي قوي' },
+] as const;
+/** Index of the normal price in PRICE_TAGS. */
+export const PRICE_NORMAL = 1;
 
 export const MARKET_PRODUCT = new Map(MARKET.products.map((p) => [p.item, p]));
 

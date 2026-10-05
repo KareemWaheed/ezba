@@ -1,5 +1,5 @@
 import { ECONOMY, type ItemId } from '../config/economy';
-import { MARKET, MARKET_PRODUCT, SHELVES, type ShelfDef } from '../config/market';
+import { MARKET, MARKET_PRODUCT, PRICE_NORMAL, PRICE_TAGS, SHELVES, type ShelfDef } from '../config/market';
 import { pickType } from '../config/album';
 import type { WorkerJob } from './staff';
 import type { SimWorld } from './world';
@@ -178,13 +178,16 @@ export class MarketSystem {
   readonly shelves: Shelf[];
   /** Storeroom stock per product. */
   readonly store = {} as Record<ItemId, number>;
+  /** Price tag per product (index into PRICE_TAGS; set at the order desk). */
+  readonly price = {} as Record<ItemId, number>;
   readonly incoming: Delivery[] = [];
   readonly cash = { value: 0, bills: 0 };
   readonly shoppers: Shopper[] = [];
   /** Player standing on the order desk (the UI opens the order panel). */
   atDesk = false;
-  /** Shoppers who left unhappy (empty-handed or tired of waiting), lifetime. */
+  /** Shoppers who left unhappy, lifetime: all of them, and those who found nothing on the shelves. */
   angry = 0;
+  angryEmpty = 0;
   private nextId = 1;
   private spawnT = 3;
   private pickT = 0;
@@ -196,7 +199,7 @@ export class MarketSystem {
 
   constructor(private w: SimWorld) {
     this.shelves = SHELVES.map((def, index) => ({ def, index, open: false, stock: 0 }));
-    for (const p of MARKET.products) this.store[p.item] = 0;
+    for (const p of MARKET.products) { this.store[p.item] = 0; this.price[p.item] = PRICE_NORMAL; }
     for (let i = 0; i < ECONOMY.upgrades['market.stocker'].max; i++) this.stockers.push(new StockerJob(this, i));
   }
 
@@ -205,7 +208,16 @@ export class MarketSystem {
   get cashier(): boolean { return this.w.upgrades.level('market.cashier') > 0; }
 
   /** Shelf price / wholesale cost per item right now (x the farm's price growth). */
-  sellPrice(item: ItemId): number { return MARKET_PRODUCT.get(item)!.sell * this.w.priceMult; }
+  sellPrice(item: ItemId): number { return MARKET_PRODUCT.get(item)!.sell * this.w.priceMult * PRICE_TAGS[this.price[item] ?? PRICE_NORMAL].mult; }
+
+  /** Change a product's price tag (cheaper sells more, dearer sells less). */
+  setPrice(item: ItemId, tag: number): void {
+    if (!MARKET_PRODUCT.has(item)) return;
+    this.price[item] = Math.max(0, Math.min(PRICE_TAGS.length - 1, Math.round(tag)));
+  }
+
+  /** How much shoppers want a product at its current price tag. */
+  demand(item: ItemId): number { return PRICE_TAGS[this.price[item] ?? PRICE_NORMAL].demand; }
   boxCost(item: ItemId): number { return Math.round(MARKET_PRODUCT.get(item)!.cost * ECONOMY.supermarket.box * this.w.priceMult); }
 
   /** Items of this product in the storeroom plus on the way. */
@@ -219,6 +231,17 @@ export class MarketSystem {
   canOrder(item: ItemId): boolean {
     const s = this.shelfFor(item);
     return !!s && s.open && this.stocked(item) + ECONOMY.supermarket.box <= ECONOMY.supermarket.storeMax;
+  }
+
+  /** The farm makes this product right now (its coop/pen, factory machine or river is open). */
+  farmMakes(item: ItemId): boolean {
+    const w = this.w;
+    if (!MARKET_PRODUCT.get(item)?.farm) return false;
+    const st = w.stations.find((s) => s.def.product === item);
+    if (st) return st.open;
+    const m = w.factory.machines.find((x) => x.def.makes === item);
+    if (m) return m.open;
+    return item === 'fish' && w.river.open;
   }
 
   /** Farm-made product with spare stock on the farm right now (for a free farm delivery). */
@@ -242,10 +265,28 @@ export class MarketSystem {
     return true;
   }
 
-  /** Order one wholesale box (paid now, arrives after deliveryTime). */
+  /** Items in the whole store (shelves, storeroom, on the way). */
+  get totalStock(): number {
+    let n = 0;
+    for (const s of this.shelves) n += s.stock;
+    for (const k in this.store) n += this.store[k as ItemId];
+    for (const d of this.incoming) n += d.n;
+    return n;
+  }
+
+  /**
+   * The supplier gives credit (money may go below zero, paid back by the next sales) while the store is
+   * nearly out of stock, so it can never be stuck with empty shelves and no money for a box.
+   */
+  onCredit(item: ItemId): boolean {
+    const cfg = ECONOMY.supermarket;
+    return this.totalStock < cfg.creditBelow && this.w.money - this.boxCost(item) >= -cfg.creditMax * this.w.priceMult;
+  }
+
+  /** Order one wholesale box (paid now, arrives after deliveryTime; on credit when the store is nearly empty). */
   order(item: ItemId): boolean {
     const cost = this.boxCost(item);
-    if (!this.open || !this.canOrder(item) || this.w.money < cost) return false;
+    if (!this.open || !this.canOrder(item) || (this.w.money < cost && !this.onCredit(item))) return false;
     this.w.money -= cost;
     this.incoming.push({ item, n: ECONOMY.supermarket.box, t: ECONOMY.supermarket.deliveryTime });
     return true;
@@ -302,8 +343,12 @@ export class MarketSystem {
     if (!open.length) return;
     const n = 1 + rng.int(Math.min(cfg.maxLines, open.length));
     const lines: ShopLine[] = [];
+    // each list line picks a shelf weighted by how much its price tag draws shoppers
+    let total = 0;
+    for (const s of open) total += this.demand(s.def.item);
     for (let k = 0; k < n; k++) {
-      const s = rng.pick(open);
+      let r = rng.next() * total, s = open[open.length - 1];
+      for (const o of open) { r -= this.demand(o.def.item); if (r <= 0) { s = o; break; } }
       if (lines.some((l) => l.shelf === s.index)) continue;
       const qty = 1 + rng.int(cfg.maxQty);
       lines.push({ product: s.def.item, shelf: s.index, qty, left: qty });
@@ -342,7 +387,7 @@ export class MarketSystem {
           const l = c.lines[c.li];
           if (!l) {
             c.state = c.got.length ? 'toQueue' : 'angry';
-            if (!c.got.length) { this.angry++; if (!w.away) w.events.emit('angry', '', c.x, c.z, 0, 0, c.id); }
+            if (!c.got.length) { this.angry++; this.angryEmpty++; if (!w.away) w.events.emit('angry', '', c.x, c.z, 0, 0, c.id); }
             break;
           }
           const sh = this.shelves[l.shelf], f = sh.def.front;
@@ -424,6 +469,7 @@ export class MarketSystem {
     this.cash.value += value;
     this.cash.bills = Math.min(40, this.cash.bills + Math.min(6, c.got.length));
     w.stats.marketServed++;
+    if (!w.away) w.album.see(c.type);
     c.state = 'leave';
     if (!w.away) w.events.emit('paid', c.got[0], c.x, c.z, value, c.got.length, c.id);
   }
@@ -441,6 +487,7 @@ export class MarketSystem {
         if (dist(p.x, p.z, s.def.front.x, s.def.front.z) >= MARKET.shelfR) continue;
         c.take(s.def.item);
         s.stock++;
+        w.stats.marketStocked++;
         this.dropT = pc.dropInterval;
         w.events.emit('drop', s.def.item, s.def.front.x, s.def.front.z, 0, c.n);
         break;
@@ -477,6 +524,20 @@ export class MarketSystem {
     }
     const d = MARKET.desk;
     this.atDesk = dist(p.x, p.z, d.x, d.z) < d.r;
+  }
+
+  /** Rough profit per second of the open shelves (scales task/album rewards on the supermarket path). */
+  get marginPerSec(): number {
+    if (!this.open) return 0;
+    let sell = 0, n = 0;
+    for (const s of this.shelves) {
+      if (!s.open) continue;
+      const p = MARKET_PRODUCT.get(s.def.item)!, t = PRICE_TAGS[this.price[s.def.item] ?? PRICE_NORMAL];
+      sell += (p.sell * t.mult - p.cost) * t.demand;
+      n++;
+    }
+    const avgItems = ((1 + ECONOMY.supermarket.maxLines) / 2) * ((1 + ECONOMY.supermarket.maxQty) / 2);
+    return n ? (avgItems * (sell / n) * this.w.priceMult) / this.interval : 0;
   }
 
   /** Money waiting at the checkout cash pile. */

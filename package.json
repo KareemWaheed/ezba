@@ -15,7 +15,8 @@
     "layoutcheck": "tsx tools/layoutcheck.ts",
     "eventcheck": "tsx tools/eventcheck.ts",
     "fieldcheck": "tsx tools/fieldcheck.ts",
-    "marketcheck": "tsx tools/marketcheck.ts"
+    "marketcheck": "tsx tools/marketcheck.ts",
+    "marketpacing": "tsx tools/marketpacing.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.12.0",

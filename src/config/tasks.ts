@@ -17,14 +17,17 @@ export interface TaskDef {
 
 /** Pool of daily tasks; three different ones are picked per calendar day. */
 export const TASKS: readonly TaskDef[] = [
-  { id: 'serve', icon: '🛒', label: (n) => `اخدم ${n} زبون`, stat: 'served', base: 40, rewardSeconds: 90 },
-  { id: 'sell', icon: '🥚', label: (n) => `بيع ${n} حاجة`, stat: 'sold', base: 150, rewardSeconds: 90 },
-  { id: 'fast', icon: '⚡', label: (n) => `اخدم ${n} زبون بسرعة`, stat: 'fast', base: 15, rewardSeconds: 120 },
-  { id: 'feed', icon: '🌾', label: (n) => `أكّل الحيوانات ${n} مرات`, stat: 'feeds', base: 3, rewardSeconds: 90 },
-  { id: 'rush', icon: '🔥', label: (n) => `عدّي ${n} زحمة من غير زعل`, stat: 'rushesCleared', base: 1, rewardSeconds: 150, when: (w) => w.upgrades.bought >= 6 },
+  // the farm shop's tasks (the supermarket path has no farm shop)
+  { id: 'serve', icon: '🛒', label: (n) => `اخدم ${n} زبون`, stat: 'served', base: 40, rewardSeconds: 90, when: (w) => w.mode === 'farm' },
+  { id: 'sell', icon: '🥚', label: (n) => `بيع ${n} حاجة`, stat: 'sold', base: 150, rewardSeconds: 90, when: (w) => w.mode === 'farm' },
+  { id: 'fast', icon: '⚡', label: (n) => `اخدم ${n} زبون بسرعة`, stat: 'fast', base: 15, rewardSeconds: 120, when: (w) => w.mode === 'farm' },
+  { id: 'feed', icon: '🌾', label: (n) => `أكّل الحيوانات ${n} مرات`, stat: 'feeds', base: 3, rewardSeconds: 90, when: (w) => w.stations.some((s) => s.open && !!s.def.trough) },
+  { id: 'shoppers', icon: '🧾', label: (n) => `حاسب ${n} زبون في السوبر ماركت`, stat: 'marketServed', base: 25, rewardSeconds: 120, when: (w) => w.market.open },
+  { id: 'stock', icon: '📦', label: (n) => `رصّ ${n} حاجة على الرفوف`, stat: 'marketStocked', base: 60, rewardSeconds: 90, when: (w) => w.market.open },
+  { id: 'rush', icon: '🔥', label: (n) => `عدّي ${n} زحمة من غير زعل`, stat: 'rushesCleared', base: 1, rewardSeconds: 150, when: (w) => w.mode === 'farm' && w.upgrades.bought >= 6 },
   { id: 'fix', icon: '🔧', label: (n) => `صلّح ${n} عطل`, stat: 'fixes', base: 2, rewardSeconds: 90, when: (w) => w.staff.machines.some((m) => m.running) },
   { id: 'golden', icon: '✨', label: (n) => `امسك ${n} حيوان دهبي`, stat: 'golden', base: 1, rewardSeconds: 120, when: (w) => w.upgrades.bought >= 8 },
-  { id: 'vip', icon: '⭐', label: (n) => `اخدم ${n} زبون VIP`, stat: 'vips', base: 2, rewardSeconds: 120, when: (w) => w.upgrades.bought >= 10 },
+  { id: 'vip', icon: '⭐', label: (n) => `اخدم ${n} زبون VIP`, stat: 'vips', base: 2, rewardSeconds: 120, when: (w) => w.mode === 'farm' && w.upgrades.bought >= 10 },
   { id: 'tables', icon: '🧽', label: (n) => `نضّف ${n} ترابيزة`, stat: 'tables', base: 15, rewardSeconds: 90, when: (w) => w.cafe.open },
   { id: 'cafe', icon: '☕', label: (n) => `اخدم ${n} زبون في الكافيه`, stat: 'cafeServed', base: 20, rewardSeconds: 120, when: (w) => w.cafe.open },
   { id: 'trucks', icon: '🚚', label: (n) => `حمّل ${n} عربية`, stat: 'trucks', base: 2, rewardSeconds: 150, when: (w) => w.contracts.open },

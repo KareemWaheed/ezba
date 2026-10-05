@@ -21,7 +21,8 @@ import { music, sfx, unlockAudio } from './audio';
 import { guideTarget, nextGoal } from './sim/guide';
 import { restore, serialize } from './sim/save';
 import { UPGRADES } from './config/upgrades';
-import { clearSave, loadSave, requestPersistence, writeSave } from './storage';
+import { MODE, chosenMode, clearSave, loadSave, requestPersistence, writeSave } from './storage';
+import { TitleScreen } from './ui/titleScreen';
 import { GoalCard, Toast } from './ui/panels';
 import { preventZoom } from './ui/noZoom';
 import { PressureHud } from './ui/pressureHud';
@@ -43,7 +44,7 @@ preventZoom();
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const uiRoot = document.getElementById('ui')!;
 
-const sim = new SimWorld(Date.now() & 0x7fffffff);
+const sim = new SimWorld(Date.now() & 0x7fffffff, MODE);
 const view = new Renderer(canvas);
 const rig = new CameraRig(view.camera);
 const locks = buildWorld(view.scene);
@@ -123,7 +124,11 @@ document.addEventListener('visibilitychange', () => {
 });
 
 sim.daily.ensure(dayKey());
+const title = new TitleScreen(uiRoot, save);
+// first launch (or first since the supermarket game arrived): pick a game
+if (!chosenMode()) title.show();
 const menus = new MetaMenus(uiRoot, sim, modal);
+menus.onSwitchGame = () => title.show(true);
 const orderPanel = new OrderPanel(sim, modal);
 menus.onLegacyReady = () => { sfx.fanfare(); toast.show('🏆 فتحت كل حاجة! دوس 🏆 وابدأ عزبة أكبر'); };
 

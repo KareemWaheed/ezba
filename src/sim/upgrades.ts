@@ -46,15 +46,18 @@ export class UpgradeSystem {
     return ECONOMY.upgrades[id].max + bonus;
   }
   maxed(id: UpgradeId): boolean { return this.level(id) >= this.maxOf(id); }
-  cost(id: UpgradeId): number { return upgradeCost(id, this.level(id)); }
+  cost(id: UpgradeId): number { return Math.max(1, Math.round(upgradeCost(id, this.level(id)) * (this.w.path.costMult[id] ?? 1))); }
+
+  /** Requirements on this game's path (the supermarket path rewires some). */
+  requires(def: UpgradeDef): readonly { id: UpgradeId; level: number }[] { return this.w.path.requires[def.id] ?? def.requires; }
   remaining(id: UpgradeId): number { return Math.max(0, this.cost(id) - this.paid[id]); }
 
   /** Tile is shown when requirements are met and the track isn't maxed. */
   available(def: UpgradeDef): boolean {
-    if (this.maxed(def.id)) return false;
+    if (this.w.path.hidden.includes(def.id) || this.maxed(def.id)) return false;
     if (def.capBy && this.level(def.id) >= 1 + this.level(def.capBy)) return false;
     if (def.requiresMaxed && !this.maxed(def.requiresMaxed)) return false;
-    for (const r of def.requires) if (this.level(r.id) < r.level) return false;
+    for (const r of this.requires(def)) if (this.level(r.id) < r.level) return false;
     return true;
   }
 
@@ -77,6 +80,8 @@ export class UpgradeSystem {
     w.player.speedMult = 1 + this.level('player.speed') * U['player.speed'].step;
     for (const s of w.stations) {
       if (s.def.unlockTrack) s.open = this.level(s.def.unlockTrack) > 0;
+      // supermarket path: even the coop starts closed (eggs.unlock opens it)
+      else if (w.mode === 'market') s.open = this.level('eggs.unlock') > 0;
       // bigger pens: move the fence out and update its solid
       const ex = s.def.expand, area = s.def.area;
       if (ex && area) {
@@ -107,7 +112,7 @@ export class UpgradeSystem {
     if (grill && this.level(grill.unlockTrack) > 0) w.addSolid('grill', grill.box);
     w.contracts.sync();
     w.factory.sync();
-    w.bounds.x1 = w.factory.open ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
+    w.bounds.x1 = w.factory.open || w.mode === 'market' ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
     if (w.market.open) {
       // the store stands on reachable grass: walls, counter, racks and desk turn solid once it's built
       MARKET.walls.forEach((b, i) => w.addSolid(`marketWall${i}`, b));
