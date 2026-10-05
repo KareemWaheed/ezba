@@ -48,6 +48,8 @@ export interface Customer {
   takeT: number;
   /** >0 right after taking an item: patience doesn't drain while being served. */
   servedT: number;
+  /** VIP: seconds spent at the front of the lane (the cashier takes over after vip.cashierAfter). */
+  frontT: number;
   /** Set when the customer walked off the map; removed at end of tick. */
   gone: boolean;
 }
@@ -68,6 +70,8 @@ export class CustomerSystem {
   private slots = [0, 0, 0];
   /** Debug: make the next arrival a VIP and bring it now. */
   forceVip = false;
+  /** Seconds until another VIP may arrive. */
+  private vipT = 0;
 
   constructor(private w: SimWorld) {}
 
@@ -104,8 +108,12 @@ export class CustomerSystem {
     const rush = w.rush.active && w.rush.kind.target !== 'cafe';
     const sc = w.scenario, inScenario = sc.active;
     const crowd = inScenario && rng.chance(sc.def.crowdShare);
-    const vip = this.forceVip || (!w.away && !rush && !inScenario && w.upgrades.bought >= ECONOMY.vip.minUpgrades && rng.chance(ECONOMY.vip.chance));
+    // one VIP at a time, with a breather between them
+    const vipWaiting = this.list.some((c) => c.kind === 'vip' && c.state === 'queue');
+    const vip = this.forceVip || (!w.away && !rush && !inScenario && !vipWaiting && this.vipT <= 0
+      && w.upgrades.bought >= ECONOMY.vip.minUpgrades && rng.chance(ECONOMY.vip.chance));
     this.forceVip = false;
+    if (vip) this.vipT = ECONOMY.vip.gap;
     const featProduct = rush ? w.rush.featured : crowd ? sc.featured : null;
     const featured = featProduct ? open.find((s) => s.def.product === featProduct) : undefined;
     let lines: OrderLine[];
@@ -130,7 +138,7 @@ export class CustomerSystem {
       id: this.nextId++, kind: vip ? 'vip' : 'normal', look, type: vip ? 'vip' : pickType(w, look),
       x: rng.range(sp.x0, sp.x1), z: sp.z, rot: Math.PI, speed: 0,
       state: 'queue', lines, lane, qty, left: qty, patience, patienceMax: patience, playerItems: 0,
-      rush, scenario: inScenario, style: crowd ? (sc.mech.crowdStyle?.(look) ?? sc.def.crowd ?? '') : '', away: w.away, takeT: 0, servedT: 0, gone: false,
+      rush, scenario: inScenario, style: crowd ? (sc.mech.crowdStyle?.(look) ?? sc.def.crowd ?? '') : '', away: w.away, takeT: 0, servedT: 0, frontT: 0, gone: false,
     });
     if (rush) w.rush.spawned++;
     if (vip) w.events.emit('vip', '', 0, 0, 0, lane, this.nextId - 1);
@@ -142,9 +150,14 @@ export class CustomerSystem {
     return null;
   }
 
-  /** Whether this customer can be served at their lane right now (VIPs only accept the player). */
+  /**
+   * Whether this customer can be served at their lane right now. VIPs want the player, but after
+   * vip.cashierAfter seconds at the front they let the lane's cashier serve them (scenario guests never do).
+   */
   servable(c: Customer): boolean {
-    return c.kind !== 'normal' ? this.w.playerAtLane(c.lane) : this.w.laneServed(c.lane);
+    if (c.kind === 'normal') return this.w.laneServed(c.lane);
+    if (this.w.playerAtLane(c.lane)) return true;
+    return c.kind === 'vip' && c.frontT >= ECONOMY.vip.cashierAfter && this.w.laneServed(c.lane);
   }
 
   /** Mean seconds between arrivals for the current farm size, lanes, rating and rush. */
@@ -181,7 +194,8 @@ export class CustomerSystem {
     let value = 0;
     for (const l of c.lines) value += l.qty * ECONOMY.products[l.product].price * w.priceMult;
     value = Math.round(value);
-    if (c.kind === 'vip') value *= ECONOMY.vip.payMult;
+    // the VIP bonus is for serving them in person (a cashier who took over gets the normal price)
+    if (c.kind === 'vip' && c.playerItems * 2 >= c.qty) value *= ECONOMY.vip.payMult;
     const sc = w.scenario, inEvent = c.scenario && sc.phase !== 'idle';
     if (c.rush) w.rush.sales += value;
     if (inEvent) {
@@ -203,6 +217,7 @@ export class CustomerSystem {
     for (const c of this.list) if (c.state === 'queue') wl[c.lane]++;
 
     this.spawnT -= dt;
+    this.vipT -= dt;
     if (this.forceVip) this.spawnT = 0;
     if (this.spawnT <= 0) {
       const lane = this.pickLane();
@@ -221,6 +236,7 @@ export class CustomerSystem {
         if (arrived) c.rot += (Math.PI - c.rot) * Math.min(1, dt * 12);
         c.servedT -= dt;
         if (slot === 0 && arrived) {
+          c.frontT += dt;
           c.takeT -= dt;
           const line = c.takeT <= 0 && this.servable(c) ? this.takeable(c) : null;
           if (line) {

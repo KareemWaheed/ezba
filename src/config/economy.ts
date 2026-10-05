@@ -277,6 +277,13 @@ export const ECONOMY = {
     qtyMult: 1.5,
     patienceMult: 1.6,
     payMult: 4,
+    /**
+     * A VIP waits this long at the front of a lane for the player; after that the lane's cashier (if
+     * any) serves them at the normal price, so a VIP never blocks a staffed lane for long.
+     */
+    cashierAfter: 15,
+    /** Seconds after a VIP shows up before the next one can (and never two waiting at once). */
+    gap: 150,
   },
 
   /** Machines jam now and then; only the player can fix them by standing next to them. */
