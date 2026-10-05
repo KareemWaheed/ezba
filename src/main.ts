@@ -5,7 +5,7 @@ import './ui/style.css';
 import './render/threeSetup';
 
 import * as THREE from 'three';
-import { ECONOMY } from './config/economy';
+import { ECONOMY, type ItemId } from './config/economy';
 import { SimWorld } from './sim/world';
 import { Renderer } from './render/renderer';
 import { CameraRig } from './render/cameraRig';
@@ -34,6 +34,8 @@ import { clockFromDate } from './config/events';
 import { Modal, fmtAway, fmtMoney, ltr } from './ui/modal';
 import { DebugPanel } from './ui/debug';
 import { MetaMenus, dayKey } from './ui/menus';
+import { OrderPanel } from './ui/orderPanel';
+import { ITEM_ICON } from './render/models';
 import { ALBUM_PAGES } from './config/album';
 import { simulateAway } from './sim/offline';
 
@@ -122,6 +124,7 @@ document.addEventListener('visibilitychange', () => {
 
 sim.daily.ensure(dayKey());
 const menus = new MetaMenus(uiRoot, sim, modal);
+const orderPanel = new OrderPanel(sim, modal);
 menus.onLegacyReady = () => { sfx.fanfare(); toast.show('🏆 فتحت كل حاجة! دوس 🏆 وابدأ عزبة أكبر'); };
 
 const debug = new DebugPanel(uiRoot, sim, view, {
@@ -196,6 +199,10 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
     }
     case 'cropSold': sfx.sell(); break;
     case 'trash': sfx.swish(); break;
+    case 'delivery':
+      sfx.clunk();
+      if (sim.upgrades.level('market.auto') === 0) toast.show(`🚚 وصلت البضاعة: ${ltr(`${e.n}`)} ${ITEM_ICON[e.product as ItemId]} في المخزن`);
+      break;
     case 'albumNew': {
       const en = ALBUM_PAGES[e.n]?.entries[e.id];
       if (en) { sfx.sparkle(); toast.show(`📖 جديد في الألبوم: ${en.name} ${en.icon}`); }
@@ -354,6 +361,7 @@ function frame(now: number): void {
   view.measure(real);
   debug.update(real);
   menus.update(real);
+  orderPanel.update();
 
   view.render(real);
   requestAnimationFrame(frame);

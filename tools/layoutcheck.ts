@@ -10,6 +10,7 @@ import { CAFE } from '../src/config/cafe';
 import { FIELDS } from '../src/config/fields';
 import { FACTORY } from '../src/config/factories';
 import { RIVER } from '../src/config/river';
+import { MARKET, SHELVES } from '../src/config/market';
 import { ECONOMY } from '../src/config/economy';
 import { ZONE } from '../src/sim/world';
 
@@ -23,6 +24,8 @@ const ZONE_MARGIN = 0.05;
 const STAND_MAX = 1.3;
 
 const problems: string[] = [];
+/** Solids that only exist once the store is built (addSolid), checked like the static ones. */
+const MARKET_SOLIDS = [...MARKET.walls, MARKET.checkout.box, MARKET.store.racks, MARKET.desk.box, ...SHELVES.map((s) => s.box)];
 const d = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.hypot(a.x - b.x, a.z - b.z);
 
 /**
@@ -50,6 +53,12 @@ const zones: { name: string; x: number; z: number; r: number; owner?: string }[]
   { name: 'fish stall cash', ...RIVER.stall.cash, r: 1.3, owner: 'river.unlock' },
   { name: 'rowboat tie spot', ...RIVER.tie, r: 1.3, owner: 'river.unlock' },
   ...RIVER.queue && [0, 1, 2, 3, 4].map((i) => ({ name: `river queue ${i}`, x: RIVER.queue.x - i * RIVER.queue.gap, z: RIVER.queue.z, r: 0.6, owner: 'river.unlock' })),
+  // supermarket (all built by market.unlock)
+  ...SHELVES.map((s) => ({ name: `${s.item} shelf`, ...s.front, r: MARKET.shelfR, owner: 'market.unlock' })),
+  { name: 'market storeroom', x: MARKET.store.x, z: MARKET.store.z, r: MARKET.store.r, owner: 'market.unlock' },
+  { name: 'market desk', x: MARKET.desk.x, z: MARKET.desk.z, r: MARKET.desk.r, owner: 'market.unlock' },
+  { name: 'market checkout', ...MARKET.checkout.serve, r: MARKET.checkout.serveR, owner: 'market.unlock' },
+  { name: 'market cash', x: MARKET.cash.x, z: MARKET.cash.z, r: MARKET.cash.r, owner: 'market.unlock' },
   ...FACTORY.machines.flatMap((m) => [
     { name: `${m.id} input`, ...m.input, r: 1.1, owner: m.unlockTrack as string },
     { name: `${m.id} output`, ...m.output, r: 1.1, owner: m.unlockTrack as string },
@@ -88,11 +97,17 @@ for (let i = 0; i < UPGRADES.length; i++) {
     const need = TILE_R + Math.min(z.r, STAND_MAX) + ZONE_MARGIN;
     if (g < need) problems.push(`tile pays while working at ${z.name}: ${a.id} (${g.toFixed(2)} apart, need ${need.toFixed(2)})`);
   }
-  for (const s of SOLIDS) {
+  for (const s of [...SOLIDS, ...MARKET_SOLIDS]) {
     if (a.pos.x > s.x0 - 0.5 && a.pos.x < s.x1 + 0.5 && a.pos.z > s.z0 - 0.5 && a.pos.z < s.z1 + 0.5) {
       problems.push(`tile in/against a solid: ${a.id} at (${a.pos.x}, ${a.pos.z})`);
     }
   }
+}
+
+// store work spots must stand on open floor (not inside a shelf, wall or counter)
+for (const z of zones) {
+  if (z.owner !== 'market.unlock') continue;
+  for (const b of MARKET_SOLIDS) if (z.x > b.x0 - 0.3 && z.x < b.x1 + 0.3 && z.z > b.z0 - 0.3 && z.z < b.z1 + 0.3) problems.push(`work spot in a store solid: ${z.name}`);
 }
 
 if (problems.length) {

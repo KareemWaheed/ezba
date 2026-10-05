@@ -4,6 +4,7 @@ import { CAFE } from '../config/cafe';
 import { FIELDS } from '../config/fields';
 import { FACTORY } from '../config/factories';
 import { RIVER } from '../config/river';
+import { MARKET } from '../config/market';
 import type { SimWorld } from '../sim/world';
 import { CanvasSprite, FONT, rr } from './canvas';
 
@@ -81,6 +82,11 @@ export class SignsView {
     const fishy = (w: SimWorld) => w.carry.has('fish') || w.carry.has('grilledFish');
     add('🐟🍢 بيع السمك هنا', RIVER.stall.drop.x, RIVER.stall.drop.z + 0.2, (w) => riverNew(w) || (w.river.open && fishy(w)), 0.95, 'rgba(30,91,198,0.92)');
     add('🪢 اربط القوارب هنا', RIVER.tie.x, RIVER.tie.z + 0.2, (w) => w.river.open && w.upgrades.level('river.worker') === 0 && w.river.rowboats.some((b) => b.state === 'untied'), 1.0, 'rgba(176,96,30,0.9)');
+    // supermarket: until a few shoppers have paid (the checkout sign until a cashier is hired)
+    const marketNew = (w: SimWorld) => w.market.open && w.stats.marketServed < 25;
+    add('📦 خد البضاعة للرفوف', MARKET.store.x, MARKET.store.z + 0.3, marketNew, 1.0, 'rgba(176,96,30,0.9)');
+    add('📱 اطلب بضاعة هنا', MARKET.desk.x, MARKET.desk.z + 0.3, (w) => marketNew(w) || (w.market.open && Object.values(w.market.store).every((n) => n === 0) && !w.market.incoming.length), 1.0, 'rgba(30,91,198,0.9)');
+    add('🧾 اقف هنا حاسب', MARKET.checkout.serve.x, MARKET.checkout.serve.z - 0.3, (w) => marketNew(w) && !w.market.cashier, 2.3, 'rgba(176,96,30,0.9)');
     add('🍳 الطلبات للمنصة', LAYOUT.vipStage.drop.x, LAYOUT.vipStage.drop.z, (w) => w.scenario.guest?.state === 'order', 1.6, 'rgba(176,24,46,0.9)');
     add('🚚 حمّل العربية هنا', LAYOUT.dock.load.x, LAYOUT.dock.load.z, (w) => w.contracts.open && w.contracts.truck.state === 'loading' && w.stats.trucks < 4, 1.6, 'rgba(30,91,198,0.9)');
   }

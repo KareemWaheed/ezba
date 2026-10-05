@@ -44,10 +44,14 @@ function segHitsBox(ax: number, az: number, bx: number, bz: number, s: Box, r: n
   return true;
 }
 
-/** Large obstacles worth routing around (fences, counter, walls, buildings); trees/hay sit at the edges. */
-const ROUTE_SOLIDS = SOLIDS.filter((b) => Math.max(b.x1 - b.x0, b.z1 - b.z0) > 1.5);
+/**
+ * Large obstacles worth routing around (fences, counter, walls, buildings); trees/hay sit at the edges.
+ * Rebuilt with the nodes when solids change (things built later, like the supermarket, add theirs).
+ */
+let ROUTE_SOLIDS: Box[] = [];
 
 function clear(ax: number, az: number, bx: number, bz: number, r: number): boolean {
+  nodes();
   for (const s of ROUTE_SOLIDS) if (segHitsBox(ax, az, bx, bz, s, r)) return false;
   return true;
 }
@@ -60,6 +64,7 @@ let nodesVersion = -1;
 function nodes(): [number, number][] {
   if (nodesVersion !== SOLIDS_VERSION.v) {
     nodesVersion = SOLIDS_VERSION.v;
+    ROUTE_SOLIDS = SOLIDS.filter((b) => Math.max(b.x1 - b.x0, b.z1 - b.z0) > 1.5);
     NODES = ROUTE_SOLIDS.flatMap((s) => [
       [s.x0 - CLEAR, s.z0 - CLEAR], [s.x1 + CLEAR, s.z0 - CLEAR], [s.x0 - CLEAR, s.z1 + CLEAR], [s.x1 + CLEAR, s.z1 + CLEAR],
     ] as [number, number][]).filter(([x, z]) => !inside(x, z));
@@ -86,12 +91,14 @@ export class Bot {
   private harvesting: FieldCrop | null = null;
   private stalk = { x: 0, z: 0 };
 
-  constructor(private w: SimWorld, readonly profile: BotProfile) {}
+  /** `skip`: upgrade tracks this bot never buys (a check that wants a farm without some stage). */
+  constructor(private w: SimWorld, readonly profile: BotProfile, private skip?: (id: string) => boolean) {}
 
   private cheapestAffordable(): TileState | null {
     const up = this.w.upgrades;
     let best: TileState | null = null, bestR = Infinity;
     for (const t of up.tiles) {
+      if (this.skip?.(t.def.id)) continue;
       const r = up.remaining(t.def.id);
       if (r <= this.w.money + 1e-6 && r < bestR) { best = t; bestR = r; }
     }
@@ -100,7 +107,7 @@ export class Bot {
 
   private cheapestRemaining(): number {
     let r = Infinity;
-    for (const t of this.w.upgrades.tiles) r = Math.min(r, this.w.upgrades.remaining(t.def.id));
+    for (const t of this.w.upgrades.tiles) if (!this.skip?.(t.def.id)) r = Math.min(r, this.w.upgrades.remaining(t.def.id));
     return r;
   }
 
@@ -293,6 +300,8 @@ export class Bot {
     const n = NODES.length + 2, G = n - 1;
     const nx = (i: number) => (i === 0 ? px : i === G ? this.tx : NODES[i - 1][0]);
     const nz = (i: number) => (i === 0 ? pz : i === G ? this.tz : NODES[i - 1][1]);
+    // (grow the scratch arrays when more obstacles appear: writes past a typed array's end are dropped)
+    if (this.dist.length < n) { this.dist = new Float64Array(n * 2); this.prev = new Int32Array(n * 2); this.done = new Uint8Array(n * 2); }
     const D = this.dist, prev = this.prev, done = this.done;
     for (let i = 0; i < n; i++) { D[i] = Infinity; prev[i] = -1; done[i] = 0; }
     D[0] = 0;

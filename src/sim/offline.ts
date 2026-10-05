@@ -27,6 +27,7 @@ export function simulateAway(w: SimWorld, seconds: number, step = 0.5): AwayResu
   // grain stall money from hired drivers too
   const field0 = [w.field.cash.value, w.field.cash.bills];
   const river0 = [w.river.cash.value, w.river.cash.bills];
+  const market0 = [w.market.cash.value, w.market.cash.bills];
   const ix = w.input.x, iz = w.input.z;
   w.away = true;
   w.input.x = w.input.z = 0;
@@ -39,7 +40,9 @@ export function simulateAway(w: SimWorld, seconds: number, step = 0.5): AwayResu
   w.away = false;
   w.input.x = ix;
   w.input.z = iz;
-  const raw = Math.max(0, w.money - money0 + w.cash.value - cash0 + w.cafe.uncollected - cafe0 + w.field.cash.value - field0[0] + w.river.cash.value - river0[0]);
+  const raw = Math.max(0, w.money - money0 + w.cash.value - cash0 + w.cafe.uncollected - cafe0 + w.field.cash.value - field0[0] + w.river.cash.value - river0[0] + w.market.cash.value - market0[0]);
+  w.market.cash.value = market0[0];
+  w.market.cash.bills = market0[1];
   w.river.cash.value = river0[0];
   w.river.cash.bills = river0[1];
   w.field.cash.value = field0[0];

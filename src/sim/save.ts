@@ -46,6 +46,8 @@ export interface SaveData {
   legacy?: number;
   /** VIP cooldown left (s). */
   vipT?: number;
+  /** Supermarket: shelf and storeroom stock per product (orders on the way are saved as arrived), checkout cash. */
+  market?: { shelves: Record<string, number>; store: Record<string, number>; cash: number; bills: number };
   /** Grain stall money not collected yet (stalks restart fully grown). */
   field?: { cash: number; bills: number; hopper?: Record<string, number>; parked?: { x: number; z: number; rot: number } };
 }
@@ -84,6 +86,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
     rating: w.service.rating, legacy: w.legacy, vipT: w.customers.vipT,
+    market: marketSave(w),
     trust: { ...w.contracts.trust },
     boost: Object.fromEntries(w.stations.map((s) => [s.def.id, s.boostT])),
     broken: Object.fromEntries(w.staff.machines.map((m, i) => [String(i), m.broken])),
@@ -100,6 +103,16 @@ export function serialize(w: SimWorld, now: number): SaveData {
     factory: { silo: w.factory.silo, machines: Object.fromEntries(w.factory.machines.map((m) => [m.def.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])) },
     daily: { day: w.daily.day, tasks: w.daily.tasks.map((t) => ({ ...t })) },
   };
+}
+
+/** Shelf/storeroom stock; deliveries on the way and baskets of shoppers inside count as stock. */
+function marketSave(w: SimWorld): SaveData['market'] {
+  const m = w.market, shelves: Record<string, number> = {}, store: Record<string, number> = {};
+  for (const s of m.shelves) shelves[s.def.item] = s.stock;
+  for (const k of Object.keys(m.store)) store[k] = m.store[k as ItemId];
+  for (const d of m.incoming) store[d.item] = (store[d.item] ?? 0) + d.n;
+  for (const c of m.shoppers) for (const it of c.got) if (c.state !== 'leave') shelves[it] = (shelves[it] ?? 0) + 1;
+  return { shelves, store, cash: m.cash.value, bills: m.cash.bills };
 }
 
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
@@ -144,6 +157,11 @@ export function restore(w: SimWorld, s: SaveData): void {
     cafe.cash.bills = Math.floor(num(cf.cash?.bills));
   }
   w.factory.silo = Math.max(0, Math.floor(num(s.factory?.silo)));
+  const cm = ECONOMY.supermarket;
+  for (const sh of w.market.shelves) sh.stock = Math.min(cm.shelfMax, Math.max(0, Math.floor(num(s.market?.shelves?.[sh.def.item]))));
+  for (const k of Object.keys(w.market.store) as ItemId[]) w.market.store[k] = Math.min(cm.storeMax, Math.max(0, Math.floor(num(s.market?.store?.[k]))));
+  w.market.cash.value = num(s.market?.cash);
+  w.market.cash.bills = Math.floor(num(s.market?.bills));
   w.river.pile = Math.max(0, Math.floor(num(s.river?.pile)));
   w.river.cash.value = num(s.river?.cash);
   w.river.cash.bills = Math.floor(num(s.river?.bills));

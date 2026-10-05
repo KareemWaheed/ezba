@@ -41,6 +41,46 @@ export const ECONOMY = {
     fish: { price: 12 },
   },
 
+  /**
+   * Stage 7 supermarket goods: bought wholesale at the order desk (never made on the farm). `price` is
+   * the shelf price; shelf prices and wholesale costs of everything in the store are in config/market.ts.
+   */
+  goods: {
+    rice: { price: 30 },
+    pasta: { price: 24 },
+    oil: { price: 60 },
+    tea: { price: 40 },
+    chips: { price: 14 },
+    soda: { price: 18 },
+  },
+
+  /** Stage 7 supermarket (south of the café): shelves, storeroom, order desk, checkout. */
+  supermarket: {
+    /** Items one shelf holds, and per product in the storeroom. */
+    shelfMax: 12,
+    storeMax: 40,
+    /** Items per wholesale box, and seconds until an order arrives. */
+    box: 10,
+    deliveryTime: 8,
+    /** Mean seconds between shoppers with the first shelf row (more rows and ads bring more). */
+    customerEvery: 7,
+    /** Shoppers inside at most. */
+    maxInside: 10,
+    /** Lines per shopping list (1..maxLines) and items per line (1..maxQty). */
+    maxLines: 3,
+    maxQty: 3,
+    /** Seconds a shopper waits at an empty shelf before giving up on that item (and losing patience). */
+    emptyWait: 4,
+    emptyPenalty: 15,
+    /** Patience in the checkout line. */
+    patience: 70,
+    /** Seconds a shopper takes per item off a shelf, and the player per item at the checkout. */
+    takeInterval: 0.4,
+    scanInterval: 0.22,
+    /** Auto-reorder buys a box when a product's storeroom stock drops below this. */
+    autoBelow: 10,
+  },
+
   /** Stage 6 river: fishing boats and rowboat rental. */
   river: {
     /** Seconds a fishing trip takes (divided by 1 + river.speed step x level). */
@@ -450,6 +490,18 @@ export const ECONOMY = {
     'river.rowboats': { base: 50000, growth: 2.2, max: 3, step: 1 },
     /** River workers: carry fish to the grill/stall and tie returned rowboats. */
     'river.worker': { base: 80000, growth: 2.5, max: 2, step: 1 },
+    /** Stage 7: the supermarket south of the café (first shelf row: eggs, milk, rice, pasta). */
+    'market.unlock': { base: 250000, growth: 1, max: 1, step: 1 },
+    /** Another shelf row per level (corn, oil, tea, chips; then cheese, cake, fish, soda). */
+    'market.shelves': { base: 60000, growth: 2.5, max: 2, step: 1 },
+    /** Cashier at the supermarket checkout. */
+    'market.cashier': { base: 90000, growth: 1, max: 1, step: 1 },
+    /** Shelf stockers (+1 per level): storeroom (or the farm) -> shelves. */
+    'market.stocker': { base: 70000, growth: 2.5, max: 2, step: 1 },
+    /** Ads: shoppers arrive (1 + step x level) times as often. */
+    'market.ads': { base: 40000, growth: 2.2, max: 3, step: 0.3 },
+    /** Auto-reorder: a box is ordered whenever a product runs low in the storeroom. */
+    'market.auto': { base: 120000, growth: 1, max: 1, step: 1 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */
@@ -498,17 +550,21 @@ export type ProductId = keyof typeof ECONOMY.products;
 export type DishId = keyof typeof ECONOMY.dishes;
 /** Field crops (cut, carried as bundles, sold at the grain stall). */
 export type CropId = keyof typeof ECONOMY.crops;
+/** Supermarket goods (bought wholesale). */
+export type GoodId = keyof typeof ECONOMY.goods;
 /** Anything that can be carried. */
-export type ItemId = ProductId | DishId | CropId;
+export type ItemId = ProductId | DishId | CropId | GoodId;
 
 export const PRODUCT_IDS = Object.keys(ECONOMY.products) as ProductId[];
 export const DISH_IDS = Object.keys(ECONOMY.dishes) as DishId[];
 export const CROP_IDS = Object.keys(ECONOMY.crops) as CropId[];
-export const ITEM_IDS: ItemId[] = [...PRODUCT_IDS, ...DISH_IDS, ...CROP_IDS];
+export const GOOD_IDS = Object.keys(ECONOMY.goods) as GoodId[];
+export const ITEM_IDS: ItemId[] = [...PRODUCT_IDS, ...DISH_IDS, ...CROP_IDS, ...GOOD_IDS];
 
 export function priceOf(item: ItemId): number {
   if (item in ECONOMY.products) return ECONOMY.products[item as ProductId].price;
   if (item in ECONOMY.crops) return ECONOMY.crops[item as CropId].price;
+  if (item in ECONOMY.goods) return ECONOMY.goods[item as GoodId].price;
   return ECONOMY.dishes[item as DishId].price;
 }
 export type ProducerKind = keyof typeof ECONOMY.producers;

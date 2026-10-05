@@ -293,3 +293,8 @@ html, body {
 #modal .l-miss { background: #fff; border: 2px solid var(--panel-edge); border-radius: 12px; padding: 3px 9px; font-size: 14px; font-weight: 700; }
 #modal .l-next { background: #fff3c4; border-radius: 14px; padding: 8px 10px; margin: 8px 0; font-size: 15px; }
 #modal .m-btn.l-later { background: #d8d2bd; color: var(--ink); box-shadow: 0 4px 0 #b3ad94; }
+
+/* supermarket order desk */
+#modal .o-farm { background: #3fae5a; box-shadow: 0 3px 0 #2c7d40; }
+#modal .o-price { color: #2c7d40; }
+#modal .t-claim small { font-size: 12px; font-weight: 700; }

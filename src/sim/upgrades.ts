@@ -5,6 +5,7 @@ import { CAFE } from '../config/cafe';
 import { FIELDS } from '../config/fields';
 import { FACTORY } from '../config/factories';
 import { RIVER } from '../config/river';
+import { MARKET, SHELVES } from '../config/market';
 import { dist } from './math';
 import type { SimWorld } from './world';
 
@@ -92,6 +93,8 @@ export class UpgradeSystem {
       const want = ECONOMY.producers[s.def.producer].start + this.level(track) * U[track].step;
       while (s.animals.length < want) s.addAnimal(w.rng);
     }
+    // (before staff.sync, so new stockers get the HR carry bonus right away)
+    w.market.sync();
     w.staff.sync();
     w.bounds.x0 = this.level('hr.office') > 0 ? LAYOUT.hrYard.unlockedX0 : LAYOUT.bounds.x0;
     if (this.level('river.unlock') > 0) w.bounds.x0 = Math.min(w.bounds.x0, RIVER.unlockedX0);
@@ -105,6 +108,14 @@ export class UpgradeSystem {
     w.contracts.sync();
     w.factory.sync();
     w.bounds.x1 = w.factory.open ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
+    if (w.market.open) {
+      // the store stands on reachable grass: walls, counter, racks and desk turn solid once it's built
+      MARKET.walls.forEach((b, i) => addSolid(`marketWall${i}`, b));
+      addSolid('marketCheckout', MARKET.checkout.box);
+      addSolid('marketRacks', MARKET.store.racks);
+      addSolid('marketDesk', MARKET.desk.box);
+    }
+    for (const s of w.market.shelves) if (s.open) addSolid(`shelf${s.index}`, SHELVES[s.index].box);
   }
 
   private purchase(t: TileState): void {
