@@ -129,3 +129,17 @@ This file records the decisions made on top of it.
 - Event square (user: "widen the world"): paved square south of the yard (z 14–27.6, walkable bounds extended):
   VIP stage + carpet + fans, football pitch, dance floor, procession route, army truck and iftar table live there so
   events don't crowd the shop. layoutcheck keeps tiles and solids off the pitch and dance pads.
+- Stage 7 — supermarket (playtest: factory goods had no outlet, late game lacked a goal). On the grass south of
+  the café / factory yard (`market.unlock`, after the factory, so the walkable area already reaches it); open
+  front plus a back door from the café side. 12 shelves in 3 rows (`market.shelves` opens rows 2-3): six farm
+  products and six wholesale goods (rice, pasta, oil, tea, chips, soda — new `goods` items). Loop: order boxes at
+  the 📱 desk (paid now, land in the storeroom after 8 s) or bring farm products for free (straight to their shelf,
+  or a free "from the farm" delivery that takes the farm's surplus); pick at the 📦 storeroom (it hands out what
+  the shelves need most); stock shelves by standing at their fronts; shoppers walk the aisles with a list (through
+  the gaps between shelf units), wait briefly at empty shelves, then pay at the checkout (player or
+  `market.cashier`). Staff: `market.stocker` (one job per stocker so they never fill the same shelf),
+  `market.auto` reorders low products (farm surplus first). Prices/costs in config/market.ts, x the farm's price
+  growth. `npm run marketcheck` covers the loop, a staffed store at steady state (0 unhappy, sales > orders),
+  saves and time away. The event checks grow their farm without the store (its shoppers would shift the random
+  sequence the event checks are tuned to). Next: start screen with a "supermarket first" path (Phase 2), more
+  goods and pricing (Phase 3).

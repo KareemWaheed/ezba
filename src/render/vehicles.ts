@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { ECONOMY } from '../config/economy';
-import { FIELDS } from '../config/fields';
 import type { SimWorld } from '../sim/world';
 import { MAT, PRIM, merge, part } from './geo';
 import type { PhysicsFx } from './physicsFx';
@@ -11,7 +10,6 @@ const DRIVER = { shirt: 0xf28c38, pants: 0x3b4a6b, skin: 0xd9a074, hair: 0x1d1d1
 
 const { box, cyl, cylLo } = PRIM;
 
-const PARK = FIELDS.park;
 
 interface Model {
   /** Sprung part (bobs and tilts). */
@@ -147,7 +145,7 @@ export class VehicleView {
     this.v.combine.root.visible = kind === 'combine';
     if (!kind) return;
     const v = this.v[kind];
-    const x = f.driving ? p.x : PARK.x, z = f.driving ? p.z : PARK.z, rot = f.driving ? p.rot : PARK.rot;
+    const x = f.driving ? p.x : f.parked.x, z = f.driving ? p.z : f.parked.z, rot = f.driving ? p.rot : f.parked.rot;
     v.root.position.set(x, 0, z);
     v.root.rotation.y = rot;
     const moving = f.driving && p.speed > 0.5;

@@ -63,6 +63,10 @@ export class FieldSystem {
   cutting = 0;
   /** True while the player drives the owned vehicle in the farmland. */
   driving = false;
+  /** The player got off (get off/on button): the vehicle waits at `parked` until they climb back on. */
+  onFoot = false;
+  /** Where the vehicle stands while nobody drives it (the yard spot, or where the player got off). */
+  readonly parked: { x: number; z: number; rot: number } = { ...FIELDS.park };
   /** Combine hopper: bundles per crop waiting to be unloaded at the stall. */
   readonly hopper = { corn: 0, wheat: 0 } as Record<FieldCrop, number>;
   hopperN = 0;
@@ -230,9 +234,46 @@ export class FieldSystem {
     return null;
   }
 
+  /** Player stands in the farmland where vehicles drive. */
+  private inFarmland(): boolean {
+    const p = this.w.player;
+    return p.z < ECONOMY.field.farmlandZ && p.x > FIELDS.driveX0;
+  }
+
+  /** The get off / get on button applies right now (driving, or on foot next to the parked vehicle). */
+  get canToggle(): boolean {
+    if (!this.open || !this.vehicle || this.w.away) return false;
+    if (this.driving) return true;
+    const p = this.w.player;
+    return this.onFoot && dist(p.x, p.z, this.parked.x, this.parked.z) < ECONOMY.field.mountRadius;
+  }
+
+  /** Get off (the vehicle stays where it is) or climb back on the parked vehicle. */
+  toggleVehicle(): void {
+    if (!this.canToggle) return;
+    const p = this.w.player;
+    if (this.driving) {
+      this.onFoot = true;
+      this.driving = false;
+      this.parked.x = p.x; this.parked.z = p.z; this.parked.rot = p.rot;
+      // step out to the driver's side
+      p.x += Math.cos(p.rot) * 1.1;
+      p.z -= Math.sin(p.rot) * 1.1;
+      p.radius = ECONOMY.player.radius;
+      p.driveMult = 1;
+    } else {
+      this.onFoot = false;
+      p.x = this.parked.x; p.z = this.parked.z; p.rot = this.parked.rot;
+    }
+    p.vx = p.vz = 0;
+  }
+
   update(dt: number): void {
     const cfg = ECONOMY.field, rng = this.w.rng, w = this.w, v = this.vehicle;
-    this.driving = this.open && !!v && !w.away && w.player.z < cfg.farmlandZ && w.player.x > FIELDS.driveX0;
+    const was = this.driving;
+    this.driving = this.open && !!v && !w.away && !this.onFoot && this.inFarmland();
+    // drove out of the farmland: the vehicle goes back to its yard spot
+    if (was && !this.driving && !this.onFoot) { this.parked.x = FIELDS.park.x; this.parked.z = FIELDS.park.z; this.parked.rot = FIELDS.park.rot; }
     w.player.driveMult = this.driving && v
       ? cfg[v].speedMult * (1 + w.upgrades.level('field.engine') * ECONOMY.upgrades['field.engine'].step) : 1;
     w.player.radius = this.driving && v ? cfg[v].radius : ECONOMY.player.radius;

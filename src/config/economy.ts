@@ -23,6 +23,8 @@ export const ECONOMY = {
     pickInterval: 0.09,
     /** Seconds between dropping two items onto a counter. */
     dropInterval: 0.09,
+    /** Seconds between two items thrown away while the trash button is held. */
+    trashInterval: 0.12,
   },
 
   /** Raw products: sale price per item at the shop counter. */
@@ -37,6 +39,46 @@ export const ECONOMY = {
   crops: {
     wheat: { price: 9 },
     fish: { price: 12 },
+  },
+
+  /**
+   * Stage 7 supermarket goods: bought wholesale at the order desk (never made on the farm). `price` is
+   * the shelf price; shelf prices and wholesale costs of everything in the store are in config/market.ts.
+   */
+  goods: {
+    rice: { price: 30 },
+    pasta: { price: 24 },
+    oil: { price: 60 },
+    tea: { price: 40 },
+    chips: { price: 14 },
+    soda: { price: 18 },
+  },
+
+  /** Stage 7 supermarket (south of the café): shelves, storeroom, order desk, checkout. */
+  supermarket: {
+    /** Items one shelf holds, and per product in the storeroom. */
+    shelfMax: 12,
+    storeMax: 40,
+    /** Items per wholesale box, and seconds until an order arrives. */
+    box: 10,
+    deliveryTime: 8,
+    /** Mean seconds between shoppers with the first shelf row (more rows and ads bring more). */
+    customerEvery: 7,
+    /** Shoppers inside at most. */
+    maxInside: 10,
+    /** Lines per shopping list (1..maxLines) and items per line (1..maxQty). */
+    maxLines: 3,
+    maxQty: 3,
+    /** Seconds a shopper waits at an empty shelf before giving up on that item (and losing patience). */
+    emptyWait: 4,
+    emptyPenalty: 15,
+    /** Patience in the checkout line. */
+    patience: 70,
+    /** Seconds a shopper takes per item off a shelf, and the player per item at the checkout. */
+    takeInterval: 0.4,
+    scanInterval: 0.22,
+    /** Auto-reorder buys a box when a product's storeroom stock drops below this. */
+    autoBelow: 10,
   },
 
   /** Stage 6 river: fishing boats and rowboat rental. */
@@ -78,6 +120,8 @@ export const ECONOMY = {
     /** Vehicles: speed multiplier and extra cutting reach; the combine fills its own hopper. */
     tractor: { speedMult: 1.4, reach: 0.9, radius: 0.9 },
     combine: { speedMult: 1.55, reach: 1.9, hopper: 60, radius: 1.2 },
+    /** Get back on the parked vehicle from within this distance of it. */
+    mountRadius: 2.2,
     /** Hired drivers: NPC tractors mowing a plot back and forth, unloading at the stall. */
     driver: { speed: 3.2, reach: 1.5, hopper: 24, unloadInterval: 0.12 },
   },
@@ -131,6 +175,12 @@ export const ECONOMY = {
     stoveOutputMax: 8,
     /** Nicer tables: café prices x (1 + step x level) and patience +20% per level. */
     niceStep: 0.2,
+    /**
+     * Factory/grill dishes the player brings while the café counter is full of that dish sell as
+     * takeaway (price x this) into the café cash pile, so a carried stack is never stuck. The fish
+     * stall buys grilled fish at the same rate.
+     */
+    takeawayMult: 0.7,
     /** Café counter visual stack cap. */
     counterVisualMax: 8,
     /** Dishes per kind on the café counter before the kitchen conveyors pause (machines then fill and stop taking eggs/milk). */
@@ -263,10 +313,17 @@ export const ECONOMY = {
     /** Chance an arriving customer is a VIP (active play only). */
     chance: 0.04,
     minUpgrades: 10,
-    /** VIPs order bigger, wait longer and pay this many times the price. Only the player can serve them. */
+    /** VIPs order bigger, wait longer and pay this many times the price for what the player serves in person. */
     qtyMult: 1.5,
     patienceMult: 1.6,
     payMult: 4,
+    /**
+     * A VIP waits this long at the front of a lane for the player; after that the lane's cashier (if
+     * any) serves them at the normal price, so a VIP never blocks a staffed lane for long.
+     */
+    cashierAfter: 15,
+    /** Seconds after a VIP shows up before the next one can (and never two waiting at once). */
+    gap: 150,
   },
 
   /** Machines jam now and then; only the player can fix them by standing next to them. */
@@ -433,6 +490,18 @@ export const ECONOMY = {
     'river.rowboats': { base: 50000, growth: 2.2, max: 3, step: 1 },
     /** River workers: carry fish to the grill/stall and tie returned rowboats. */
     'river.worker': { base: 80000, growth: 2.5, max: 2, step: 1 },
+    /** Stage 7: the supermarket south of the café (first shelf row: eggs, milk, rice, pasta). */
+    'market.unlock': { base: 250000, growth: 1, max: 1, step: 1 },
+    /** Another shelf row per level (corn, oil, tea, chips; then cheese, cake, fish, soda). */
+    'market.shelves': { base: 60000, growth: 2.5, max: 2, step: 1 },
+    /** Cashier at the supermarket checkout. */
+    'market.cashier': { base: 90000, growth: 1, max: 1, step: 1 },
+    /** Shelf stockers (+1 per level): storeroom (or the farm) -> shelves. */
+    'market.stocker': { base: 70000, growth: 2.5, max: 2, step: 1 },
+    /** Ads: shoppers arrive (1 + step x level) times as often. */
+    'market.ads': { base: 40000, growth: 2.2, max: 3, step: 0.3 },
+    /** Auto-reorder: a box is ordered whenever a product runs low in the storeroom. */
+    'market.auto': { base: 120000, growth: 1, max: 1, step: 1 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */
@@ -481,17 +550,21 @@ export type ProductId = keyof typeof ECONOMY.products;
 export type DishId = keyof typeof ECONOMY.dishes;
 /** Field crops (cut, carried as bundles, sold at the grain stall). */
 export type CropId = keyof typeof ECONOMY.crops;
+/** Supermarket goods (bought wholesale). */
+export type GoodId = keyof typeof ECONOMY.goods;
 /** Anything that can be carried. */
-export type ItemId = ProductId | DishId | CropId;
+export type ItemId = ProductId | DishId | CropId | GoodId;
 
 export const PRODUCT_IDS = Object.keys(ECONOMY.products) as ProductId[];
 export const DISH_IDS = Object.keys(ECONOMY.dishes) as DishId[];
 export const CROP_IDS = Object.keys(ECONOMY.crops) as CropId[];
-export const ITEM_IDS: ItemId[] = [...PRODUCT_IDS, ...DISH_IDS, ...CROP_IDS];
+export const GOOD_IDS = Object.keys(ECONOMY.goods) as GoodId[];
+export const ITEM_IDS: ItemId[] = [...PRODUCT_IDS, ...DISH_IDS, ...CROP_IDS, ...GOOD_IDS];
 
 export function priceOf(item: ItemId): number {
   if (item in ECONOMY.products) return ECONOMY.products[item as ProductId].price;
   if (item in ECONOMY.crops) return ECONOMY.crops[item as CropId].price;
+  if (item in ECONOMY.goods) return ECONOMY.goods[item as GoodId].price;
   return ECONOMY.dishes[item as DishId].price;
 }
 export type ProducerKind = keyof typeof ECONOMY.producers;

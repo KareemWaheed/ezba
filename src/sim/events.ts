@@ -34,6 +34,8 @@ export type SimEventType =
   | 'cut'         // a stalk was cut (product = crop, id = plot)
   | 'goldenStalk' // a golden stalk was cut (value = reward)
   | 'cropSold'    // a bundle was sold at the grain stall (value)
+  | 'trash'       // the player threw away the top carried item (n = stack size after)
+  | 'delivery'    // a wholesale order landed in the supermarket storeroom (product, n = items)
   | 'albumNew'    // first time this customer kind was served (n = page, id = entry)
   | 'albumPage'   // an album page was completed (value = bonus, n = page)
   | 'taskDone'    // a daily task is finished, ready to claim (value = reward, id = task)

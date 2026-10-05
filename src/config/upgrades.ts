@@ -194,6 +194,31 @@ export const UPGRADES: readonly UpgradeDef[] = [
     id: 'river.worker', icon: '🧑‍✈️', label: 'وظّف عامل مرسى', msg: 'عامل المرسى بيشيل السمك ويربط القوارب 🧑‍✈️',
     pos: { x: -8.6, z: -16.9 }, requires: [{ id: 'river.unlock', level: 1 }], milestone: true,
   },
+  // Stage 7: the supermarket south of the café
+  {
+    id: 'market.unlock', icon: '🛒', label: 'سوبر ماركت', msg: 'فتحت السوبر ماركت! املا الرفوف من المخزن 🛒',
+    pos: { x: 22.6, z: 14.2 }, requires: [{ id: 'factory.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'market.shelves', icon: '🗄️', label: 'رفوف جديدة', msg: 'صف رفوف جديد ومنتجات أكتر 🗄️',
+    pos: { x: 17.8, z: 26.5 }, requires: [{ id: 'market.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'market.cashier', icon: '🧾', label: 'كاشير السوبر ماركت', msg: 'الكاشير بيحاسب الزباين بدالك 🧾',
+    pos: { x: 19.8, z: 26.5 }, requires: [{ id: 'market.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'market.stocker', icon: '📦', label: 'وظّف عامل رفوف', msg: 'عامل الرفوف بيملا الرفوف من المخزن والمزرعة 📦',
+    pos: { x: 21.8, z: 26.5 }, requires: [{ id: 'market.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'market.ads', icon: '📣', label: 'إعلانات', msg: 'زباين أكتر جايين للسوبر ماركت 📣',
+    pos: { x: 23.8, z: 26.5 }, requires: [{ id: 'market.unlock', level: 1 }],
+  },
+  {
+    id: 'market.auto', icon: '🤖', label: 'طلب أوتوماتيك', msg: 'البضاعة بتتطلب لوحدها لما تخلص 🤖',
+    pos: { x: 25.8, z: 26.5 }, requires: [{ id: 'market.stocker', level: 1 }], milestone: true,
+  },
   // Loading dock: company contracts with trucks
   {
     id: 'dock.unlock', icon: '🚚', label: 'رصيف التحميل', msg: 'الشركات هتبعت عربيات تاخد منك بالجملة 🚚',

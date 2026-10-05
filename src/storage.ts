@@ -22,6 +22,13 @@ export function writeSave(s: SaveData): void {
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* quota / private mode */ }
 }
 
+/** Replace the save for good (selling the farm): later writes from this page are blocked until reload. */
+export function replaceSave(s: SaveData): boolean {
+  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { return false; }
+  blocked = true;
+  return true;
+}
+
 /** Wipe the save; further writes are blocked until reload so an autosave can't resurrect it. */
 export function clearSave(): void {
   blocked = true;

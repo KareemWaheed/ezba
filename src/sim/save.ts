@@ -1,5 +1,7 @@
 import { ECONOMY, ITEM_IDS, type ItemId, type UpgradeId } from '../config/economy';
-import type { SimWorld } from './world';
+import { SimWorld } from './world';
+import { LEGACY } from '../config/legacy';
+import { FIELDS } from '../config/fields';
 
 /**
  * Versioned save format. Bump SAVE_VERSION when the shape changes and add a migration from the
@@ -40,8 +42,14 @@ export interface SaveData {
   /** Factory machine buffers and the wheat silo. */
   factory?: { silo: number; machines: Record<string, { in: Record<string, number>; out: Record<string, number> }> };
   daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
+  /** Prestige level (config/legacy.ts). */
+  legacy?: number;
+  /** VIP cooldown left (s). */
+  vipT?: number;
+  /** Supermarket: shelf and storeroom stock per product (orders on the way are saved as arrived), checkout cash. */
+  market?: { shelves: Record<string, number>; store: Record<string, number>; cash: number; bills: number };
   /** Grain stall money not collected yet (stalks restart fully grown). */
-  field?: { cash: number; bills: number; hopper?: Record<string, number> };
+  field?: { cash: number; bills: number; hopper?: Record<string, number>; parked?: { x: number; z: number; rot: number } };
 }
 
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
@@ -77,7 +85,8 @@ export function serialize(w: SimWorld, now: number): SaveData {
     v: SAVE_VERSION, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
-    rating: w.service.rating,
+    rating: w.service.rating, legacy: w.legacy, vipT: w.customers.vipT,
+    market: marketSave(w),
     trust: { ...w.contracts.trust },
     boost: Object.fromEntries(w.stations.map((s) => [s.def.id, s.boostT])),
     broken: Object.fromEntries(w.staff.machines.map((m, i) => [String(i), m.broken])),
@@ -88,12 +97,24 @@ export function serialize(w: SimWorld, now: number): SaveData {
       tables: w.cafe.tables.map((t) => ({ dirty: t.dirty, cash: t.cash, bills: t.bills })),
       cash: { value: w.cafe.uncollected - w.cafe.tables.reduce((a, t) => a + t.cash, 0), bills: w.cafe.cash.bills },
     },
-    field: { cash: w.field.cash.value, bills: w.field.cash.bills, hopper: { ...w.field.hopper } },
+    field: { cash: w.field.cash.value, bills: w.field.cash.bills, hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
     river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },
     factory: { silo: w.factory.silo, machines: Object.fromEntries(w.factory.machines.map((m) => [m.def.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])) },
     daily: { day: w.daily.day, tasks: w.daily.tasks.map((t) => ({ ...t })) },
   };
+}
+
+/** Shelf/storeroom stock; deliveries on the way and baskets of shoppers inside count as stock. */
+function marketSave(w: SimWorld): SaveData['market'] {
+  const m = w.market, shelves: Record<string, number> = {}, store: Record<string, number> = {};
+  for (const s of m.shelves) shelves[s.def.item] = s.stock;
+  for (const k of Object.keys(m.store)) store[k] = m.store[k as ItemId];
+  for (const d of m.incoming) store[d.item] = (store[d.item] ?? 0) + d.n;
+  for (const c of m.shoppers) for (const it of c.got) if (c.state !== 'leave') shelves[it] = (shelves[it] ?? 0) + 1;
+  // what stockers are carrying goes back to the storeroom
+  for (const x of w.staff.workers) if (x.job.key.startsWith('market.stock')) for (const it of x.carry.items) store[it] = (store[it] ?? 0) + 1;
+  return { shelves, store, cash: m.cash.value, bills: m.cash.bills };
 }
 
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
@@ -102,6 +123,8 @@ const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) 
 export function restore(w: SimWorld, s: SaveData): void {
   w.time = num(s.time);
   w.money = num(s.money);
+  w.legacy = Math.max(0, Math.floor(num(s.legacy)));
+  w.customers.vipT = Math.max(0, num(s.vipT));
   if (s.rng) w.rng.state = num(s.rng, w.rng.state) >>> 0;
   const up = w.upgrades;
   for (const id of Object.keys(up.levels) as UpgradeId[]) {
@@ -136,6 +159,17 @@ export function restore(w: SimWorld, s: SaveData): void {
     cafe.cash.bills = Math.floor(num(cf.cash?.bills));
   }
   w.factory.silo = Math.max(0, Math.floor(num(s.factory?.silo)));
+  const cm = ECONOMY.supermarket;
+  // (basket items saved back onto a shelf can overflow it: the rest goes to the storeroom; the storeroom may
+  // then hold more than an order would allow, which just pauses ordering until it's used up)
+  for (const k of Object.keys(w.market.store) as ItemId[]) w.market.store[k] = Math.max(0, Math.floor(num(s.market?.store?.[k])));
+  for (const sh of w.market.shelves) {
+    const n = Math.max(0, Math.floor(num(s.market?.shelves?.[sh.def.item])));
+    sh.stock = Math.min(cm.shelfMax, n);
+    w.market.store[sh.def.item] += n - sh.stock;
+  }
+  w.market.cash.value = num(s.market?.cash);
+  w.market.cash.bills = Math.floor(num(s.market?.bills));
   w.river.pile = Math.max(0, Math.floor(num(s.river?.pile)));
   w.river.cash.value = num(s.river?.cash);
   w.river.cash.bills = Math.floor(num(s.river?.bills));
@@ -156,6 +190,12 @@ export function restore(w: SimWorld, s: SaveData): void {
   }
   w.field.cash.value = num(s.field?.cash);
   w.field.cash.bills = Math.floor(num(s.field?.bills));
+  // the vehicle left standing in the field (the player had got off)
+  const pk = s.field?.parked;
+  if (pk && Number.isFinite(pk.x) && Number.isFinite(pk.z) && pk.z < ECONOMY.field.farmlandZ && pk.x > FIELDS.driveX0) {
+    w.field.onFoot = true;
+    w.field.parked.x = pk.x; w.field.parked.z = pk.z; w.field.parked.rot = num(pk.rot);
+  }
   w.field.hopperN = 0;
   for (const k of Object.keys(w.field.hopper) as (keyof typeof w.field.hopper)[]) {
     w.field.hopper[k] = Math.max(0, Math.floor(num(s.field?.hopper?.[k])));
@@ -170,4 +210,22 @@ export function restore(w: SimWorld, s: SaveData): void {
   // rebuild tiles from scratch so one under the restored player position starts disarmed
   up.tiles = [];
   up.refresh();
+}
+
+/**
+ * Sell the farm for a bigger one: a fresh farm one prestige level up, with the starting money for it.
+ * The album, daily tasks and lifetime stats carry over. Returns the new save (the caller writes it
+ * and reloads). Null while milestones are still missing.
+ */
+export function legacyReset(w: SimWorld, now: number): SaveData | null {
+  if (w.legacyMissing.length > 0) return null;
+  const f = new SimWorld((now % 1_000_000_007) >>> 0 || 1);
+  f.legacy = w.legacy + 1;
+  f.money = LEGACY.startMoney * f.legacy;
+  for (const k of Object.keys(f.stats) as (keyof typeof f.stats)[]) f.stats[k] = w.stats[k];
+  for (const id of w.album.seen) f.album.seen.add(id);
+  for (const id of w.album.paid) f.album.paid.add(id);
+  f.daily.day = w.daily.day;
+  f.daily.tasks = w.daily.tasks.map((t) => ({ ...t }));
+  return serialize(f, now);
 }

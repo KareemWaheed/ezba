@@ -23,7 +23,9 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
   // things only the player can do come first: VIPs, jammed machines, golden animals
   for (let i = 0; i < w.lanes; i++) {
     const f = w.customers.front(i);
-    if (f && f.kind !== 'normal') { out.x = LAYOUT.shop.lanes[i].x; out.z = LAYOUT.shop.serveZ; return true; }
+    // (a VIP the lane's cashier has taken over no longer needs the player)
+    const handedOver = f?.kind === 'vip' && i < w.cashiers && f.frontT >= ECONOMY.vip.cashierAfter;
+    if (f && f.kind !== 'normal' && !handedOver) { out.x = LAYOUT.shop.lanes[i].x; out.z = LAYOUT.shop.serveZ; return true; }
   }
   for (const b of w.staff.machines) if (b.running && b.broken) { out.x = b.mx; out.z = b.mz; return true; }
   const g = w.golden.animal;

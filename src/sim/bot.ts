@@ -1,5 +1,5 @@
 import { ECONOMY } from '../config/economy';
-import { LAYOUT, SOLIDS, SOLIDS_VERSION } from '../config/layout';
+import { LAYOUT, SOLIDS_VERSION } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import type { ProductId } from '../config/economy';
 import { FIELDS, FIELD_CROPS, type FieldCrop } from '../config/fields';
@@ -44,27 +44,31 @@ function segHitsBox(ax: number, az: number, bx: number, bz: number, s: Box, r: n
   return true;
 }
 
-/** Large obstacles worth routing around (fences, counter, walls, buildings); trees/hay sit at the edges. */
-const ROUTE_SOLIDS = SOLIDS.filter((b) => Math.max(b.x1 - b.x0, b.z1 - b.z0) > 1.5);
+/**
+ * Route graph of one world: the large obstacles worth routing around (fences, counter, walls,
+ * buildings; trees/hay sit at the edges) and the walkable corners just outside them. Rebuilt when that
+ * world's solids change (pens grow, something gets built).
+ */
+interface RouteGraph { key: string; solids: Box[]; nodes: [number, number][] }
+const GRAPHS = new WeakMap<SimWorld, RouteGraph>();
 
-function clear(ax: number, az: number, bx: number, bz: number, r: number): boolean {
-  for (const s of ROUTE_SOLIDS) if (segHitsBox(ax, az, bx, bz, s, r)) return false;
-  return true;
+function graph(w: SimWorld): RouteGraph {
+  const key = `${SOLIDS_VERSION.v}:${w.solidsVersion}`;
+  let g = GRAPHS.get(w);
+  if (g && g.key === key) return g;
+  const solids = w.solids.filter((b) => Math.max(b.x1 - b.x0, b.z1 - b.z0) > 1.5);
+  const inside = (x: number, z: number) => solids.some((s) => x > s.x0 - CLEAR + 0.01 && x < s.x1 + CLEAR - 0.01 && z > s.z0 - CLEAR + 0.01 && z < s.z1 + CLEAR - 0.01);
+  const nodes = solids.flatMap((s) => [
+    [s.x0 - CLEAR, s.z0 - CLEAR], [s.x1 + CLEAR, s.z0 - CLEAR], [s.x0 - CLEAR, s.z1 + CLEAR], [s.x1 + CLEAR, s.z1 + CLEAR],
+  ] as [number, number][]).filter(([x, z]) => !inside(x, z));
+  g = { key, solids, nodes };
+  GRAPHS.set(w, g);
+  return g;
 }
 
-const inside = (x: number, z: number) => ROUTE_SOLIDS.some((s) => x > s.x0 - CLEAR + 0.01 && x < s.x1 + CLEAR - 0.01 && z > s.z0 - CLEAR + 0.01 && z < s.z1 + CLEAR - 0.01);
-
-/** Walkable corners just outside each big obstacle; rebuilt when fences move (pens grow). */
-let NODES: [number, number][] = [];
-let nodesVersion = -1;
-function nodes(): [number, number][] {
-  if (nodesVersion !== SOLIDS_VERSION.v) {
-    nodesVersion = SOLIDS_VERSION.v;
-    NODES = ROUTE_SOLIDS.flatMap((s) => [
-      [s.x0 - CLEAR, s.z0 - CLEAR], [s.x1 + CLEAR, s.z0 - CLEAR], [s.x0 - CLEAR, s.z1 + CLEAR], [s.x1 + CLEAR, s.z1 + CLEAR],
-    ] as [number, number][]).filter(([x, z]) => !inside(x, z));
-  }
-  return NODES;
+function clear(g: RouteGraph, ax: number, az: number, bx: number, bz: number, r: number): boolean {
+  for (const s of g.solids) if (segHitsBox(ax, az, bx, bz, s, r)) return false;
+  return true;
 }
 
 export class Bot {
@@ -86,12 +90,14 @@ export class Bot {
   private harvesting: FieldCrop | null = null;
   private stalk = { x: 0, z: 0 };
 
-  constructor(private w: SimWorld, readonly profile: BotProfile) {}
+  /** `skip`: upgrade tracks this bot never buys (a check that wants a farm without some stage). */
+  constructor(private w: SimWorld, readonly profile: BotProfile, private skip?: (id: string) => boolean) {}
 
   private cheapestAffordable(): TileState | null {
     const up = this.w.upgrades;
     let best: TileState | null = null, bestR = Infinity;
     for (const t of up.tiles) {
+      if (this.skip?.(t.def.id)) continue;
       const r = up.remaining(t.def.id);
       if (r <= this.w.money + 1e-6 && r < bestR) { best = t; bestR = r; }
     }
@@ -100,7 +106,7 @@ export class Bot {
 
   private cheapestRemaining(): number {
     let r = Infinity;
-    for (const t of this.w.upgrades.tiles) r = Math.min(r, this.w.upgrades.remaining(t.def.id));
+    for (const t of this.w.upgrades.tiles) if (!this.skip?.(t.def.id)) r = Math.min(r, this.w.upgrades.remaining(t.def.id));
     return r;
   }
 
@@ -287,12 +293,14 @@ export class Bot {
   private route(px: number, pz: number): { x: number; z: number } {
     const way = this.way, r = ECONOMY.player.radius * 0.95;
     way.x = this.tx; way.z = this.tz;
-    if (clear(px, pz, this.tx, this.tz, r)) return way;
-    const NODES = nodes();
+    const g = graph(this.w), NODES = g.nodes;
+    if (clear(g, px, pz, this.tx, this.tz, r)) return way;
     // Dijkstra over [start, ...corners, goal]
     const n = NODES.length + 2, G = n - 1;
     const nx = (i: number) => (i === 0 ? px : i === G ? this.tx : NODES[i - 1][0]);
     const nz = (i: number) => (i === 0 ? pz : i === G ? this.tz : NODES[i - 1][1]);
+    // (grow the scratch arrays when more obstacles appear: writes past a typed array's end are dropped)
+    if (this.dist.length < n) { this.dist = new Float64Array(n * 2); this.prev = new Int32Array(n * 2); this.done = new Uint8Array(n * 2); }
     const D = this.dist, prev = this.prev, done = this.done;
     for (let i = 0; i < n; i++) { D[i] = Infinity; prev[i] = -1; done[i] = 0; }
     D[0] = 0;
@@ -304,7 +312,7 @@ export class Bot {
       for (let v = 1; v < n; v++) {
         if (done[v]) continue;
         const d = D[u] + dist(nx(u), nz(u), nx(v), nz(v));
-        if (d < D[v] && clear(nx(u), nz(u), nx(v), nz(v), r)) { D[v] = d; prev[v] = u; }
+        if (d < D[v] && clear(g, nx(u), nz(u), nx(v), nz(v), r)) { D[v] = d; prev[v] = u; }
       }
     }
     if (prev[G] < 0) return way; // no path: walk straight and let the unstick nudge handle it
