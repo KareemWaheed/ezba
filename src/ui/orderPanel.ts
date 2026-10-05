@@ -28,7 +28,7 @@ export class OrderPanel {
 
   private stateKey(): string {
     const m = this.sim.market;
-    return `${Math.floor(this.sim.money / 10)}|${m.shelves.map((s) => s.stock).join(',')}|${MARKET.products.map((p) => m.stocked(p.item) * 100 + Math.min(99, m.farmSpare(p.item))).join(',')}`;
+    return `${Math.floor(this.sim.money)}|${m.shelves.map((s) => s.stock).join(',')}|${MARKET.products.map((p) => m.stocked(p.item) * 100 + Math.min(99, m.farmSpare(p.item))).join(',')}`;
   }
 
   private show(): void {

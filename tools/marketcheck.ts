@@ -49,7 +49,8 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
   ok(open.length === 4, `first shelf row opens with the store (${open.join(', ')})`);
   for (const it of open) m.order(it);
   ok(m.store.rice === 0 && m.incoming.length === 4, 'orders are on the way, not in the storeroom yet');
-  at(w, 20, 26, ECONOMY.supermarket.deliveryTime + 0.5);
+  // (wait clear of the upgrade tiles along the front: standing on one would buy it)
+  at(w, 20, 24, ECONOMY.supermarket.deliveryTime + 0.5);
   ok(open.every((it) => m.store[it] === ECONOMY.supermarket.box), 'deliveries land in the storeroom');
   for (let k = 0; k < 4; k++) m.order('rice');
   ok(m.stocked('rice') <= ECONOMY.supermarket.storeMax && !m.canOrder('rice'), 'the storeroom caps what can be ordered');
@@ -64,6 +65,7 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
   const money0 = w.money, cash = m.cash.value;
   at(w, MARKET.cash.x, MARKET.cash.z, 0.5);
   ok(m.cash.value === 0 && Math.abs(w.money - money0 - cash) < 1e-6, 'the checkout cash is collected');
+  ok(w.upgrades.level('market.cashier') === 0, 'the hand loop ran without buying any store upgrade');
 }
 
 // ---- free deliveries from the farm ----
