@@ -258,15 +258,24 @@ export class CafeSystem {
     if (!this.open) return;
     const w = this.w, p = w.player, c = w.carry, cfg = ECONOMY.player;
     this.dropT -= dt;
-    // factory dishes the player carried over go onto the café counter at the serve spot
+    // factory dishes the player carried over go onto the café counter at the serve spot; once the
+    // counter is full of that dish, the rest sells as takeaway into the café cash (never stuck in hand)
     if (this.dropT <= 0 && this.playerAtCounter()) {
+      const sv = CAFE.counter.serve;
       for (const m of w.factory.machines) {
         const d = m.def.makes;
-        if (!c.has(d) || this.counter[d] >= ECONOMY.cafe.counterMax) continue;
+        if (!c.has(d)) continue;
         c.take(d);
-        this.counter[d]++;
         this.dropT = cfg.dropInterval;
-        w.events.emit('drop', d, CAFE.counter.serve.x, CAFE.counter.serve.z, 0, c.n);
+        if (this.counter[d] < ECONOMY.cafe.counterMax) {
+          this.counter[d]++;
+          w.events.emit('drop', d, sv.x, sv.z, 0, c.n);
+        } else {
+          const v = Math.round(ECONOMY.dishes[d].price * ECONOMY.cafe.takeawayMult * w.priceMult * this.priceMult);
+          this.cash.value += v;
+          this.cash.bills = Math.min(40, this.cash.bills + 1);
+          w.events.emit('cropSold', d, sv.x, sv.z, v, c.n);
+        }
         break;
       }
     }

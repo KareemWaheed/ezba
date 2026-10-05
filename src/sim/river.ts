@@ -121,6 +121,14 @@ export class RiverSystem {
     if (!w.away) w.events.emit('cropSold', 'fish', RIVER.stall.drop.x, RIVER.stall.drop.z, v, 0, -1);
   }
 
+  /** Sell one grilled fish at the stall (takeaway price, like the café's overflow). */
+  private sellGrilled(): void {
+    const w = this.w, v = Math.round(ECONOMY.dishes.grilledFish.price * ECONOMY.cafe.takeawayMult * w.priceMult);
+    this.cash.value += v;
+    this.cash.bills = Math.min(40, this.cash.bills + 1);
+    w.events.emit('cropSold', 'grilledFish', RIVER.stall.drop.x, RIVER.stall.drop.z, v, 0, -1);
+  }
+
   update(dt: number): void {
     if (!this.open) return;
     this.updateBoats(dt);
@@ -272,10 +280,10 @@ export class RiverSystem {
       this.pickT = cfg.pickInterval;
       w.events.emit('pick', 'fish', pl.x, pl.z, 0, c.n, -1);
     }
-    if (this.sellT <= 0 && c.has('fish') && dist(p.x, p.z, st.drop.x, st.drop.z) < 1.25) {
-      c.take('fish');
-      this.sell(1);
-      this.sellT = cfg.dropInterval;
+    if (this.sellT <= 0 && dist(p.x, p.z, st.drop.x, st.drop.z) < 1.25) {
+      // fish, and grilled fish from the grill next door (no long walk to the café needed)
+      if (c.take('grilledFish')) { this.sellGrilled(); this.sellT = cfg.dropInterval; }
+      else if (c.take('fish')) { this.sell(1); this.sellT = cfg.dropInterval; }
     }
     // tying up: stand at the tie spot; one boat at a time
     const t = RIVER.tie;

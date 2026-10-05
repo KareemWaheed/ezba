@@ -59,9 +59,12 @@ export class SimWorld {
   readonly input = { x: 0, z: 0 };
   /** True while simulating time away: the player can't carry, serve or pay. */
   away = false;
+  /** Trash button held: the top carried item is thrown away every trashInterval. Set by the UI. */
+  trashing = false;
 
   private pickT = 0;
   private dropT = 0;
+  private trashT = 0;
 
   constructor(seed = 1) {
     this.rng = new Rng(seed);
@@ -145,6 +148,13 @@ export class SimWorld {
     const p = this.player, c = this.carry, cfg = ECONOMY.player;
     this.pickT -= dt;
     this.dropT -= dt;
+    this.trashT -= dt;
+    // trash button: throw the top item away (a stack nothing takes right now never gets the player stuck)
+    if (this.trashing && c.n > 0 && this.trashT <= 0) {
+      const it = c.items.pop()!;
+      this.trashT = cfg.trashInterval;
+      this.events.emit('trash', it, p.x, p.z, 0, c.n);
+    }
     for (const s of this.stations) {
       if (!s.open) continue;
       const d = s.def;

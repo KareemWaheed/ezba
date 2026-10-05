@@ -23,6 +23,8 @@ export const ECONOMY = {
     pickInterval: 0.09,
     /** Seconds between dropping two items onto a counter. */
     dropInterval: 0.09,
+    /** Seconds between two items thrown away while the trash button is held. */
+    trashInterval: 0.12,
   },
 
   /** Raw products: sale price per item at the shop counter. */
@@ -131,6 +133,12 @@ export const ECONOMY = {
     stoveOutputMax: 8,
     /** Nicer tables: café prices x (1 + step x level) and patience +20% per level. */
     niceStep: 0.2,
+    /**
+     * Factory/grill dishes the player brings while the café counter is full of that dish sell as
+     * takeaway (price x this) into the café cash pile, so a carried stack is never stuck. The fish
+     * stall buys grilled fish at the same rate.
+     */
+    takeawayMult: 0.7,
     /** Café counter visual stack cap. */
     counterVisualMax: 8,
     /** Dishes per kind on the café counter before the kitchen conveyors pause (machines then fill and stop taking eggs/milk). */

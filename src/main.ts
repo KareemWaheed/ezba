@@ -193,6 +193,7 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       break;
     }
     case 'cropSold': sfx.sell(); break;
+    case 'trash': sfx.swish(); break;
     case 'albumNew': {
       const en = ALBUM_PAGES[e.n]?.entries[e.id];
       if (en) { sfx.sparkle(); toast.show(`📖 جديد في الألبوم: ${en.name} ${en.icon}`); }
@@ -309,6 +310,8 @@ function frame(now: number): void {
   if (input.moved) hud.showHint(false);
   sim.input.x = input.x;
   sim.input.z = input.z;
+  hud.setTrash(sim.carry.n > 0 && !sim.away);
+  sim.trashing = hud.trashHeld;
   cinematic.update(real);
   sim.advance(real * debug.speed * cinematic.timeScale);
   sim.events.drain(onEvent);
