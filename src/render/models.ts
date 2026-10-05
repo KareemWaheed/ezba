@@ -97,6 +97,21 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
     ...Q4.map(([a, b]) => part(cylLo, 0x2f63b8, a * 0.11, 0.14, b * 0.11, 0, 0, 0, 0.08, 0.28, 0.08)),
     ...Q4.map(([a, b]) => part(cylLo, 0xd94f45, a * 0.11, 0.16, b * 0.11, 0, 0, 0, 0.082, 0.06, 0.082)),
   ]),
+  // a stack of round baladi loaves on a paper sheet
+  bread: merge([
+    part(box, 0xf3efe3, 0, 0.01, 0, 0, 0, 0, 0.56, 0.02, 0.5),
+    ...[[-0.12, 0.05, 0], [0.13, 0.05, 0.02], [0, 0.12, -0.04]].map(([x, y, z]) => part(cyl, 0xd9a35a, x, y + 0.03, z, 0, 0, 0, 0.2, 0.06, 0.2)),
+  ]),
+  // crate of tomatoes / sack of potatoes
+  tomato: merge([
+    part(box, 0x9a6233, 0, 0.08, 0, 0, 0, 0, 0.56, 0.16, 0.42),
+    ...[-0.16, 0, 0.16].flatMap((x) => [-0.09, 0.09].map((z) => part(sphLo, 0xe0393e, x, 0.2, z, 0, 0, 0, 0.09, 0.08, 0.09))),
+  ]),
+  potato: merge([
+    part(sphLo, 0xc9a26b, 0, 0.16, 0, 0, 0, 0, 0.25, 0.17, 0.2),
+    part(cylLo, 0xa88450, 0, 0.34, 0, 0, 0, 0, 0.08, 0.07, 0.06),
+    ...[-0.1, 0.1].map((x) => part(sphLo, 0xb8864e, x, 0.32, 0.12, 0, 0, 0, 0.07, 0.05, 0.06)),
+  ]),
   bill: merge([
     part(box, 0x4dbb4f, 0, 0.05, 0, 0, 0, 0, 0.56, 0.1, 0.3),
     part(box, 0x8fe58a, 0, 0.051, 0, 0, 0, 0, 0.3, 0.104, 0.16),
@@ -104,9 +119,9 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
 };
 
 /** Stacking height of one item. */
-export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, omelette: 0.17, coffee: 0.36, cake: 0.32, cheese: 0.22, grilledFish: 0.18, fish: 0.3, corn: 0.24, wheat: 0.28, rice: 0.38, pasta: 0.4, oil: 0.48, tea: 0.26, chips: 0.34, soda: 0.28, bill: 0.11 };
+export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, omelette: 0.17, coffee: 0.36, cake: 0.32, cheese: 0.22, grilledFish: 0.18, fish: 0.3, corn: 0.24, wheat: 0.28, rice: 0.38, pasta: 0.4, oil: 0.48, tea: 0.26, chips: 0.34, soda: 0.28, bread: 0.2, tomato: 0.26, potato: 0.36, bill: 0.11 };
 
-export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', omelette: '🍳', coffee: '☕', cake: '🍰', cheese: '🥪', grilledFish: '🍢', fish: '🐟', corn: '🌽', wheat: '🌾', rice: '🍚', pasta: '🍝', oil: '🫒', tea: '🍵', chips: '🥔', soda: '🥤' };
+export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', omelette: '🍳', coffee: '☕', cake: '🍰', cheese: '🥪', grilledFish: '🍢', fish: '🐟', corn: '🌽', wheat: '🌾', rice: '🍚', pasta: '🍝', oil: '🫒', tea: '🍵', chips: '🍟', soda: '🥤', bread: '🍞', tomato: '🍅', potato: '🥔' };
 
 /** Standing crop stalks (one instance per stalk; scaled down to a stub when cut). */
 export const STALK_GEO: Record<FieldCrop, THREE.BufferGeometry> = {

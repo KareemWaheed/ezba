@@ -318,3 +318,13 @@ html, body {
 #title .ti-btn { justify-self: start; margin-top: 6px; background: var(--bill); color: #fff; font-weight: 800; border-radius: 12px; padding: 4px 14px; box-shadow: 0 3px 0 var(--bill-edge); }
 #title .ti-note { font-size: 13px; font-weight: 600; color: var(--ink); opacity: 0.8; }
 #title .ti-x { position: absolute; top: -6px; left: 0; width: 40px; height: 40px; border-radius: 12px; border: 0; font-size: 20px; background: var(--panel); }
+#modal .o-tag { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0; direction: rtl; }
+#modal .o-tag button { font: inherit; border: 0; border-radius: 9px; width: 30px; height: 26px; padding: 0; background: #efe8cc; font-size: 13px; }
+#modal .o-tag button:disabled { opacity: 0.35; }
+#modal .o-tag span { font-size: 13px; font-weight: 800; min-width: 54px; text-align: center; border-radius: 8px; padding: 1px 6px; }
+#modal .o-tag-0 { background: #d6f2d2; color: #2c7d40; }
+#modal .o-tag-1 { background: #eee8d2; }
+#modal .o-tag-2 { background: #fde2c4; color: #b8600f; }
+#modal .o-tag-3 { background: #fbd0cc; color: #b0302a; }
+#modal .o-btns { display: flex; flex-direction: column; gap: 5px; flex: none; }
+#modal .o-btns .t-claim { min-width: 92px; }

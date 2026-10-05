@@ -50,7 +50,7 @@ export interface SaveData {
   /** VIP cooldown left (s). */
   vipT?: number;
   /** Supermarket: shelf and storeroom stock per product (orders on the way are saved as arrived), checkout cash. */
-  market?: { shelves: Record<string, number>; store: Record<string, number>; cash: number; bills: number };
+  market?: { shelves: Record<string, number>; store: Record<string, number>; cash: number; bills: number; price?: Record<string, number> };
   /** Grain stall money not collected yet (stalks restart fully grown). */
   field?: { cash: number; bills: number; hopper?: Record<string, number>; parked?: { x: number; z: number; rot: number } };
 }
@@ -117,7 +117,7 @@ function marketSave(w: SimWorld): SaveData['market'] {
   for (const c of m.shoppers) for (const it of c.got) if (c.state !== 'leave') shelves[it] = (shelves[it] ?? 0) + 1;
   // what stockers are carrying goes back to the storeroom
   for (const x of w.staff.workers) if (x.job.key.startsWith('market.stock')) for (const it of x.carry.items) store[it] = (store[it] ?? 0) + 1;
-  return { shelves, store, cash: m.cash.value, bills: m.cash.bills };
+  return { shelves, store, cash: m.cash.value, bills: m.cash.bills, price: { ...m.price } };
 }
 
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
@@ -171,6 +171,7 @@ export function restore(w: SimWorld, s: SaveData): void {
     sh.stock = Math.min(cm.shelfMax, n);
     w.market.store[sh.def.item] += n - sh.stock;
   }
+  for (const k of Object.keys(w.market.price) as ItemId[]) if (s.market?.price?.[k] !== undefined) w.market.setPrice(k, num(s.market.price[k], 1));
   w.market.cash.value = num(s.market?.cash);
   w.market.cash.bills = Math.floor(num(s.market?.bills));
   w.river.pile = Math.max(0, Math.floor(num(s.river?.pile)));

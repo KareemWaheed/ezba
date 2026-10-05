@@ -154,4 +154,10 @@ This file records the decisions made on top of it.
   The active/casual bots run the store (shelve, checkout, storeroom, desk orders, keeping money back for boxes);
   `npm run marketpacing` checks the supermarket path's pacing (cashier ~7 min, chickens ~13, cows ~60-70, café
   within 2 h, nobody unhappy once staffed).
+- Phase 3 — more goods and price tags: bread, tomatoes and potatoes (wholesale goods; bread could later come from the
+  bakery, vegetables from new plots); the store has 3 rows x 5 shelves. Price tags per product at the order desk
+  (cheap x0.85 / normal / dear x1.2 / very dear x1.45; config/market.ts PRICE_TAGS): a dearer tag pays more per
+  item but shoppers put it on their lists less often (demand weight 1.5 / 1 / 0.65 / 0.4), so pricing trades
+  margin for traffic. Tags are saved; the order panel shows the free farm delivery only once the farm makes
+  that product.
 

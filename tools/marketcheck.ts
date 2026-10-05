@@ -6,7 +6,7 @@
  */
 import { SimWorld } from '../src/sim/world';
 import { ECONOMY, type UpgradeId } from '../src/config/economy';
-import { MARKET, SHELVES } from '../src/config/market';
+import { MARKET, PRICE_TAGS, SHELVES } from '../src/config/market';
 import { serialize, restore, migrate, legacyReset } from '../src/sim/save';
 import { simulateAway } from '../src/sim/offline';
 import { Bot } from '../src/sim/bot';
@@ -59,6 +59,30 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
   ok(nx.mode === 'market' && nx.legacy === 1 && nx.market.open && !nx.stations[0].open, 'a bigger ezba stays a supermarket game');
 }
 
+// ---- price tags: dearer pays more per item but fewer shoppers want it; saved with the game ----
+{
+  const share = (tag: number) => {
+    const w = farm({ 'market.unlock': 1 }), m = w.market;
+    m.setPrice('rice', tag);
+    let rice = 0, all = 0;
+    for (let i = 0; i < 400; i++) {
+      (m as unknown as { spawn(): void }).spawn();
+      const c = m.shoppers.pop()!;
+      for (const l of c.lines) { all += l.qty; if (l.product === 'rice') rice += l.qty; }
+    }
+    return { share: rice / all, price: m.sellPrice('rice') };
+  };
+  const cheap = share(0), normal = share(1), dear = share(3);
+  ok(cheap.share > normal.share && normal.share > dear.share, `cheaper rice is wanted more (cheap ${(cheap.share * 100).toFixed(0)}%, normal ${(normal.share * 100).toFixed(0)}%, very dear ${(dear.share * 100).toFixed(0)}%)`);
+  ok(dear.price > normal.price && normal.price > cheap.price, `and pays more per item when dear (${Math.round(cheap.price)} / ${Math.round(normal.price)} / ${Math.round(dear.price)})`);
+  const w = farm({ 'market.unlock': 1 });
+  w.market.setPrice('pasta', PRICE_TAGS.length - 1);
+  w.market.setPrice('egg', 99);
+  const w2 = new SimWorld(1);
+  restore(w2, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
+  ok(w2.market.price.pasta === PRICE_TAGS.length - 1 && w2.market.price.egg === PRICE_TAGS.length - 1, 'price tags are clamped and saved');
+}
+
 // ---- locked until bought ----
 {
   const w = farm({});
@@ -79,9 +103,9 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
   m.incoming.length = 0;
   w.money = 1e6;
   const open = m.shelves.filter((s) => s.open).map((s) => s.def.item);
-  ok(open.length === 4, `first shelf row opens with the store (${open.join(', ')})`);
+  ok(open.length === 5, `first shelf row opens with the store (${open.join(', ')})`);
   for (const it of open) m.order(it);
-  ok(m.store.rice === 0 && m.incoming.length === 4, 'orders are on the way, not in the storeroom yet');
+  ok(m.store.rice === 0 && m.incoming.length === 5, 'orders are on the way, not in the storeroom yet');
   // (wait clear of the upgrade tiles along the front: standing on one would buy it)
   at(w, 20, 24, ECONOMY.supermarket.deliveryTime + 0.5);
   ok(open.every((it) => m.store[it] === ECONOMY.supermarket.box), 'deliveries land in the storeroom');
@@ -89,9 +113,11 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
   ok(m.stocked('rice') <= ECONOMY.supermarket.storeMax && !m.canOrder('rice'), 'the storeroom caps what can be ordered');
   w.carry.items.length = 0;
   at(w, MARKET.store.x, MARKET.store.z, 1.5);
-  ok(w.carry.n > 0 && new Set(w.carry.items).size === 4, `the storeroom hands out what the shelves need (${w.carry.items.join(',')})`);
-  for (const s of SHELVES.slice(0, 4)) at(w, s.front.x, s.front.z, 0.8);
-  ok(w.carry.n === 0 && m.shelves.slice(0, 4).every((s) => s.stock > 0), 'standing at a shelf stocks it');
+  ok(w.carry.n > 0 && new Set(w.carry.items).size === 5, `the storeroom hands out what the shelves need (${w.carry.items.join(',')})`);
+  const held = w.carry.n, stocked0 = w.stats.marketStocked;
+  for (const s of SHELVES.slice(0, 5)) at(w, s.front.x, s.front.z, 0.8);
+  // (shoppers may buy some straight off the shelf meanwhile: count what went onto the shelves)
+  ok(w.carry.n === 0 && w.stats.marketStocked - stocked0 === held, `standing at a shelf stocks it (${w.stats.marketStocked - stocked0} of ${held})`);
   const served0 = w.stats.marketServed;
   at(w, MARKET.checkout.serve.x, MARKET.checkout.serve.z, 90);
   ok(w.stats.marketServed - served0 >= 3 && m.cash.value > 0, `the player runs the checkout (${w.stats.marketServed - served0} paid)`);

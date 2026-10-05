@@ -52,6 +52,9 @@ export const ECONOMY = {
     tea: { price: 40 },
     chips: { price: 14 },
     soda: { price: 18 },
+    bread: { price: 8 },
+    tomato: { price: 12 },
+    potato: { price: 10 },
   },
 
   /** Stage 7 supermarket (south of the café): shelves, storeroom, order desk, checkout. */
