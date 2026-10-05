@@ -3,6 +3,10 @@ export class Hud {
   /** True while the trash button is pressed (the sim throws the top carried item away). */
   trashHeld = false;
   private trash: HTMLButtonElement;
+  private ride: HTMLButtonElement;
+  private rideState = '';
+  /** Tapped the get off / get on button (main.ts calls the sim). */
+  onRide: (() => void) | null = null;
   private moneyEl: HTMLElement;
   private moneyVal: HTMLElement;
   private hint: HTMLElement;
@@ -14,7 +18,10 @@ export class Hud {
       <div id="hud"><div id="money" data-ui><span class="bill"></span><span id="moneyVal">0</span></div></div>
       <div id="hint" hidden>اسحب في أي مكان عشان تتحرك</div>
       <div id="full" hidden>مليان</div>
-      <button id="trash" data-ui hidden aria-label="ارمي اللي في إيدك">🗑️<span>ارمي</span></button>`);
+      <button id="trash" data-ui hidden aria-label="ارمي اللي في إيدك">🗑️<span>ارمي</span></button>
+      <button id="ride" data-ui hidden></button>`);
+    this.ride = root.querySelector('#ride')!;
+    this.ride.addEventListener('click', () => this.onRide?.());
     this.trash = root.querySelector('#trash')!;
     // hold to keep throwing away (one item per tick of ECONOMY.player.trashInterval)
     this.trash.addEventListener('pointerdown', (e) => { this.trashHeld = true; this.trash.setPointerCapture(e.pointerId); e.preventDefault(); });
@@ -55,6 +62,15 @@ export class Hud {
     if (this.trash.hidden === !on) return;
     this.trash.hidden = !on;
     if (!on) this.trashHeld = false;
+  }
+
+  /** Get off / get on button: 'off' while driving, 'on' next to the parked vehicle, '' hidden. */
+  setRide(state: '' | 'off' | 'on', icon: string): void {
+    const key = state + icon;
+    if (key === this.rideState) return;
+    this.rideState = key;
+    this.ride.hidden = !state;
+    if (state) this.ride.innerHTML = state === 'off' ? `🚶<span>انزل</span>` : `${icon}<span>اركب</span>`;
   }
 
   /** Rising "+X" text at a screen position. */

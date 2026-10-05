@@ -41,7 +41,7 @@ export interface SaveData {
   factory?: { silo: number; machines: Record<string, { in: Record<string, number>; out: Record<string, number> }> };
   daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
   /** Grain stall money not collected yet (stalks restart fully grown). */
-  field?: { cash: number; bills: number; hopper?: Record<string, number> };
+  field?: { cash: number; bills: number; hopper?: Record<string, number>; parked?: { x: number; z: number; rot: number } };
 }
 
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
@@ -88,7 +88,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
       tables: w.cafe.tables.map((t) => ({ dirty: t.dirty, cash: t.cash, bills: t.bills })),
       cash: { value: w.cafe.uncollected - w.cafe.tables.reduce((a, t) => a + t.cash, 0), bills: w.cafe.cash.bills },
     },
-    field: { cash: w.field.cash.value, bills: w.field.cash.bills, hopper: { ...w.field.hopper } },
+    field: { cash: w.field.cash.value, bills: w.field.cash.bills, hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
     river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },
     factory: { silo: w.factory.silo, machines: Object.fromEntries(w.factory.machines.map((m) => [m.def.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])) },
@@ -156,6 +156,12 @@ export function restore(w: SimWorld, s: SaveData): void {
   }
   w.field.cash.value = num(s.field?.cash);
   w.field.cash.bills = Math.floor(num(s.field?.bills));
+  // the vehicle left standing in the field (the player had got off)
+  const pk = s.field?.parked;
+  if (pk && Number.isFinite(pk.x) && Number.isFinite(pk.z)) {
+    w.field.onFoot = true;
+    w.field.parked.x = pk.x; w.field.parked.z = pk.z; w.field.parked.rot = num(pk.rot);
+  }
   w.field.hopperN = 0;
   for (const k of Object.keys(w.field.hopper) as (keyof typeof w.field.hopper)[]) {
     w.field.hopper[k] = Math.max(0, Math.floor(num(s.field?.hopper?.[k])));

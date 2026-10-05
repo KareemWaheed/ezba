@@ -66,6 +66,7 @@ let swishT = 0;
 const input = new Input(uiRoot);
 input.onGesture = unlockAudio;
 const hud = new Hud(uiRoot);
+hud.onRide = () => sim.field.toggleVehicle();
 const toast = new Toast(uiRoot);
 const goalCard = new GoalCard(uiRoot);
 const pressureHud = new PressureHud(uiRoot);
@@ -311,6 +312,8 @@ function frame(now: number): void {
   sim.input.x = input.x;
   sim.input.z = input.z;
   hud.setTrash(sim.carry.n > 0 && !sim.away);
+  const f = sim.field;
+  hud.setRide(!f.canToggle ? '' : f.driving ? 'off' : 'on', f.vehicle === 'combine' ? '🌾' : '🚜');
   sim.trashing = hud.trashHeld;
   cinematic.update(real);
   sim.advance(real * debug.speed * cinematic.timeScale);

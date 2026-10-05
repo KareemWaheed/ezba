@@ -80,6 +80,8 @@ export const ECONOMY = {
     /** Vehicles: speed multiplier and extra cutting reach; the combine fills its own hopper. */
     tractor: { speedMult: 1.4, reach: 0.9, radius: 0.9 },
     combine: { speedMult: 1.55, reach: 1.9, hopper: 60, radius: 1.2 },
+    /** Get back on the parked vehicle from within this distance of it. */
+    mountRadius: 2.2,
     /** Hired drivers: NPC tractors mowing a plot back and forth, unloading at the stall. */
     driver: { speed: 3.2, reach: 1.5, hopper: 24, unloadInterval: 0.12 },
   },

@@ -93,6 +93,16 @@ html, body {
   font-size: 28px; background: rgba(255, 251, 234, 0.92); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.22);
   touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
+#ride {
+  position: fixed; right: 14px; bottom: calc(env(safe-area-inset-bottom, 0px) + 172px); z-index: 6;
+  width: 64px; height: 64px; border-radius: 20px; border: 0; padding: 0; line-height: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  font-size: 28px; background: #ffd166; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.22);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+#ride span { font: 800 13px/1 var(--font); color: var(--ink); }
+#ride:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.22); }
+#ride[hidden] { display: none; }
 #trash span { font: 800 13px/1 var(--font); color: var(--ink); }
 #trash:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.22); background: #ffd9d6; }
 #trash[hidden] { display: none; }
