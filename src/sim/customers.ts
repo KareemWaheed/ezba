@@ -71,7 +71,7 @@ export class CustomerSystem {
   /** Debug: make the next arrival a VIP and bring it now. */
   forceVip = false;
   /** Seconds until another VIP may arrive. */
-  private vipT = 0;
+  vipT = 0;
 
   constructor(private w: SimWorld) {}
 
@@ -194,8 +194,8 @@ export class CustomerSystem {
     let value = 0;
     for (const l of c.lines) value += l.qty * ECONOMY.products[l.product].price * w.priceMult;
     value = Math.round(value);
-    // the VIP bonus is for serving them in person (a cashier who took over gets the normal price)
-    if (c.kind === 'vip' && c.playerItems * 2 >= c.qty) value *= ECONOMY.vip.payMult;
+    // the VIP bonus is for the items served in person (whatever a cashier took over sells at the normal price)
+    if (c.kind === 'vip') value = Math.round(value * (1 + (ECONOMY.vip.payMult - 1) * Math.min(1, c.playerItems / c.qty)));
     const sc = w.scenario, inEvent = c.scenario && sc.phase !== 'idle';
     if (c.rush) w.rush.sales += value;
     if (inEvent) {

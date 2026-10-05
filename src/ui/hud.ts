@@ -24,11 +24,14 @@ export class Hud {
     this.ride.addEventListener('click', () => this.onRide?.());
     this.trash = root.querySelector('#trash')!;
     // hold to keep throwing away (one item per tick of ECONOMY.player.trashInterval)
-    this.trash.addEventListener('pointerdown', (e) => { this.trashHeld = true; this.trash.setPointerCapture(e.pointerId); e.preventDefault(); });
+    this.trash.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; this.trashHeld = true; this.trash.setPointerCapture(e.pointerId); e.preventDefault(); });
     const up = () => { this.trashHeld = false; };
     this.trash.addEventListener('pointerup', up);
     this.trash.addEventListener('pointercancel', up);
     this.trash.addEventListener('lostpointercapture', up);
+    // a release that never arrives (tab hidden / app backgrounded mid-hold) must not keep trashing
+    document.addEventListener('visibilitychange', () => { if (document.hidden) up(); });
+    addEventListener('blur', up);
     this.trash.addEventListener('contextmenu', (e) => e.preventDefault());
     this.moneyEl = root.querySelector('#money')!;
     this.moneyVal = root.querySelector('#moneyVal')!;

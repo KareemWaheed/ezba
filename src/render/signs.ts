@@ -60,7 +60,7 @@ export class SignsView {
     // carrying cake/cheese/grilled fish: this is where it goes (extra sells as takeaway when the counter is full)
     const factoryDish = (w: SimWorld) => w.factory.machines.some((m) => w.carry.has(m.def.makes));
     add('🍽️ اخدم هنا', CAFE.counter.serve.x, CAFE.counter.serve.z - 0.2, (w) => cafeNew(w) && !factoryDish(w), 2.6, 'rgba(176,96,30,0.9)');
-    add('🍰🧀 حطهم هنا للبيع', CAFE.counter.serve.x, CAFE.counter.serve.z - 0.2, (w) => w.cafe.open && factoryDish(w), 2.6, 'rgba(176,96,30,0.9)');
+    add('🍰🧀🍢 حطهم هنا', CAFE.counter.serve.x, CAFE.counter.serve.z - 0.2, (w) => w.cafe.open && factoryDish(w), 2.6, 'rgba(176,96,30,0.9)');
     // field: until the player has sold a few bundles
     const fieldNew = (w: SimWorld) => w.field.open && w.stats.crops < 30;
     const corn = FIELDS.plots[0].box;

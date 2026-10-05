@@ -42,14 +42,13 @@ export class MetaMenus {
       <div id="side" data-ui>
         <button data-m="tasks">📋<span class="badge" hidden></span></button>
         <button data-m="album">📖<span class="badge" hidden></span></button>
-        <button data-m="legacy">🏆<span class="badge" hidden>!</span></button>
+        <button data-m="legacy" aria-label="عزبة أكبر">🏆<span class="badge" hidden>!</span></button>
         <button data-m="settings">⚙️</button>
       </div>`);
     const side = root.querySelector('#side')!;
     this.tasksBadge = side.querySelector('[data-m="tasks"] .badge')!;
     this.albumBadge = side.querySelector('[data-m="album"] .badge')!;
     this.legacyBadge = side.querySelector('[data-m="legacy"] .badge')!;
-    this.legacyReady = sim.legacyMissing.length === 0;
     side.addEventListener('click', (e) => {
       const m = (e.target as HTMLElement).closest('button')?.dataset.m as MetaMenus['open'];
       if (m === 'tasks') this.showTasks();
@@ -148,8 +147,9 @@ export class MetaMenus {
     card.querySelector('[data-legacy-go]')?.addEventListener('click', () => {
       const s = legacyReset(w, Date.now());
       if (!s) return;
-      replaceSave(s);
-      location.reload();
+      if (replaceSave(s)) { location.reload(); return; }
+      this.modal.open(`<div class="m-icon">⚠️</div><div class="m-title">ماقدرناش نحفظ</div>
+        <div>المتصفح مش سامح بالحفظ دلوقتي، جرّب تاني بعد شوية</div><button class="m-btn" data-close>تمام</button>`, () => { this.open = null; });
     });
   }
 

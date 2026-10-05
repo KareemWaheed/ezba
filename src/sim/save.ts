@@ -1,6 +1,7 @@
 import { ECONOMY, ITEM_IDS, type ItemId, type UpgradeId } from '../config/economy';
 import { SimWorld } from './world';
 import { LEGACY } from '../config/legacy';
+import { FIELDS } from '../config/fields';
 
 /**
  * Versioned save format. Bump SAVE_VERSION when the shape changes and add a migration from the
@@ -41,9 +42,11 @@ export interface SaveData {
   /** Factory machine buffers and the wheat silo. */
   factory?: { silo: number; machines: Record<string, { in: Record<string, number>; out: Record<string, number> }> };
   daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
-  /** Grain stall money not collected yet (stalks restart fully grown). */
   /** Prestige level (config/legacy.ts). */
   legacy?: number;
+  /** VIP cooldown left (s). */
+  vipT?: number;
+  /** Grain stall money not collected yet (stalks restart fully grown). */
   field?: { cash: number; bills: number; hopper?: Record<string, number>; parked?: { x: number; z: number; rot: number } };
 }
 
@@ -80,7 +83,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     v: SAVE_VERSION, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
-    rating: w.service.rating, legacy: w.legacy,
+    rating: w.service.rating, legacy: w.legacy, vipT: w.customers.vipT,
     trust: { ...w.contracts.trust },
     boost: Object.fromEntries(w.stations.map((s) => [s.def.id, s.boostT])),
     broken: Object.fromEntries(w.staff.machines.map((m, i) => [String(i), m.broken])),
@@ -106,6 +109,7 @@ export function restore(w: SimWorld, s: SaveData): void {
   w.time = num(s.time);
   w.money = num(s.money);
   w.legacy = Math.max(0, Math.floor(num(s.legacy)));
+  w.customers.vipT = Math.max(0, num(s.vipT));
   if (s.rng) w.rng.state = num(s.rng, w.rng.state) >>> 0;
   const up = w.upgrades;
   for (const id of Object.keys(up.levels) as UpgradeId[]) {
@@ -162,7 +166,7 @@ export function restore(w: SimWorld, s: SaveData): void {
   w.field.cash.bills = Math.floor(num(s.field?.bills));
   // the vehicle left standing in the field (the player had got off)
   const pk = s.field?.parked;
-  if (pk && Number.isFinite(pk.x) && Number.isFinite(pk.z)) {
+  if (pk && Number.isFinite(pk.x) && Number.isFinite(pk.z) && pk.z < ECONOMY.field.farmlandZ && pk.x > FIELDS.driveX0) {
     w.field.onFoot = true;
     w.field.parked.x = pk.x; w.field.parked.z = pk.z; w.field.parked.rot = num(pk.rot);
   }

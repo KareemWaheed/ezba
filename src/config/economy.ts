@@ -273,7 +273,7 @@ export const ECONOMY = {
     /** Chance an arriving customer is a VIP (active play only). */
     chance: 0.04,
     minUpgrades: 10,
-    /** VIPs order bigger, wait longer and pay this many times the price. Only the player can serve them. */
+    /** VIPs order bigger, wait longer and pay this many times the price for what the player serves in person. */
     qtyMult: 1.5,
     patienceMult: 1.6,
     payMult: 4,
