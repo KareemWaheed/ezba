@@ -289,3 +289,9 @@ html, body {
 /* settings */
 #modal .s-sound { background: var(--accent); box-shadow: 0 4px 0 #b8600f; display: block; margin: 8px auto 4px; }
 #modal .s-tip { background: #fff; border: 2px solid var(--panel-edge); border-radius: 12px; padding: 8px; margin-top: 10px; font-size: 14px; }
+
+/* a bigger ezba (prestige) */
+#modal .l-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 8px 0; }
+#modal .l-miss { background: #fff; border: 2px solid var(--panel-edge); border-radius: 12px; padding: 3px 9px; font-size: 14px; font-weight: 700; }
+#modal .l-next { background: #fff3c4; border-radius: 14px; padding: 8px 10px; margin: 8px 0; font-size: 15px; }
+#modal .m-btn.l-later { background: #d8d2bd; color: var(--ink); }

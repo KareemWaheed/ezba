@@ -21,6 +21,8 @@ import { RiverSystem } from './river';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
+import { LEGACY } from '../config/legacy';
+import { UPGRADES } from '../config/upgrades';
 
 /** Radii of the walk-in zones (units). */
 export const ZONE = { pile: 1.35, drop: 1.25, cash: 1.3 } as const;
@@ -59,6 +61,8 @@ export class SimWorld {
   readonly input = { x: 0, z: 0 };
   /** True while simulating time away: the player can't carry, serve or pay. */
   away = false;
+  /** Prestige level: how many times the farm was sold for a bigger one (config/legacy.ts). */
+  legacy = 0;
   /** Trash button held: the top carried item is thrown away every trashInterval. Set by the UI. */
   trashing = false;
 
@@ -99,7 +103,14 @@ export class SimWorld {
   }
 
   /** Sale price multiplier from farm growth (see ECONOMY.market). */
-  get priceMult(): number { return 1 + this.upgrades.bought * ECONOMY.market.growthPerUpgrade; }
+  get priceMult(): number {
+    return (1 + this.upgrades.bought * ECONOMY.market.growthPerUpgrade) * (1 + this.legacy * LEGACY.priceStep);
+  }
+
+  /** Milestone upgrades not bought yet (all bought = the farm can be sold for a bigger one). */
+  get legacyMissing(): typeof UPGRADES[number][] {
+    return UPGRADES.filter((d) => d.milestone && this.upgrades.level(d.id) === 0);
+  }
 
   /** Open checkout lanes (1 at the start). */
   get lanes(): number { return 1 + this.upgrades.level('shop.lanes'); }

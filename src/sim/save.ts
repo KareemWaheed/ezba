@@ -1,5 +1,6 @@
 import { ECONOMY, ITEM_IDS, type ItemId, type UpgradeId } from '../config/economy';
-import type { SimWorld } from './world';
+import { SimWorld } from './world';
+import { LEGACY } from '../config/legacy';
 
 /**
  * Versioned save format. Bump SAVE_VERSION when the shape changes and add a migration from the
@@ -41,6 +42,8 @@ export interface SaveData {
   factory?: { silo: number; machines: Record<string, { in: Record<string, number>; out: Record<string, number> }> };
   daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
   /** Grain stall money not collected yet (stalks restart fully grown). */
+  /** Prestige level (config/legacy.ts). */
+  legacy?: number;
   field?: { cash: number; bills: number; hopper?: Record<string, number>; parked?: { x: number; z: number; rot: number } };
 }
 
@@ -77,7 +80,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     v: SAVE_VERSION, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
-    rating: w.service.rating,
+    rating: w.service.rating, legacy: w.legacy,
     trust: { ...w.contracts.trust },
     boost: Object.fromEntries(w.stations.map((s) => [s.def.id, s.boostT])),
     broken: Object.fromEntries(w.staff.machines.map((m, i) => [String(i), m.broken])),
@@ -102,6 +105,7 @@ const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) 
 export function restore(w: SimWorld, s: SaveData): void {
   w.time = num(s.time);
   w.money = num(s.money);
+  w.legacy = Math.max(0, Math.floor(num(s.legacy)));
   if (s.rng) w.rng.state = num(s.rng, w.rng.state) >>> 0;
   const up = w.upgrades;
   for (const id of Object.keys(up.levels) as UpgradeId[]) {
@@ -176,4 +180,22 @@ export function restore(w: SimWorld, s: SaveData): void {
   // rebuild tiles from scratch so one under the restored player position starts disarmed
   up.tiles = [];
   up.refresh();
+}
+
+/**
+ * Sell the farm for a bigger one: a fresh farm one prestige level up, with the starting money for it.
+ * The album, daily tasks and lifetime stats carry over. Returns the new save (the caller writes it
+ * and reloads). Null while milestones are still missing.
+ */
+export function legacyReset(w: SimWorld, now: number): SaveData | null {
+  if (w.legacyMissing.length > 0) return null;
+  const f = new SimWorld((now % 1_000_000_007) >>> 0 || 1);
+  f.legacy = w.legacy + 1;
+  f.money = LEGACY.startMoney * f.legacy;
+  for (const k of Object.keys(f.stats) as (keyof typeof f.stats)[]) f.stats[k] = w.stats[k];
+  for (const id of w.album.seen) f.album.seen.add(id);
+  for (const id of w.album.paid) f.album.paid.add(id);
+  f.daily.day = w.daily.day;
+  f.daily.tasks = w.daily.tasks.map((t) => ({ ...t }));
+  return serialize(f, now);
 }

@@ -122,6 +122,7 @@ document.addEventListener('visibilitychange', () => {
 
 sim.daily.ensure(dayKey());
 const menus = new MetaMenus(uiRoot, sim, modal);
+menus.onLegacyReady = () => { sfx.fanfare(); toast.show('🏆 فتحت كل حاجة! دوس 🏆 وابدأ عزبة أكبر'); };
 
 const debug = new DebugPanel(uiRoot, sim, view, {
   away: (sec) => welcomeBack(sec),

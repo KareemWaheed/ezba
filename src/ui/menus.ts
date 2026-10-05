@@ -1,8 +1,12 @@
 import type { SimWorld } from '../sim/world';
 import { TASKS } from '../config/tasks';
+import { UPGRADES } from '../config/upgrades';
 import { ALBUM_PAGES } from '../config/album';
 import { isMuted, setMuted } from '../audio';
 import { fmtMoney, ltr, type Modal } from './modal';
+import { LEGACY, legacyTitle } from '../config/legacy';
+import { legacyReset } from '../sim/save';
+import { replaceSave } from '../storage';
 
 interface InstallPrompt extends Event { prompt(): Promise<void> }
 
@@ -14,6 +18,9 @@ export function dayKey(d = new Date()): string {
 
 const SOUND_KEY = 'ezba.muted';
 
+/** Number of milestone upgrades (all of them bought = ready for a bigger ezba). */
+const UPGRADE_MILESTONES = () => UPGRADES.filter((d) => d.milestone).length;
+
 /**
  * Side buttons under the rating: 📋 daily tasks (badge = ready to claim), 📖 customer album
  * (badge = new entries since last look), ⚙️ settings (sound, install to home screen).
@@ -22,7 +29,11 @@ export class MetaMenus {
   private tasksBadge: HTMLElement;
   private albumBadge: HTMLElement;
   private albumSeen = 0;
-  private open: 'tasks' | 'album' | 'settings' | null = null;
+  private open: 'tasks' | 'album' | 'settings' | 'legacy' | null = null;
+  private legacyBadge: HTMLElement;
+  private legacyReady = false;
+  /** Called once when the farm becomes ready to sell for a bigger one. */
+  onLegacyReady: (() => void) | null = null;
   private installEvt: InstallPrompt | null = null;
   private t = 0;
 
@@ -31,16 +42,20 @@ export class MetaMenus {
       <div id="side" data-ui>
         <button data-m="tasks">📋<span class="badge" hidden></span></button>
         <button data-m="album">📖<span class="badge" hidden></span></button>
+        <button data-m="legacy">🏆<span class="badge" hidden>!</span></button>
         <button data-m="settings">⚙️</button>
       </div>`);
     const side = root.querySelector('#side')!;
     this.tasksBadge = side.querySelector('[data-m="tasks"] .badge')!;
     this.albumBadge = side.querySelector('[data-m="album"] .badge')!;
+    this.legacyBadge = side.querySelector('[data-m="legacy"] .badge')!;
+    this.legacyReady = sim.legacyMissing.length === 0;
     side.addEventListener('click', (e) => {
       const m = (e.target as HTMLElement).closest('button')?.dataset.m as MetaMenus['open'];
       if (m === 'tasks') this.showTasks();
       if (m === 'album') this.showAlbum();
       if (m === 'settings') this.showSettings();
+      if (m === 'legacy') this.showLegacy();
     });
     try { setMuted(localStorage.getItem(SOUND_KEY) === '1'); } catch { /* storage blocked */ }
     this.albumSeen = sim.album.seen.size;
@@ -93,6 +108,51 @@ export class MetaMenus {
       <button class="m-btn" data-close>تمام</button>`, () => { this.open = null; });
   }
 
+  /** 🏆 A bigger ezba: progress toward selling the farm, then the confirm-and-restart flow. */
+  private showLegacy(confirm = false): void {
+    const w = this.sim, lv = w.legacy, missing = w.legacyMissing;
+    this.open = 'legacy';
+    const pct = (l: number) => `+${Math.round(l * LEGACY.priceStep * 100)}%`;
+    const now = lv > 0
+      ? `<div>لقبك: <b>${legacyTitle(lv)}</b> · كل الأسعار <b>${ltr(pct(lv))}</b></div>`
+      : `<div>لقبك: <b>${legacyTitle(0)}</b></div>`;
+    const next = `<div class="l-next">🏆 العزبة الجاية: لقب <b>${legacyTitle(lv + 1)}</b>، كل الأسعار <b>${ltr(pct(lv + 1))}</b>
+      وتبدأ بـ <b>${ltr(fmtMoney(LEGACY.startMoney * (lv + 1)))}</b> 💰</div>`;
+    let body: string;
+    if (missing.length) {
+      const all = UPGRADE_MILESTONES();
+      const done = all - missing.length;
+      const list = missing.slice(0, 6).map((d) => `<div class="l-miss">${d.icon} ${d.label}</div>`).join('')
+        + (missing.length > 6 ? `<div class="l-miss">… و${missing.length - 6} كمان</div>` : '');
+      body = `<div class="m-note">افتح كل حاجة في المزرعة، وبعدها تقدر تبيعها وتبدأ عزبة أكبر وأغنى</div>
+        <div class="t-track"><div class="t-bar" style="width:${Math.round((done / all) * 100)}%"></div></div>
+        <div class="t-sub">${done}/${all}</div>
+        <div class="l-list">${list}</div>${next}
+        <button class="m-btn" data-close>تمام</button>`;
+    } else if (!confirm) {
+      body = `<div class="m-note">فتحت كل حاجة! 🎉 بيع العزبة وابدأ واحدة أكبر</div>${next}
+        <div class="m-note">بيفضل معاك: الألبوم والمهام. بيتصفّر: الفلوس والترقيات</div>
+        <button class="m-btn" data-legacy>🏆 بيع العزبة وابدأ أكبر</button>
+        <button class="m-btn l-later" data-close>بعدين</button>`;
+    } else {
+      body = `<div class="m-title">متأكد؟</div>
+        <div>هتبدأ مزرعة جديدة من الأول، بس أسعارك هتبقى ${ltr(pct(lv + 1))} على طول</div>
+        <button class="m-btn" data-legacy-go>✅ أيوه، ابدأ</button>
+        <button class="m-btn l-later" data-close>لأ، استنى</button>`;
+    }
+    const card = this.modal.open(`
+      <div class="m-icon">🏆</div>
+      <div class="m-title">عزبة أكبر</div>
+      ${now}${body}`, () => { this.open = null; });
+    card.querySelector('[data-legacy]')?.addEventListener('click', () => this.showLegacy(true));
+    card.querySelector('[data-legacy-go]')?.addEventListener('click', () => {
+      const s = legacyReset(w, Date.now());
+      if (!s) return;
+      replaceSave(s);
+      location.reload();
+    });
+  }
+
   private showSettings(): void {
     this.open = 'settings';
     const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
@@ -130,6 +190,10 @@ export class MetaMenus {
     const ready = d.ready;
     this.tasksBadge.hidden = ready === 0;
     this.tasksBadge.textContent = String(ready);
+    const sellable = this.sim.legacyMissing.length === 0;
+    this.legacyBadge.hidden = !sellable;
+    if (sellable && !this.legacyReady) this.onLegacyReady?.();
+    this.legacyReady = sellable;
     const fresh = this.sim.album.seen.size - this.albumSeen;
     this.albumBadge.hidden = fresh <= 0;
     this.albumBadge.textContent = String(fresh);

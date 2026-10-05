@@ -34,8 +34,11 @@ tick(w, 6, () => { w.player.x = d.x; w.player.z = d.z; w.input.x = w.input.z = 0
 ok(!w.carry.has('corn'), `the stall takes the carried corn (${w.carry.items.filter((x) => x === 'corn').length} left in hand)`);
 // walk away; the corn worker moves it to the shop
 w.player.x = 8; w.player.z = 8;
-tick(w, 60);
-ok(corn.counter - counter0 >= 8, `the corn worker carried it to the shop counter (+${corn.counter - counter0})`);
+// (shop customers may buy some of it straight off the counter: those count as delivered too)
+let cornSold = 0;
+for (let i = 0; i < 60 / DT; i++) { w.tick(DT); w.events.drain((e) => { if (e.type === 'sell' && e.product === 'corn') cornSold++; }); }
+const reached = corn.counter - counter0 + cornSold;
+ok(reached >= 8, `the corn worker carried it to the shop counter (+${reached}, ${cornSold} already sold)`);
 
 // a full pile: corn stays in the player's hands (they can still take it to the counter)
 corn.pile = ECONOMY.pile.max;
