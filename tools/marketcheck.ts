@@ -75,6 +75,37 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
   ok(m.farmSpare('rice') === 0 && !m.orderFromFarm('rice'), 'wholesale goods never come from the farm');
 }
 
+// ---- stockers fetch farm products from the farm's surplus (no auto-reorder needed) ----
+{
+  const w = farm({ 'market.unlock': 1, 'market.stocker': 1 }), m = w.market, milk = w.stations.find((s) => s.def.product === 'milk')!;
+  milk.counter = 40;
+  run(w, ECONOMY.supermarket.deliveryTime + 30);
+  ok(m.shelfFor('milk')!.stock > 0 && milk.counter < 40, `a stocker brings farm milk to the shelf (shelf ${m.shelfFor('milk')!.stock}, farm counter ${milk.counter})`);
+  ok(m.stocked('rice') === 0, 'without auto-reorder nothing is bought');
+}
+
+// ---- saves never lose stock: stockers' hands and over-full baskets ----
+{
+  const w = farm({ 'market.unlock': 1, 'market.stocker': 2 }), m = w.market;
+  m.store.rice = 30;
+  m.store.pasta = 30;
+  let carrying = 0;
+  for (let i = 0; i < 20 / DT && carrying === 0; i++) {
+    w.tick(DT);
+    carrying = w.staff.workers.filter((x) => x.job.key.startsWith('market.stock')).reduce((a, x) => a + x.carry.n, 0);
+  }
+  const stock = (x: SimWorld) => x.market.shelves.reduce((a, s) => a + s.stock, 0) + Object.values(x.market.store).reduce((a, n) => a + n, 0);
+  const inBaskets = m.shoppers.reduce((a, c) => a + (c.state !== 'leave' ? c.got.length : 0), 0);
+  // a full shelf plus a basket from it (worst case for the "back on the shelf" save)
+  m.shelfFor('rice')!.stock = ECONOMY.supermarket.shelfMax;
+  m.shoppers.push({ id: 999, look: 1, type: 'normal', x: 20, z: 20, rot: 0, speed: 0, state: 'queue', lines: [], li: 0, got: ['rice', 'rice', 'rice'], scanned: 0, waitT: 0, takeT: 0, patience: 50, patienceMax: 70, gone: false });
+  const w2 = new SimWorld(1);
+  restore(w2, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
+  ok(carrying > 0 && stock(w2) >= stock(w) + carrying + inBaskets + 3, `a save mid-trip keeps every item (carrying ${carrying}, saved ${stock(w2)})`);
+  // buildings belong to their world: a fresh world has none of this store's walls or shelves
+  ok(new SimWorld(2).solids.length < w.solids.length, 'another world never collides with this world\'s store');
+}
+
 // ---- fully staffed store at steady state ----
 {
   const w = farm({ 'market.unlock': 1, 'market.shelves': 2, 'market.cashier': 1, 'market.stocker': 2, 'market.ads': 3, 'market.auto': 1 });

@@ -1,6 +1,6 @@
 import { ECONOMY, type UpgradeId } from '../config/economy';
 import { UPGRADES, UPGRADE_BY_ID, type UpgradeDef } from '../config/upgrades';
-import { FENCES, LAYOUT, SOLIDS_VERSION, addSolid } from '../config/layout';
+import { FENCES, LAYOUT, SOLIDS_VERSION } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import { FIELDS } from '../config/fields';
 import { FACTORY } from '../config/factories';
@@ -102,20 +102,20 @@ export class UpgradeSystem {
     w.field.sync();
     w.bounds.z0 = w.field.open ? FIELDS.unlockedZ0 : LAYOUT.bounds.z0;
     w.river.sync();
-    if (w.river.open) { w.bounds.z0 = RIVER.unlockedZ0; addSolid('fishStall', RIVER.stall.box); }
+    if (w.river.open) { w.bounds.z0 = RIVER.unlockedZ0; w.addSolid('fishStall', RIVER.stall.box); }
     const grill = FACTORY.machines.find((m) => m.id === 'grill');
-    if (grill && this.level(grill.unlockTrack) > 0) addSolid('grill', grill.box);
+    if (grill && this.level(grill.unlockTrack) > 0) w.addSolid('grill', grill.box);
     w.contracts.sync();
     w.factory.sync();
     w.bounds.x1 = w.factory.open ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
     if (w.market.open) {
       // the store stands on reachable grass: walls, counter, racks and desk turn solid once it's built
-      MARKET.walls.forEach((b, i) => addSolid(`marketWall${i}`, b));
-      addSolid('marketCheckout', MARKET.checkout.box);
-      addSolid('marketRacks', MARKET.store.racks);
-      addSolid('marketDesk', MARKET.desk.box);
+      MARKET.walls.forEach((b, i) => w.addSolid(`marketWall${i}`, b));
+      w.addSolid('marketCheckout', MARKET.checkout.box);
+      w.addSolid('marketRacks', MARKET.store.racks);
+      w.addSolid('marketDesk', MARKET.desk.box);
     }
-    for (const s of w.market.shelves) if (s.open) addSolid(`shelf${s.index}`, SHELVES[s.index].box);
+    for (const s of w.market.shelves) if (s.open) w.addSolid(`shelf${s.index}`, SHELVES[s.index].box);
   }
 
   private purchase(t: TileState): void {

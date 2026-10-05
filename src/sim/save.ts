@@ -112,6 +112,8 @@ function marketSave(w: SimWorld): SaveData['market'] {
   for (const k of Object.keys(m.store)) store[k] = m.store[k as ItemId];
   for (const d of m.incoming) store[d.item] = (store[d.item] ?? 0) + d.n;
   for (const c of m.shoppers) for (const it of c.got) if (c.state !== 'leave') shelves[it] = (shelves[it] ?? 0) + 1;
+  // what stockers are carrying goes back to the storeroom
+  for (const x of w.staff.workers) if (x.job.key.startsWith('market.stock')) for (const it of x.carry.items) store[it] = (store[it] ?? 0) + 1;
   return { shelves, store, cash: m.cash.value, bills: m.cash.bills };
 }
 
@@ -158,8 +160,14 @@ export function restore(w: SimWorld, s: SaveData): void {
   }
   w.factory.silo = Math.max(0, Math.floor(num(s.factory?.silo)));
   const cm = ECONOMY.supermarket;
-  for (const sh of w.market.shelves) sh.stock = Math.min(cm.shelfMax, Math.max(0, Math.floor(num(s.market?.shelves?.[sh.def.item]))));
-  for (const k of Object.keys(w.market.store) as ItemId[]) w.market.store[k] = Math.min(cm.storeMax, Math.max(0, Math.floor(num(s.market?.store?.[k]))));
+  // (basket items saved back onto a shelf can overflow it: the rest goes to the storeroom; the storeroom may
+  // then hold more than an order would allow, which just pauses ordering until it's used up)
+  for (const k of Object.keys(w.market.store) as ItemId[]) w.market.store[k] = Math.max(0, Math.floor(num(s.market?.store?.[k])));
+  for (const sh of w.market.shelves) {
+    const n = Math.max(0, Math.floor(num(s.market?.shelves?.[sh.def.item])));
+    sh.stock = Math.min(cm.shelfMax, n);
+    w.market.store[sh.def.item] += n - sh.stock;
+  }
   w.market.cash.value = num(s.market?.cash);
   w.market.cash.bills = Math.floor(num(s.market?.bills));
   w.river.pile = Math.max(0, Math.floor(num(s.river?.pile)));

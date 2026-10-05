@@ -1,5 +1,6 @@
 import { ECONOMY } from '../config/economy';
 import { LAYOUT, SOLIDS } from '../config/layout';
+import type { Box } from './math';
 import { STATIONS } from '../config/stations';
 import { Rng } from './rng';
 import { createPlayer, updatePlayer, type PlayerState } from './player';
@@ -57,6 +58,15 @@ export class SimWorld {
   /** Lifetime counters (daily tasks, album and the simulator read these). */
   readonly stats = { earned: 0, served: 0, sold: 0, angry: 0, fast: 0, vips: 0, rushesCleared: 0, fixes: 0, golden: 0, feeds: 0, tables: 0, cafeServed: 0, scenariosWon: 0, trucks: 0, stalks: 0, crops: 0, goldenStalks: 0, rides: 0, marketServed: 0 };
   readonly events = new EventQueue();
+  /**
+   * What the player can't walk through: the static layout (its fence boxes are shared and move as pens
+   * grow) plus things this world has built since (grill, fish stall, supermarket). Per world, so a
+   * simulator or check running several worlds never sees another world's buildings.
+   */
+  readonly solids: Box[] = [...SOLIDS];
+  /** Bumped whenever this world adds a solid (route caches rebuild). */
+  solidsVersion = 0;
+  private built = new Set<string>();
   /** Walkable area; grows when walled plots are unlocked. */
   readonly bounds = { ...LAYOUT.bounds };
   /** Current stick input, magnitude 0..1. Set by the UI or the simulated player. */
@@ -140,7 +150,7 @@ export class SimWorld {
   /** Advance the simulation. Callers keep dt <= MAX_STEP. */
   tick(dt: number): void {
     this.time += dt;
-    if (!this.away) updatePlayer(this.player, this.input.x, this.input.z, dt, SOLIDS, this.bounds);
+    if (!this.away) updatePlayer(this.player, this.input.x, this.input.z, dt, this.solids, this.bounds);
     for (const s of this.stations) s.update(dt, this.rng, this.events);
     if (!this.away) this.interact(dt);
     this.staff.update(dt);
@@ -240,6 +250,14 @@ export class SimWorld {
     this.factory.interact(dt);
     this.river.interact(dt);
     this.market.interact(dt);
+  }
+
+  /** Make a box solid once (something built on ground the player can already reach). */
+  addSolid(key: string, b: Box): void {
+    if (this.built.has(key)) return;
+    this.built.add(key);
+    this.solids.push({ ...b });
+    this.solidsVersion++;
   }
 
   /** Advance by any amount of time in safe sub-steps. */

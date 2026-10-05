@@ -127,15 +127,6 @@ export const FENCES: Record<string, Box> = {
 /** Bumped whenever solids change, so cached routing can rebuild. */
 export const SOLIDS_VERSION = { v: 0 };
 
-const added = new Set<string>();
-/** Add a solid once (things built later on ground the player can already reach). */
-export function addSolid(key: string, b: Box): void {
-  if (added.has(key)) return;
-  added.add(key);
-  SOLIDS.push({ ...b });
-  SOLIDS_VERSION.v++;
-}
-
 /** Things the player can't walk through. Fence boxes are padded slightly at the back. */
 export const SOLIDS: Box[] = [
   FENCES.eggs,
@@ -145,7 +136,7 @@ export const SOLIDS: Box[] = [
   { ...LAYOUT.hrYard.building },
   ...CAFE.kitchen.map((k) => ({ ...k.box })),
   { ...FIELDS.stall.box },
-  // the river grill and fish stall stand on reachable ground: they become solid once built (addSolid)
+  // the river grill and fish stall stand on reachable ground: they become solid once built (SimWorld.addSolid)
   ...FACTORY.machines.filter((m) => m.id !== 'grill').map((m) => ({ ...m.box })),
   { x0: FACTORY.silo.x - FACTORY.silo.r, x1: FACTORY.silo.x + FACTORY.silo.r, z0: FACTORY.silo.z - FACTORY.silo.r, z1: FACTORY.silo.z + FACTORY.silo.r },
   { ...CAFE.counter.box },

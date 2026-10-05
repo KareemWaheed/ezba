@@ -17,9 +17,11 @@ export class OrderPanel {
   constructor(private sim: SimWorld, private modal: Modal) {}
 
   update(): void {
+    // stepping onto the desk opens the panel; if another card is up (e.g. welcome back) it opens once
+    // that one closes, as long as the player is still on the desk
     const at = this.sim.market.atDesk;
-    if (at && !this.wasAt && !this.modal.isOpen) this.show();
-    this.wasAt = at;
+    if (!at) this.wasAt = false;
+    else if (!this.wasAt && !this.modal.isOpen) { this.wasAt = true; this.show(); }
     // live numbers while open (deliveries landing, shelves emptying)
     if (this.shown && this.modal.isOpen && this.stateKey() !== this.key) this.show();
   }
@@ -34,7 +36,7 @@ export class OrderPanel {
     this.key = this.stateKey();
     const rows = m.shelves.filter((s) => s.open).map((s) => {
       const it = s.def.item, p = MARKET.products.find((x) => x.item === it)!;
-      const cost = m.boxCost(it), room = m.canOrder(it);
+      const cost = m.boxCost(it), room = m.canOrder(it), coming = m.stocked(it) - m.store[it];
       const farm = p.farm ? m.farmSpare(it) : 0;
       const farmBtn = p.farm
         ? `<button class="t-claim o-farm" data-farm="${it}" ${room && farm > 0 ? '' : 'disabled'}>🚚 ${ltr(`${Math.min(box, farm)}`)} ببلاش</button>`
@@ -42,7 +44,7 @@ export class OrderPanel {
       return `<div class="t-row">
         <span class="t-icon">${ITEM_ICON[it]}</span>
         <div class="t-body"><div class="t-label">${p.name} · <span class="o-price">${ltr(fmtMoney(m.sellPrice(it)))} 💰</span></div>
-          <div class="t-sub">على الرف ${ltr(`${s.stock}/${ECONOMY.supermarket.shelfMax}`)} · في المخزن ${ltr(`${m.stocked(it)}`)}</div></div>
+          <div class="t-sub">على الرف ${ltr(`${s.stock}/${ECONOMY.supermarket.shelfMax}`)} · في المخزن ${ltr(`${m.store[it]}`)}${coming ? ` · 🚚 ${ltr(`+${coming}`)}` : ''}</div></div>
         ${farmBtn}
         <button class="t-claim" data-buy="${it}" ${room && w.money >= cost ? '' : 'disabled'}>📦 +${box}<br><small>${ltr(fmtMoney(cost))}</small></button>
       </div>`;

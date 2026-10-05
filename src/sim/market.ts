@@ -70,15 +70,23 @@ const GAPS_X = (() => {
   return out;
 })();
 
-/** Whether walking straight from (x, z) to (tx, tz) would pass through a shelf unit. */
-function crossesShelf(x: number, z: number, tx: number, tz: number): boolean {
-  for (const s of SHELVES) {
-    const b = s.box;
-    if (Math.min(z, tz) > b.z1 || Math.max(z, tz) < b.z0) continue;
-    // x where the path crosses the shelf's middle line
-    const cz = (b.z0 + b.z1) / 2, k = tz === z ? 0 : (cz - z) / (tz - z), cx = x + (tx - x) * Math.max(0, Math.min(1, k));
-    if (cx > b.x0 - 0.2 && cx < b.x1 + 0.2) return true;
+/** Does the segment (ax, az) -> (bx, bz) pass through box b grown by r? (slab test) */
+function segHits(ax: number, az: number, bx: number, bz: number, b: { x0: number; x1: number; z0: number; z1: number }, r: number): boolean {
+  let t0 = 0, t1 = 1;
+  for (const [p, d, lo, hi] of [[ax, bx - ax, b.x0 - r, b.x1 + r], [az, bz - az, b.z0 - r, b.z1 + r]] as const) {
+    if (Math.abs(d) < 1e-9) { if (p < lo || p > hi) return false; continue; }
+    let ta = (lo - p) / d, tb = (hi - p) / d;
+    if (ta > tb) { const t = ta; ta = tb; tb = t; }
+    t0 = Math.max(t0, ta);
+    t1 = Math.min(t1, tb);
+    if (t0 > t1) return false;
   }
+  return true;
+}
+
+/** Whether walking straight from (x, z) to (tx, tz) would pass through a shelf unit (with a little clearance). */
+function crossesShelf(x: number, z: number, tx: number, tz: number): boolean {
+  for (const s of SHELVES) if (segHits(x, z, tx, tz, s.box, 0.2)) return true;
   return false;
 }
 
@@ -271,15 +279,17 @@ export class MarketSystem {
       this.incoming.splice(i, 1);
       if (!w.away) w.events.emit('delivery', d.item, MARKET.store.x, MARKET.store.z, 0, d.n);
     }
-    // auto-reorder: one box at a time for whatever runs low (only what sells: open shelves); farm products
-    // come from the farm's surplus for free when it has some, otherwise they're bought like the rest
+    // restocking by staff, once a second for whatever runs low on open shelves: stockers fetch farm products
+    // from the farm's surplus (a free farm delivery); auto-reorder also buys wholesale (farm surplus first)
     this.autoT -= dt;
-    if (this.autoT <= 0 && w.upgrades.level('market.auto') > 0) {
+    const stockers = w.upgrades.level('market.stocker') > 0, auto = w.upgrades.level('market.auto') > 0;
+    if (this.autoT <= 0 && (stockers || auto)) {
       this.autoT = 1;
       for (const s of this.shelves) {
         const it = s.def.item;
         if (!s.open || this.stocked(it) >= cfg.autoBelow) continue;
-        if (this.orderFromFarm(it) || this.order(it)) break;
+        if ((stockers || auto) && this.orderFromFarm(it)) break;
+        if (auto && this.order(it)) break;
       }
     }
     this.updateShoppers(dt);
