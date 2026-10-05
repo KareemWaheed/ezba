@@ -1,7 +1,6 @@
 import { ECONOMY } from '../config/economy';
 import { LAYOUT, SOLIDS_VERSION } from '../config/layout';
 import { CAFE } from '../config/cafe';
-import { MARKET } from '../config/market';
 import type { ProductId } from '../config/economy';
 import { FIELDS, FIELD_CROPS, type FieldCrop } from '../config/fields';
 import { dist, type Box } from './math';
@@ -57,10 +56,7 @@ function graph(w: SimWorld): RouteGraph {
   const key = `${SOLIDS_VERSION.v}:${w.solidsVersion}`;
   let g = GRAPHS.get(w);
   if (g && g.key === key) return g;
-  // inside the supermarket only its walls matter (the bot never walks the aisles; shelves would just slow routing)
-  const P = MARKET.plot, inStore = (b: Box) => b.x0 >= P.x0 && b.x1 <= P.x1 && b.z0 >= P.z0 && b.z1 <= P.z1;
-  const wall = (b: Box) => MARKET.walls.some((m) => m.x0 === b.x0 && m.z0 === b.z0 && m.x1 === b.x1 && m.z1 === b.z1);
-  const solids = w.solids.filter((b) => Math.max(b.x1 - b.x0, b.z1 - b.z0) > 1.5 && (!inStore(b) || wall(b)));
+  const solids = w.solids.filter((b) => Math.max(b.x1 - b.x0, b.z1 - b.z0) > 1.5);
   const inside = (x: number, z: number) => solids.some((s) => x > s.x0 - CLEAR + 0.01 && x < s.x1 + CLEAR - 0.01 && z > s.z0 - CLEAR + 0.01 && z < s.z1 + CLEAR - 0.01);
   const nodes = solids.flatMap((s) => [
     [s.x0 - CLEAR, s.z0 - CLEAR], [s.x1 + CLEAR, s.z0 - CLEAR], [s.x0 - CLEAR, s.z1 + CLEAR], [s.x1 + CLEAR, s.z1 + CLEAR],

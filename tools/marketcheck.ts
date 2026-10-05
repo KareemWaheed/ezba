@@ -9,6 +9,8 @@ import { ECONOMY, type UpgradeId } from '../src/config/economy';
 import { MARKET, SHELVES } from '../src/config/market';
 import { serialize, restore, migrate } from '../src/sim/save';
 import { simulateAway } from '../src/sim/offline';
+import { Bot } from '../src/sim/bot';
+import { LAYOUT } from '../src/config/layout';
 
 const DT = 1 / 30;
 let fails = 0;
@@ -106,6 +108,26 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
   ok(carrying > 0 && stock(w2) >= stock(w) + carrying + inBaskets + 3, `a save mid-trip keeps every item (carrying ${carrying}, saved ${stock(w2)})`);
   // buildings belong to their world: a fresh world has none of this store's walls or shelves
   ok(new SimWorld(2).solids.length < w.solids.length, 'another world never collides with this world\'s store');
+}
+
+// ---- items put back are never lost: an unhappy shopper's basket when the shelf has been refilled ----
+{
+  const w = farm(), m = w.market, rice = m.shelfFor('rice')!;
+  rice.stock = ECONOMY.supermarket.shelfMax;
+  m.store.rice = ECONOMY.supermarket.storeMax;
+  m.shoppers.push({ id: 998, look: 1, type: 'normal', x: 14.2, z: 26.4, rot: 0, speed: 0, state: 'queue', lines: [], li: 0, got: ['rice', 'rice'], scanned: 0, waitT: 0, takeT: 0, patience: 0.01, patienceMax: 70, gone: false });
+  run(w, 0.2);
+  ok(rice.stock + m.store.rice === ECONOMY.supermarket.shelfMax + ECONOMY.supermarket.storeMax + 2, `an unhappy shopper's basket goes back somewhere (shelf ${rice.stock}, storeroom ${m.store.rice})`);
+}
+
+// ---- the active bot reaches and buys every store tile from the yard (routing round walls and shelves) ----
+{
+  const w = farm({}), bot = new Bot(w, 'active');
+  w.player.x = LAYOUT.spawn.x;
+  w.player.z = LAYOUT.spawn.z;
+  for (let i = 0; i < 20 * 60 / DT && w.upgrades.level('market.auto') === 0; i++) { w.money = Math.max(w.money, 1e9); bot.update(DT); w.tick(DT); w.events.drain(() => {}); }
+  const ids: UpgradeId[] = ['market.unlock', 'market.shelves', 'market.cashier', 'market.stocker', 'market.ads', 'market.auto'];
+  ok(ids.every((id) => w.upgrades.level(id) > 0), `the bot buys every store upgrade (${ids.map((id) => `${id.slice(7)} ${w.upgrades.level(id)}`).join(', ')})`);
 }
 
 // ---- fully staffed store at steady state ----

@@ -163,7 +163,8 @@ class StockerJob implements WorkerJob {
   }
 
   putBack(_w: SimWorld, item: ItemId): void {
-    this.m.store[item] = Math.min(ECONOMY.supermarket.storeMax, (this.m.store[item] ?? 0) + 1);
+    // (never clamped: storeMax only limits ordering, so returned items are never lost)
+    this.m.store[item] = (this.m.store[item] ?? 0) + 1;
   }
 }
 
@@ -275,7 +276,7 @@ export class MarketSystem {
       const d = this.incoming[i];
       d.t -= dt;
       if (d.t > 0) continue;
-      this.store[d.item] = Math.min(cfg.storeMax, (this.store[d.item] ?? 0) + d.n);
+      this.store[d.item] = (this.store[d.item] ?? 0) + d.n;
       this.incoming.splice(i, 1);
       if (!w.away) w.events.emit('delivery', d.item, MARKET.store.x, MARKET.store.z, 0, d.n);
     }
@@ -389,7 +390,12 @@ export class MarketSystem {
             c.patience -= dt;
             if (c.patience <= 0) {
               // gives up: what they picked goes back on the shelves
-              for (const it of c.got) { const sh = this.shelfFor(it); if (sh) sh.stock = Math.min(cfg.shelfMax, sh.stock + 1); }
+              // (a shelf refilled meanwhile can't take them all: the rest goes to the storeroom)
+              for (const it of c.got) {
+                const sh = this.shelfFor(it);
+                if (sh && sh.stock < cfg.shelfMax) sh.stock++;
+                else this.store[it] = (this.store[it] ?? 0) + 1;
+              }
               c.got.length = 0;
               c.state = 'angry';
               this.angry++;
