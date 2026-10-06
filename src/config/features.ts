@@ -1,9 +1,8 @@
 /**
- * Feature switches. The supermarket (store stage, supermarket-first game, price tags) is closed for now:
- * its tiles and the start screen don't appear, and a save that already built the store gets its store
- * upgrades refunded on load. The code stays (tools/marketcheck and marketpacing switch it on for their
- * checks), so it can come back by flipping this.
+ * Feature switches. supermarket: the store stage, the supermarket-first game and price tags. Switched off,
+ * its tiles and the start screen don't appear and a save that already built the store gets its store
+ * upgrades refunded on load (tools/marketcheck covers that; it and marketpacing switch it on for their checks).
  */
 export const FEATURES = {
-  supermarket: false,
+  supermarket: true,
 };

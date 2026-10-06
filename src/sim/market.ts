@@ -293,6 +293,23 @@ export class MarketSystem {
     return true;
   }
 
+  /** A product running out: its shelf is half empty or less and nothing is in the storeroom or on the way. */
+  needsBox(item: ItemId): boolean {
+    const s = this.shelfFor(item);
+    return !!s && s.open && s.stock <= ECONOMY.supermarket.shelfMax / 2 && this.stocked(item) === 0 && this.canOrder(item);
+  }
+
+  /** One box for every product running out (from the farm's surplus when it has some, else wholesale). */
+  restockAll(): number {
+    let n = 0;
+    for (const s of this.shelves) {
+      const it = s.def.item;
+      if (!this.needsBox(it)) continue;
+      if (this.orderFromFarm(it) || this.order(it)) n++;
+    }
+    return n;
+  }
+
   sync(): void {
     const w = this.w, up = w.upgrades;
     this.open = FEATURES.supermarket && up.level('market.unlock') > 0;

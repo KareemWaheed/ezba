@@ -8,9 +8,11 @@ export default defineConfig({
   // the lazy Rapier chunk (stage 4 cosmetic physics, wasm inlined) is ~2 MB on its own
   build: { target: 'es2022', chunkSizeWarningLimit: 2100 },
   plugins: [
-    // installable, fully offline: every built file is precached; new versions update in the background
+    // installable, fully offline: every built file is precached; a new version downloads in the background
+    // and the game shows an update button (ui/updateBanner.ts) instead of reloading mid-game
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'عزبتي',

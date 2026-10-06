@@ -3,9 +3,9 @@ import { ECONOMY, type ItemId } from '../config/economy';
 import { MARKET, SHELVES } from '../config/market';
 import { FEATURES } from '../config/features';
 import type { SimWorld } from '../sim/world';
-import type { Shopper } from '../sim/market';
+import type { MarketSystem, Shopper } from '../sim/market';
 import { MAT, PRIM, merge, part } from './geo';
-import { CanvasSprite, FONT, groundMarker, rr } from './canvas';
+import { CanvasSprite, EMOJI, FONT, groundMarker, rr } from './canvas';
 import { InstancedStack, gridSlots, type SlotFn } from './stacks';
 import { ITEM_ICON } from './models';
 import { CharacterView } from './character';
@@ -127,6 +127,7 @@ export class MarketView {
   private storeLabel = new Label(200, 1.3);
   private cash: InstancedStack;
   private shoppers = new Map<number, CustomerView>();
+  private chips = new Map<number, ListChip>();
   private cashier: CharacterView | null = null;
   private time = 0;
 
@@ -236,20 +237,27 @@ export class MarketView {
 
   private syncShoppers(sim: SimWorld, dt: number): void {
     const m = sim.market;
-    let front: Shopper | null = null;
-    for (const c of m.shoppers) if (c.state === 'queue') { front = c; break; }
     for (const c of m.shoppers) {
       let v = this.shoppers.get(c.id);
-      if (!v) { v = typedCustomerView({ kind: 'normal', look: c.look, type: c.type }); this.shoppers.set(c.id, v); this.scene.add(v.char.root); }
+      if (!v) {
+        v = typedCustomerView({ kind: 'normal', look: c.look, type: c.type });
+        const chip = new ListChip();
+        v.char.root.add(chip.s.sprite);
+        this.chips.set(c.id, chip);
+        this.shoppers.set(c.id, v);
+        this.scene.add(v.char.root);
+      }
       // basket: what they picked and haven't had scanned yet
       v.items.length = 0;
       if (c.state !== 'leave' && c.state !== 'angry') for (let i = c.scanned; i < c.got.length; i++) v.items.push(c.got[i]);
-      const waiting = c.state === 'shop' && c.waitT > 0;
-      const full = c.state === 'angry' || c === front || waiting;
-      v.bubble.sprite.visible = full;
-      v.face.sprite.visible = !full && c.state === 'queue';
-      if (full) v.draw(bubbleOf(c, c === front));
-      else if (c.state === 'queue') v.drawFace(c);
+      // their shopping list (ticked off as they go), then their basket at the checkout; angry: the 😡 bubble
+      const angry = c.state === 'angry', chip = this.chips.get(c.id)!;
+      v.bubble.sprite.visible = angry;
+      if (angry) v.draw(bubbleOf(c));
+      v.face.sprite.visible = c.state === 'queue';
+      if (c.state === 'queue') v.drawFace(c);
+      chip.s.sprite.visible = !angry && c.state !== 'leave';
+      if (chip.s.sprite.visible) chip.show(c, m);
       v.char.update(c.x, c.z, c.rot, c.speed, dt, v.items.length > 0);
       v.carrier.update(v.items, c.speed > 0.1 ? 1 : 0, dt);
     }
@@ -257,6 +265,8 @@ export class MarketView {
       for (const [id, v] of this.shoppers) {
         if (m.shoppers.some((c) => c.id === id)) continue;
         this.dispose(v);
+        this.chips.get(id)?.s.dispose();
+        this.chips.delete(id);
         this.shoppers.delete(id);
       }
     }
@@ -264,7 +274,9 @@ export class MarketView {
 
   private clearShoppers(): void {
     for (const v of this.shoppers.values()) this.dispose(v);
+    for (const c of this.chips.values()) c.s.dispose();
     this.shoppers.clear();
+    this.chips.clear();
   }
 
   private dispose(v: CustomerView): void {
@@ -274,22 +286,78 @@ export class MarketView {
     v.carrier.dispose();
   }
 
-  invalidate(): void { for (const v of this.shoppers.values()) v.invalidate(); }
-}
-
-/** Bubble rows: at an empty shelf, the item they're waiting for; at the checkout, the basket (✓ once scanned). */
-function bubbleOf(c: Shopper, checkout: boolean): { look: number; state: string; patience: number; patienceMax: number; lines: { product: ItemId; left: number }[] } {
-  const lines: { product: ItemId; left: number }[] = [];
-  if (checkout) {
-    for (let i = 0; i < c.got.length; i++) {
-      const it = c.got[i], l = lines.find((x) => x.product === it);
-      const left = i >= c.scanned ? 1 : 0;
-      if (l) l.left += left; else lines.push({ product: it, left });
-    }
-  } else {
-    const l = c.lines[c.li];
-    if (l) lines.push({ product: l.product, left: l.left });
+  invalidate(): void {
+    for (const v of this.shoppers.values()) v.invalidate();
+    for (const c of this.chips.values()) c.invalidate();
   }
-  return { look: c.look, state: c.state, patience: c.patience, patienceMax: c.patienceMax, lines: lines.slice(0, 3) };
 }
 
+/** The 😡 bubble of a shopper who gave up. */
+function bubbleOf(c: Shopper): { look: number; state: string; patience: number; patienceMax: number; lines: { product: ItemId; left: number }[] } {
+  return { look: c.look, state: c.state, patience: c.patience, patienceMax: c.patienceMax, lines: [] };
+}
+
+/**
+ * Over a shopper's head: their shopping list while they shop (✓ for what's in the basket, the item they're
+ * after highlighted, red while its shelf is empty) with a bar for how far along they are; on the way to and
+ * in the checkout line, their basket: items scanned so far and what it comes to.
+ */
+class ListChip {
+  readonly s = new CanvasSprite(288, 84, 2.2);
+  private key = '';
+  constructor() { this.s.sprite.position.set(0, 2.8, 0); }
+
+  invalidate(): void { this.key = ''; }
+
+  show(c: Shopper, m: MarketSystem): void {
+    const shopping = c.state === 'shop';
+    let total = 0;
+    for (const l of c.lines) total += l.qty;
+    const basket = shopping ? 0 : Math.round(c.got.reduce((a, it) => a + m.sellPrice(it), 0));
+    const empty = shopping && c.waitT > 0;
+    const key = shopping
+      ? `s${c.li}|${empty ? 1 : 0}|${c.lines.map((l) => l.left).join(',')}`
+      : `q${c.scanned}/${c.got.length}|${basket}`;
+    if (key === this.key) return;
+    this.key = key;
+    this.s.draw((ctx, w, h) => {
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      rr(ctx, 4, 4, w - 8, h - 8, 22); ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = shopping ? '#c8cdd4' : '#3d7fd9'; ctx.stroke();
+      const bar = (frac: number, color: string) => {
+        ctx.fillStyle = '#e9e4d4'; rr(ctx, 18, h - 18, w - 36, 7, 4); ctx.fill();
+        ctx.fillStyle = color; rr(ctx, 18, h - 18, Math.max(7, (w - 36) * frac), 7, 4); ctx.fill();
+      };
+      if (shopping) {
+        const n = c.lines.length, cell = (w - 16) / Math.max(n, 1);
+        c.lines.forEach((l, i) => {
+          // (laid out left to right in list order)
+          const x = 8 + cell * (i + 0.5), cur = i === c.li;
+          if (cur) { ctx.fillStyle = empty ? '#ffd2cf' : '#fff1b8'; rr(ctx, x - cell / 2 + 3, 9, cell - 6, h - 30, 14); ctx.fill(); }
+          ctx.globalAlpha = l.left > 0 || cur ? 1 : 0.45;
+          ctx.font = `34px ${EMOJI}`;
+          ctx.fillText(ITEM_ICON[l.product], x - 18, 34);
+          ctx.font = `800 30px ${FONT}`;
+          ctx.fillStyle = l.left > 0 ? (cur && empty ? '#d0342c' : '#2b2a1f') : '#2f9e44';
+          ctx.fillText(l.left > 0 ? `${cur && empty ? '!' : ''}${l.left}` : '✓', x + 20, 36);
+          ctx.globalAlpha = 1;
+        });
+        bar(total ? c.got.length / total : 0, '#f6c23e');
+      } else {
+        ctx.font = `30px ${EMOJI}`;
+        ctx.fillText('🧾', 34, 34);
+        ctx.font = `800 30px ${FONT}`;
+        ctx.fillStyle = '#2b2a1f';
+        ctx.direction = 'ltr';
+        ctx.fillText(`${c.scanned}/${c.got.length}`, 100, 36);
+        ctx.fillStyle = '#2f8f3a';
+        ctx.fillText(`${basket}`, 196, 36);
+        ctx.font = `26px ${EMOJI}`;
+        ctx.fillText('💰', 252, 34);
+        bar(c.got.length ? c.scanned / c.got.length : 0, '#3d7fd9');
+      }
+    });
+  }
+}

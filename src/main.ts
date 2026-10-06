@@ -37,6 +37,8 @@ import { Modal, fmtAway, fmtMoney, ltr } from './ui/modal';
 import { DebugPanel } from './ui/debug';
 import { MetaMenus, dayKey } from './ui/menus';
 import { OrderPanel } from './ui/orderPanel';
+import { updateBanner } from './ui/updateBanner';
+import { MarketBoard } from './ui/marketBoard';
 import { ITEM_ICON } from './render/models';
 import { ALBUM_PAGES } from './config/album';
 import { simulateAway } from './sim/offline';
@@ -73,6 +75,7 @@ const hud = new Hud(uiRoot);
 hud.onRide = () => sim.field.toggleVehicle();
 const toast = new Toast(uiRoot);
 const goalCard = new GoalCard(uiRoot);
+const marketBoard = new MarketBoard(uiRoot);
 const pressureHud = new PressureHud(uiRoot);
 const scenarioHud = new ScenarioHud(uiRoot);
 const scenarioView = new ScenarioView(view.scene, view);
@@ -90,6 +93,7 @@ setInterval(save, ECONOMY.save.autosaveEvery * 1000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 addEventListener('pagehide', save);
 void requestPersistence();
+updateBanner(uiRoot, save);
 
 const modal = new Modal(uiRoot);
 
@@ -358,7 +362,11 @@ function frame(now: number): void {
   scenarioView.sync(sim, real);
   if (sim.scenario.phase === 'idle') music.stop();
   goalT -= real;
-  if (goalT <= 0) { goalT = 0.25; goalCard.update(nextGoal(sim), sim.money); }
+  if (goalT <= 0) {
+    goalT = 0.25;
+    // inside the supermarket its board takes the goal card's place
+    goalCard.update(marketBoard.update(sim) ? null : nextGoal(sim), sim.money);
+  }
   if (sim.carry.full()) {
     const s = toScreen(p.x, 0.78 + playerStack.height + 0.5, p.z);
     hud.setFull(s.x, s.y, true);

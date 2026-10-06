@@ -161,10 +161,20 @@ This file records the decisions made on top of it.
   margin for traffic. Tags are saved; the order panel shows the free farm delivery only once the farm makes
   that product.
 
-- Supermarket switched off for now (config/features.ts `FEATURES.supermarket = false`): its tiles are hidden, the
-  start screen and the settings switch are gone, every game is the farm. A save that built the store gets what it
-  paid for the store tiles (and the store's cash pile) back on load. The code stays; `marketcheck`/`marketpacing`
-  switch it on to keep it tested.
+- Supermarket polish (playtest: couldn't scroll the order panel on a phone; couldn't tell what shoppers buy or
+  when they're done; it felt unfinished). Panels scroll with a finger (they used to inherit the joystick's
+  `touch-action: none`). Every shopper carries a list chip: their items with ✓ as they're picked, the one
+  they're after highlighted (red with "!" while its shelf is empty) and a progress bar; in the checkout line
+  it turns into their basket (scanned/total and what it comes to). Inside the store a board replaces the
+  goal card: the next thing to do (sim/guide.ts `marketHint`: checkout > stock > fetch > order > coming >
+  cash > ok), shoppers in the store and in line, who's serving, cash waiting, empty shelves. The order panel
+  highlights products running out and has one button that orders a box of each (farm surplus first).
+  `FEATURES.supermarket` (config/features.ts) can still switch the whole store off: tiles and start screen
+  hidden, store spend refunded on load.
+- Updates: the service worker no longer reloads the game by itself. An open game checks for a new version
+  every 20 min and when it comes back to the front; when one is ready a button says so (progress is kept);
+  tapping it saves and reloads (ui/updateBanner.ts). Saves keep progress, not prices, so balance changes in
+  config apply to existing saves.
 - Football (Salah/Messi) physics redo (playtest: ball glitched, goal too small): the goal mouth is 2.6 wide (was
   1.4) with a real net. The ball is solid (never inside the player; a pinned ball stops the player); walking into
   it dribbles it a touch ahead, running into it kicks it (mostly the way the player runs, power from speed, one

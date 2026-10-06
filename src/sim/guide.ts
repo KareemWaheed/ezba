@@ -240,3 +240,18 @@ export function unservedLane(w: SimWorld): number {
   }
   return -1;
 }
+
+/** What the store needs from the player right now (the store board's hint), most urgent first. */
+export type MarketHint = 'checkout' | 'stock' | 'fetch' | 'order' | 'coming' | 'cash' | 'ok';
+
+export function marketHint(w: SimWorld): MarketHint {
+  const m = w.market, c = w.carry, cfg = ECONOMY.supermarket;
+  if (!m.cashier && m.shoppers.some((x) => x.state === 'queue') && !m.playerAtCheckout()) return 'checkout';
+  if (m.shelves.some((s) => s.open && c.has(s.def.item) && s.stock < cfg.shelfMax)) return 'stock';
+  const low = m.shelves.filter((s) => s.open && s.stock < 4);
+  if (low.some((s) => m.store[s.def.item] > 0)) return 'fetch';
+  if (low.some((s) => m.stocked(s.def.item) === 0)) return 'order';
+  if (m.incoming.length && low.length) return 'coming';
+  if (m.cash.value > 0) return 'cash';
+  return 'ok';
+}

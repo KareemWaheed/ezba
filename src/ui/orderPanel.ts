@@ -42,7 +42,7 @@ export class OrderPanel {
       const farmBtn = m.farmMakes(it)
         ? `<button class="t-claim o-farm" data-farm="${it}" ${room && farm > 0 ? '' : 'disabled'}>🚚 ببلاش<br><small>${ltr(`${Math.min(box, farm)}`)} من المزرعة</small></button>`
         : '';
-      return `<div class="t-row">
+      return `<div class="t-row${m.needsBox(it) ? ' o-need' : s.stock === 0 ? ' o-empty' : ''}">
         <span class="t-icon">${ITEM_ICON[it]}</span>
         <div class="t-body"><div class="t-label">${p.name} · <span class="o-price">${ltr(fmtMoney(m.sellPrice(it)))} 💰</span></div>
           <div class="o-tag"><button data-price="${it}" data-d="-1" ${m.price[it] > 0 ? '' : 'disabled'}>➖</button><span class="o-tag-${m.price[it]}">${PRICE_TAGS[m.price[it]].label}</span><button data-price="${it}" data-d="1" ${m.price[it] < PRICE_TAGS.length - 1 ? '' : 'disabled'}>➕</button></div>
@@ -51,12 +51,22 @@ export class OrderPanel {
         <button class="t-claim" data-buy="${it}" ${room && (w.money >= cost || m.onCredit(it)) ? '' : 'disabled'}>📦 +${box}<br><small>${w.money < cost && m.onCredit(it) ? 'على النوتة 📒' : ltr(fmtMoney(cost))}</small></button></div>
       </div>`;
     }).join('');
+    // one tap for everything running out: farm surplus first (free), the rest wholesale
+    const need = m.shelves.filter((s) => s.open && m.needsBox(s.def.item));
+    const needCost = need.reduce((a, s) => a + (m.farmSpare(s.def.item) > 0 ? 0 : m.boxCost(s.def.item)), 0);
+    const all = need.length
+      ? `<button class="m-btn o-all" data-all>📦 اطلب لكل الناقص (${ltr(`${need.length}`)}) ${need.map((s) => ITEM_ICON[s.def.item]).join('')}<br><small>${needCost ? ltr(fmtMoney(needCost)) + ' 💰' : 'ببلاش من المزرعة 🚚'}</small></button>`
+      : `<div class="o-allok">✅ كل الرفوف ليها بضاعة في المخزن أو جاية</div>`;
     const card = this.modal.open(`
       <div class="m-title">📱 اطلب بضاعة</div>
+      ${all}
       <div class="m-note">البضاعة بتوصل المخزن بعد ${ECONOMY.supermarket.deliveryTime} ثواني · منتجات المزرعة ممكن تيجي من مزرعتك ببلاش 🚚 · ➖➕ السعر: الرخيص بيتباع أكتر</div>
       <div class="t-list">${rows}</div>
       <button class="m-btn" data-close>تمام</button>`, () => { this.shown = false; });
     this.shown = true;
+    card.querySelector<HTMLButtonElement>('[data-all]')?.addEventListener('click', () => {
+      if (m.restockAll()) this.show();
+    });
     card.querySelectorAll<HTMLButtonElement>('[data-buy]').forEach((b) => b.addEventListener('click', () => {
       if (m.order(b.dataset.buy as never)) this.show();
     }));

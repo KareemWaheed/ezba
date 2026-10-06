@@ -16,6 +16,7 @@ import { simulateAway } from '../src/sim/offline';
 import { Bot } from '../src/sim/bot';
 import { LAYOUT } from '../src/config/layout';
 import { UPGRADE_BY_ID } from '../src/config/upgrades';
+import { marketHint } from '../src/sim/guide';
 
 const DT = 1 / 30;
 let fails = 0;
@@ -225,6 +226,26 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
   // time away: a staffed store earns while the player is gone (paid out with the rest, not left in its cash pile)
   const cash0 = m.cash.value, r = simulateAway(w, 600);
   ok(r.raw > 0 && m.cash.value === cash0, `time away counts the store's sales (${Math.round(r.raw)} raw in 10 min)`);
+}
+
+// store board hints and the order-everything button
+{
+  const w = farm({ 'market.unlock': 1 }), m = w.market, D = MARKET.desk;
+  w.money = 1e6;
+  at(w, D.x, D.z, 0.1);
+  ok(marketHint(w) === 'order', `empty store: the board says order (${marketHint(w)})`);
+  const open = m.shelves.filter((s) => s.open);
+  const n = m.restockAll();
+  ok(n === open.length && open.every((s) => !m.needsBox(s.def.item)), `one tap orders a box for every empty shelf (${n}/${open.length})`);
+  ok(m.restockAll() === 0, 'a second tap orders nothing more');
+  ok(marketHint(w) === 'coming', `then: on its way (${marketHint(w)})`);
+  at(w, D.x, D.z, ECONOMY.supermarket.deliveryTime + 1);
+  ok(marketHint(w) === 'fetch', `delivered: fetch it to the shelves (${marketHint(w)})`);
+  const S = MARKET.store;
+  at(w, S.x, S.z, 3);
+  ok(w.carry.n > 0 && marketHint(w) === 'stock', `carrying: stock the shelf (${marketHint(w)})`);
+  m.shoppers.push({ id: 999, look: 1, type: 'normal', x: 0, z: 0, rot: 0, speed: 0, state: 'queue', lines: [], li: 0, got: ['rice'], scanned: 0, waitT: 0, takeT: 0, patience: 90, patienceMax: 90, gone: false });
+  ok(marketHint(w) === 'checkout', `someone in line and no cashier: go to the checkout (${marketHint(w)})`);
 }
 
 // switched off (as in the game now): a save that built the store gets its spend back and the store stays shut
