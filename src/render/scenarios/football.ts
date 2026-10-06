@@ -19,26 +19,46 @@ function pitchLines(): THREE.BufferGeometry {
     part(box, LINE, cx, y, P.z1, 0, 0, 0, w, 0.01, t),
     part(box, LINE, P.x0, y, cz, 0, 0, 0, t, 0.01, d),
     part(box, LINE, P.x1, y, cz, 0, 0, 0, t, 0.01, d),
-    part(box, LINE, P.x1 - 0.9, y, cz, 0, 0, 0, t, 0.01, 2.2),
-    part(box, LINE, P.x1 - 0.45, y, cz - 1.1, 0, 0, 0, 0.9, 0.01, t),
-    part(box, LINE, P.x1 - 0.45, y, cz + 1.1, 0, 0, 0, 0.9, 0.01, t),
+    // penalty box round the (bigger) goal
+    part(box, LINE, P.x1 - 1.3, y, cz, 0, 0, 0, t, 0.01, 3.6),
+    part(box, LINE, P.x1 - 0.65, y, cz - 1.8, 0, 0, 0, 1.3, 0.01, t),
+    part(box, LINE, P.x1 - 0.65, y, cz + 1.8, 0, 0, 0, 1.3, 0.01, t),
     part(sph, LINE, P.kick.x, y, P.kick.z, 0, 0, 0, 0.09, 0.01, 0.09),
   ]);
 }
 
-/** Goal frame (posts + bar + a net-colored back). */
+/** Goal frame: posts + crossbar, a net (back, roof, sides) with a few net lines. */
 function goalGeo(): THREE.BufferGeometry {
-  const g = P.goal, h = 0.9, x = g.x + 0.05;
-  return merge([
-    part(cyl, 0xffffff, x, h / 2, g.z0, 0, 0, 0, 0.05, h, 0.05),
-    part(cyl, 0xffffff, x, h / 2, g.z1, 0, 0, 0, 0.05, h, 0.05),
-    part(cyl, 0xffffff, x, h, (g.z0 + g.z1) / 2, Math.PI / 2, 0, 0, 0.05, g.z1 - g.z0, 0.05),
-    part(box, 0xdfe8e8, x + 0.35, h / 2, (g.z0 + g.z1) / 2, 0, 0, 0, 0.02, h, g.z1 - g.z0),
-    part(box, 0xdfe8e8, x + 0.17, h - 0.01, (g.z0 + g.z1) / 2, 0, 0, 0, 0.36, 0.02, g.z1 - g.z0),
-  ]);
+  const g = P.goal, h = 1.15, x = g.x, deep = 0.65, w = g.z1 - g.z0, cz = (g.z0 + g.z1) / 2, net = 0xdfe8e8;
+  const parts = [
+    part(cyl, 0xffffff, x, h / 2, g.z0, 0, 0, 0, 0.07, h, 0.07),
+    part(cyl, 0xffffff, x, h / 2, g.z1, 0, 0, 0, 0.07, h, 0.07),
+    part(cyl, 0xffffff, x, h, cz, Math.PI / 2, 0, 0, 0.07, w, 0.07),
+    part(box, net, x + deep, h / 2, cz, 0, 0, 0, 0.02, h, w),
+    part(box, net, x + deep / 2, h - 0.01, cz, 0, 0, 0, deep, 0.02, w),
+    part(box, net, x + deep / 2, h / 2, g.z0, 0, 0, 0, deep, h, 0.02),
+    part(box, net, x + deep / 2, h / 2, g.z1, 0, 0, 0, deep, h, 0.02),
+  ];
+  for (let z = g.z0 + 0.25; z < g.z1; z += 0.25) parts.push(part(box, 0xb9c4c4, x + deep - 0.01, h / 2, z, 0, 0, 0, 0.025, h, 0.015));
+  for (let y = 0.2; y < h; y += 0.2) parts.push(part(box, 0xb9c4c4, x + deep - 0.01, y, cz, 0, 0, 0, 0.025, 0.015, w));
+  return merge(parts);
 }
 
-const BALL_GEO = merge([part(sph, 0xffffff, 0, 0.2, 0, 0, 0, 0, 0.2, 0.2, 0.2), part(sph, 0x222222, 0, 0.36, 0, 0, 0, 0, 0.07, 0.05, 0.07), part(sph, 0x222222, 0.16, 0.22, 0, 0, 0, 0, 0.05, 0.07, 0.07)]);
+/**
+ * The ball, built around its center (it spins about that point while rolling; a model built from the
+ * ground up would swing around its bottom and wobble). Black patches all round.
+ */
+const BALL_GEO = merge([
+  part(sph, 0xffffff, 0, 0, 0, 0, 0, 0, 0.2, 0.2, 0.2),
+  part(sph, 0x222222, 0, 0.16, 0, 0, 0, 0, 0.07, 0.05, 0.07),
+  part(sph, 0x222222, 0, -0.16, 0, 0, 0, 0, 0.07, 0.05, 0.07),
+  part(sph, 0x222222, 0.16, 0.02, 0, 0, 0, 0, 0.05, 0.07, 0.07),
+  part(sph, 0x222222, -0.16, 0.02, 0, 0, 0, 0, 0.05, 0.07, 0.07),
+  part(sph, 0x222222, 0, 0.02, 0.16, 0, 0, 0, 0.07, 0.07, 0.05),
+  part(sph, 0x222222, 0, 0.02, -0.16, 0, 0, 0, 0.07, 0.07, 0.05),
+]);
+/** Ball model scale and the resulting radius (it rests on the ground). */
+const BALL_SCALE = 1.35, BALL_VIS_R = 0.2 * BALL_SCALE;
 const CONE_GEO = merge([part(cyl, 0xff7a1a, 0, 0.22, 0, 0, 0, 0, 0.13, 0.44, 0.13), part(box, 0xff7a1a, 0, 0.02, 0, 0, 0, 0, 0.36, 0.04, 0.36), part(cyl, 0xffffff, 0, 0.26, 0, 0, 0, 0, 0.1, 0.07, 0.1)]);
 
 /** Football visit: pitch lines, a goal, the ball, cones (Messi) or a goalkeeper (Salah), and a score sign. */
@@ -57,7 +77,7 @@ export class FootballView implements MechanicView {
     this.group.add(new THREE.Mesh(goalGeo(), MAT));
     this.group.add(this.ball);
     this.score.sprite.position.set(P.goal.x - 0.6, 2.6, P.goal.z0 - 0.8);
-    this.ball.scale.setScalar(1.35);
+    this.ball.scale.setScalar(BALL_SCALE);
     this.group.add(this.score.sprite);
     scene.add(this.group);
   }
@@ -75,8 +95,8 @@ export class FootballView implements MechanicView {
     }
     // the ball rolls: spin around the axis across its motion
     const b = m.ball, sp = Math.hypot(b.vx, b.vz);
-    this.ball.position.set(b.x, 0, b.z);
-    if (sp > 0.01) this.ball.rotateOnWorldAxis(this.axis.set(b.vz / sp, 0, -b.vx / sp), (sp * dt) / 0.2);
+    this.ball.position.set(b.x, BALL_VIS_R, b.z);
+    if (sp > 0.01) this.ball.rotateOnWorldAxis(this.axis.set(b.vz / sp, 0, -b.vx / sp), (sp * dt) / BALL_VIS_R);
     // passed cones sink a little and glow white
     this.cones.forEach((c, i) => { c.scale.y = m.cones[i] ? 0.6 : 1 + Math.sin(this.time * 6 + i) * 0.05; });
     if (this.keeper) {

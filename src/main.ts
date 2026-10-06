@@ -23,6 +23,7 @@ import { restore, serialize } from './sim/save';
 import { UPGRADES } from './config/upgrades';
 import { MODE, chosenMode, clearSave, loadSave, requestPersistence, writeSave } from './storage';
 import { TitleScreen } from './ui/titleScreen';
+import { FEATURES } from './config/features';
 import { GoalCard, Toast } from './ui/panels';
 import { preventZoom } from './ui/noZoom';
 import { PressureHud } from './ui/pressureHud';
@@ -126,7 +127,7 @@ document.addEventListener('visibilitychange', () => {
 sim.daily.ensure(dayKey());
 const title = new TitleScreen(uiRoot, save);
 // first launch (or first since the supermarket game arrived): pick a game
-if (!chosenMode()) title.show();
+if (FEATURES.supermarket && !chosenMode()) title.show();
 const menus = new MetaMenus(uiRoot, sim, modal);
 menus.onSwitchGame = () => title.show(true);
 const orderPanel = new OrderPanel(sim, modal);

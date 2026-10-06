@@ -1,5 +1,6 @@
 import { SAVE_VERSION, migrate, type SaveData } from './sim/save';
 import type { GameMode } from './config/paths';
+import { FEATURES } from './config/features';
 
 const MODE_KEY = 'ezba.mode';
 /** Each game has its own save slot (the farm keeps the original key, so old saves load as the farm). */
@@ -10,8 +11,8 @@ export function chosenMode(): GameMode | null {
   try { const m = localStorage.getItem(MODE_KEY); return m === 'farm' || m === 'market' ? m : null; } catch { return null; }
 }
 
-/** The game this page runs: the one picked, else the farm. */
-export const MODE: GameMode = chosenMode() ?? 'farm';
+/** The game this page runs: the one picked, else the farm (always the farm while the supermarket is off). */
+export const MODE: GameMode = FEATURES.supermarket ? chosenMode() ?? 'farm' : 'farm';
 const KEY = keyOf(MODE);
 
 /** Remember the picked game (the caller reloads the page when it changes). */

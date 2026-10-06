@@ -5,12 +5,17 @@
  *   npm run marketcheck
  */
 import { SimWorld } from '../src/sim/world';
+import { FEATURES } from '../src/config/features';
+
+// the supermarket is switched off in the game; its checks switch it on
+FEATURES.supermarket = true;
 import { ECONOMY, type UpgradeId } from '../src/config/economy';
 import { MARKET, PRICE_TAGS, SHELVES } from '../src/config/market';
 import { serialize, restore, migrate, legacyReset } from '../src/sim/save';
 import { simulateAway } from '../src/sim/offline';
 import { Bot } from '../src/sim/bot';
 import { LAYOUT } from '../src/config/layout';
+import { UPGRADE_BY_ID } from '../src/config/upgrades';
 
 const DT = 1 / 30;
 let fails = 0;
@@ -220,6 +225,22 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
   // time away: a staffed store earns while the player is gone (paid out with the rest, not left in its cash pile)
   const cash0 = m.cash.value, r = simulateAway(w, 600);
   ok(r.raw > 0 && m.cash.value === cash0, `time away counts the store's sales (${Math.round(r.raw)} raw in 10 min)`);
+}
+
+// switched off (as in the game now): a save that built the store gets its spend back and the store stays shut
+{
+  const w = farm({ 'market.unlock': 1, 'market.shelves': 3, 'market.cashier': 1 });
+  w.market.cash.value = 120;
+  const saved = JSON.parse(JSON.stringify(serialize(w, Date.now())));
+  FEATURES.supermarket = false;
+  const w2 = new SimWorld(1);
+  w2.money = 0;
+  restore(w2, migrate(saved)!);
+  w2.upgrades.apply();
+  ok(!w2.market.open && w2.upgrades.level('market.unlock') === 0, 'switched off: a saved store stays shut');
+  ok(w2.money > saved.money + 120, `switched off: its spend and cash pile are refunded (${Math.round(saved.money)} -> ${Math.round(w2.money)})`);
+  ok(w2.upgrades.hidden('market.unlock') && !w2.upgrades.available(UPGRADE_BY_ID.get('market.unlock')!), 'switched off: its tiles are hidden');
+  FEATURES.supermarket = true;
 }
 
 console.log(fails ? `\n${fails} failed` : '\nall market checks passed');

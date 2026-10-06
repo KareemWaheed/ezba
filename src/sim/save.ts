@@ -3,6 +3,7 @@ import { SimWorld } from './world';
 import { LEGACY } from '../config/legacy';
 import { FIELDS } from '../config/fields';
 import type { GameMode } from '../config/paths';
+import { FEATURES } from '../config/features';
 
 /**
  * Versioned save format. Bump SAVE_VERSION when the shape changes and add a migration from the
@@ -207,6 +208,12 @@ export function restore(w: SimWorld, s: SaveData): void {
   }
   w.cash.value = num(s.cash?.value);
   w.cash.bills = Math.floor(num(s.cash?.bills));
+  // the supermarket is switched off: refund its upgrades and the cash waiting at its checkout
+  const refund = up.refundClosedFeatures();
+  if (refund > 0 || w.market.cash.value > 0) {
+    w.money += refund + (FEATURES.supermarket ? 0 : w.market.cash.value);
+    if (!FEATURES.supermarket) { w.market.cash.value = 0; w.market.cash.bills = 0; }
+  }
   up.apply();
   w.carry.items.length = 0;
   for (const p of s.carry ?? []) if ((ITEM_IDS as string[]).includes(p) && !w.carry.full()) w.carry.push(p as ItemId);

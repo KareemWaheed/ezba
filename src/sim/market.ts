@@ -1,6 +1,7 @@
 import { ECONOMY, type ItemId } from '../config/economy';
 import { MARKET, MARKET_PRODUCT, PRICE_NORMAL, PRICE_TAGS, SHELVES, type ShelfDef } from '../config/market';
 import { pickType } from '../config/album';
+import { FEATURES } from '../config/features';
 import type { WorkerJob } from './staff';
 import type { SimWorld } from './world';
 import { dist, moveToward, turnToward } from './math';
@@ -294,7 +295,7 @@ export class MarketSystem {
 
   sync(): void {
     const w = this.w, up = w.upgrades;
-    this.open = up.level('market.unlock') > 0;
+    this.open = FEATURES.supermarket && up.level('market.unlock') > 0;
     const rows = this.open ? 1 + up.level('market.shelves') : 0;
     for (const s of this.shelves) s.open = s.def.row < rows;
     const st = MARKET.store;

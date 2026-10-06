@@ -70,7 +70,8 @@ export const LAYOUT = {
    */
   pitch: {
     x0: 0.6, x1: 6.6, z0: 16.2, z1: 21.0,
-    goal: { x: 6.6, z0: 17.9, z1: 19.3 },
+    // a proper little goal (was 1.4 wide): room to beat Salah's keeper
+    goal: { x: 6.6, z0: 17.3, z1: 19.9 },
     kick: { x: 1.8, z: 18.6 },
     cones: [{ x: 2.8, z: 17.2 }, { x: 3.7, z: 20.0 }, { x: 4.6, z: 17.2 }, { x: 5.4, z: 20.0 }],
   },

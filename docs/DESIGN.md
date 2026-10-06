@@ -161,3 +161,12 @@ This file records the decisions made on top of it.
   margin for traffic. Tags are saved; the order panel shows the free farm delivery only once the farm makes
   that product.
 
+- Supermarket switched off for now (config/features.ts `FEATURES.supermarket = false`): its tiles are hidden, the
+  start screen and the settings switch are gone, every game is the farm. A save that built the store gets what it
+  paid for the store tiles (and the store's cash pile) back on load. The code stays; `marketcheck`/`marketpacing`
+  switch it on to keep it tested.
+- Football (Salah/Messi) physics redo (playtest: ball glitched, goal too small): the goal mouth is 2.6 wide (was
+  1.4) with a real net. The ball is solid (never inside the player; a pinned ball stops the player); walking into
+  it dribbles it a touch ahead, running into it kicks it (mostly the way the player runs, power from speed, one
+  kick per touch); it rolls with drag + constant friction so it settles, bounces off the pitch edges and round
+  posts. The ball model spins about its center (it used to swing around its bottom and wobble).

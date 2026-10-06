@@ -7,6 +7,7 @@ import { fmtMoney, ltr, type Modal } from './modal';
 import { LEGACY, legacyTitle } from '../config/legacy';
 import { legacyReset } from '../sim/save';
 import { replaceSave } from '../storage';
+import { FEATURES } from '../config/features';
 
 interface InstallPrompt extends Event { prompt(): Promise<void> }
 
@@ -166,7 +167,7 @@ export class MetaMenus {
     const card = this.modal.open(`
       <div class="m-title">⚙️ الإعدادات</div>
       <button class="m-btn s-sound" data-sound>${isMuted() ? '🔇 الصوت مقفول' : '🔊 الصوت شغال'}</button>
-      <button class="m-btn s-switch" data-switch>🔁 ${this.sim.mode === 'market' ? 'روح للمزرعة 🐔' : 'روح للسوبر ماركت 🛒'}</button>
+      ${FEATURES.supermarket ? `<button class="m-btn s-switch" data-switch>🔁 ${this.sim.mode === 'market' ? 'روح للمزرعة 🐔' : 'روح للسوبر ماركت 🛒'}</button>` : ''}
       ${install}
       <div class="m-note">بتشتغل من غير نت، وتقدمك بيتحفظ لوحده</div>
       <button class="m-btn" data-close>تمام</button>`, () => { this.open = null; });

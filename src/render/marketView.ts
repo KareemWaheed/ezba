@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ECONOMY, type ItemId } from '../config/economy';
 import { MARKET, SHELVES } from '../config/market';
+import { FEATURES } from '../config/features';
 import type { SimWorld } from '../sim/world';
 import type { Shopper } from '../sim/market';
 import { MAT, PRIM, merge, part } from './geo';
@@ -194,7 +195,7 @@ export class MarketView {
   sync(sim: SimWorld, dt: number): void {
     const m = sim.market;
     this.time += dt;
-    this.lock.visible = !m.open && sim.factory.open;
+    this.lock.visible = FEATURES.supermarket && !m.open && sim.factory.open;
     this.root.visible = m.open;
     if (!m.open) { this.clearShoppers(); return; }
     m.shelves.forEach((s, i) => {
