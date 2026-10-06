@@ -78,6 +78,8 @@ export interface KitchenMachine {
 /** Kitchen helper job: eggs/milk from the piles (or shop-counter surplus) into the right machine. */
 class SupplyJob implements WorkerJob {
   readonly key = 'cafe.supply';
+  /** (eggs or milk: a station whose stock is left for the shop's line isn't waited on) */
+  readonly repick = true;
   private target: number[] = [];
   private fromCounter: boolean[] = [];
   constructor(private cafe: CafeSystem) {}

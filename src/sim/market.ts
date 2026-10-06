@@ -300,10 +300,18 @@ export class MarketSystem {
     return true;
   }
 
-  /** A product running out: its shelf is half empty or less and nothing is in the storeroom or on the way. */
+  /** An open shelf half empty or less (the store board, the guide arrow and the order panel all use this). */
+  low(s: Shelf): boolean { return s.open && s.stock <= ECONOMY.supermarket.shelfMax / 2; }
+
+  /** A product running out: its shelf is low and nothing is in the storeroom or on the way. */
   needsBox(item: ItemId): boolean {
     const s = this.shelfFor(item);
-    return !!s && s.open && s.stock <= ECONOMY.supermarket.shelfMax / 2 && this.stocked(item) === 0 && this.canOrder(item);
+    return !!s && this.low(s) && this.stocked(item) === 0 && this.canOrder(item);
+  }
+
+  /** A box of this can be had right now: free from the farm's surplus, paid, or on the supplier's credit. */
+  canGetBox(item: ItemId): boolean {
+    return this.farmSpare(item) > 0 || this.w.money >= this.boxCost(item) || this.onCredit(item);
   }
 
   /** One box for every product running out (from the farm's surplus when it has some, else wholesale). */
@@ -384,13 +392,16 @@ export class MarketSystem {
     const most = Math.min(family ? cfg.family.lines : cfg.maxLines, open.length), least = family ? Math.min(3, most) : 1;
     const n = least + rng.int(most - least + 1);
     const lines: ShopLine[] = [];
-    // each list line picks a shelf weighted by how much its price tag draws shoppers
-    let total = 0;
-    for (const s of open) total += this.demand(s.def.item);
-    for (let k = 0; k < n; k++) {
-      let r = rng.next() * total, s = open[open.length - 1];
-      for (const o of open) { r -= this.demand(o.def.item); if (r <= 0) { s = o; break; } }
+    // each list line picks a shelf weighted by how much its price tag draws shoppers (a repeat pick is
+    // dropped; a family picks from the shelves not on its list yet, so it always gets its `n` products)
+    const pool = open.slice();
+    for (let k = 0; k < n && pool.length; k++) {
+      let total = 0;
+      for (const o of pool) total += this.demand(o.def.item);
+      let r = rng.next() * total, s = pool[pool.length - 1];
+      for (const o of pool) { r -= this.demand(o.def.item); if (r <= 0) { s = o; break; } }
       if (lines.some((l) => l.shelf === s.index)) continue;
+      if (family) pool.splice(pool.indexOf(s), 1);
       const qty = 1 + rng.int(family ? cfg.family.qty : cfg.maxQty);
       lines.push({ product: s.def.item, shelf: s.index, qty, left: qty });
     }

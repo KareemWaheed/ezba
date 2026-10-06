@@ -7,10 +7,12 @@ import { fmtMoney, ltr, type Modal } from './modal';
 
 /** One line about a save, for the "replace?" card: game, money, upgrades, bigger-ezba level. */
 function summary(s: SaveData): string {
+  // (from a pasted code: only numbers built here go into the HTML, never the code's own text)
+  const n = (v: unknown) => Math.max(0, Math.floor(Number(v)) || 0);
   let ups = 0;
-  for (const k in s.levels) ups += s.levels[k] ?? 0;
-  const game = s.mode === 'market' ? '🛒 سوبر ماركت' : '🐔 مزرعة';
-  return `${game} · 💰 ${ltr(fmtMoney(s.money))} · ⬆️ ${ltr(String(ups))} ترقية${s.legacy ? ` · 🏆 ${ltr(String(s.legacy))}` : ''}`;
+  for (const k in s.levels) ups += n(s.levels[k]);
+  const game = s.mode === 'market' ? '🛒 سوبر ماركت' : '🐔 مزرعة', legacy = n(s.legacy);
+  return `${game} · 💰 ${ltr(fmtMoney(n(s.money)))} · ⬆️ ${ltr(String(ups))} ترقية${legacy ? ` · 🏆 ${ltr(String(legacy))}` : ''}`;
 }
 
 /**
@@ -79,6 +81,7 @@ export class TransferPanel {
       const box = card.querySelector<HTMLElement>('.x-scan')!;
       box.hidden = false;
       void this.scan(box.querySelector('video')!, (code) => void this.check(code)).catch(() => {
+        this.stop();
         box.hidden = true;
         this.showReceive('مش قادرين نفتح الكاميرا: اسمح للعبة باستخدامها، أو الزق الكود');
       });

@@ -51,20 +51,19 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
 
 /**
  * Supermarket hint (the first stretch of a supermarket-first game, or the first shoppers of a farm's
- * store): stock what's in hand, run the checkout while there's no cashier, fetch for an empty shelf,
- * order what the storeroom lacks, pick up the cash.
+ * store): run the checkout while there's no cashier, stock what's in hand, fetch for a low shelf, order
+ * what the storeroom lacks (when a box can be had), pick up the cash.
  */
 export function marketAction(w: SimWorld, out: { x: number; z: number }): boolean {
   const m = w.market, c = w.carry;
   if (!m.open) return false;
   if (w.mode === 'market' ? w.upgrades.bought >= 14 : w.stats.marketServed >= 25) return false;
+  // (same order as the store board's hint: waiting shoppers lose patience, so the checkout comes first)
+  if (!m.cashier && m.shoppers.some((x) => x.state === 'queue')) { out.x = MARKET.checkout.serve.x; out.z = MARKET.checkout.serve.z; return true; }
   const shelf = m.shelves.find((s) => s.open && c.has(s.def.item) && s.stock < ECONOMY.supermarket.shelfMax);
   if (shelf) { out.x = shelf.def.front.x; out.z = shelf.def.front.z; return true; }
-  if (!m.cashier && m.shoppers.some((x) => x.state === 'queue')) { out.x = MARKET.checkout.serve.x; out.z = MARKET.checkout.serve.z; return true; }
-  if (c.n === 0 && m.shelves.some((s) => s.open && s.stock < 4 && m.store[s.def.item] > 0)) { out.x = MARKET.store.x; out.z = MARKET.store.z; return true; }
-  if (!m.incoming.length && m.shelves.some((s) => s.open && s.stock < 4 && m.store[s.def.item] === 0 && w.money >= m.boxCost(s.def.item))) {
-    out.x = MARKET.desk.x; out.z = MARKET.desk.z; return true;
-  }
+  if (c.n === 0 && m.shelves.some((s) => m.low(s) && m.store[s.def.item] > 0)) { out.x = MARKET.store.x; out.z = MARKET.store.z; return true; }
+  if (m.shelves.some((s) => m.needsBox(s.def.item) && m.canGetBox(s.def.item))) { out.x = MARKET.desk.x; out.z = MARKET.desk.z; return true; }
   if (m.cash.value > 0 && c.n === 0) { out.x = MARKET.cash.x; out.z = MARKET.cash.z; return true; }
   return false;
 }
@@ -112,13 +111,9 @@ const FIELD_TUTORIAL = 40;
 function fieldAction(w: SimWorld, out: { x: number; z: number }): boolean {
   const f = w.field, c = w.carry;
   if (!f.open || w.stats.crops >= FIELD_TUTORIAL) return false;
-  // full (or the field is bare): bundles to the stall (corn goes on its pile for the corn workers);
-  // corn only walks to its shop counter slot while that pile is full
-  if (c.n > 0 && (c.full() || f.ready === 0)) {
-    const corn = w.stations.find((s) => s.def.product === 'corn');
-    const cornRoom = !!corn && !corn.pileFull;
-    if (c.has('wheat') || (c.has('corn') && cornRoom)) { out.x = FIELDS.stall.drop.x; out.z = FIELDS.stall.drop.z; return true; }
-    if (corn && c.has('corn')) { out.x = corn.def.counter.dropX; out.z = corn.def.counter.dropZ; return true; }
+  // full (or the field is bare): bundles to the stall (corn goes on its pile for the corn workers: no limit)
+  if (c.n > 0 && (c.full() || f.ready === 0) && (c.has('wheat') || c.has('corn'))) {
+    out.x = FIELDS.stall.drop.x; out.z = FIELDS.stall.drop.z; return true;
   }
   if (c.full()) return false;
   return nearestStalk(w, out);
@@ -248,10 +243,12 @@ export function marketHint(w: SimWorld): MarketHint {
   const m = w.market, c = w.carry, cfg = ECONOMY.supermarket;
   if (!m.cashier && m.shoppers.some((x) => x.state === 'queue') && !m.playerAtCheckout()) return 'checkout';
   if (m.shelves.some((s) => s.open && c.has(s.def.item) && s.stock < cfg.shelfMax)) return 'stock';
-  const low = m.shelves.filter((s) => s.open && s.stock < 4);
+  const low = m.shelves.filter((s) => m.low(s));
   if (low.some((s) => m.store[s.def.item] > 0)) return 'fetch';
-  if (low.some((s) => m.stocked(s.def.item) === 0)) return 'order';
+  // (a box it can get now; one it can't pay for yet waits for the cash below)
+  if (low.some((s) => m.needsBox(s.def.item) && m.canGetBox(s.def.item))) return 'order';
   if (m.incoming.length && low.length) return 'coming';
   if (m.cash.value > 0) return 'cash';
+  if (low.some((s) => m.needsBox(s.def.item))) return 'order';
   return 'ok';
 }

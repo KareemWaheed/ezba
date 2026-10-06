@@ -132,6 +132,10 @@ export class FootballMechanic implements Mechanic {
     const nx = d > 1e-4 ? dx / d : -Math.sin(p.rot), nz = d > 1e-4 ? dz / d : -Math.cos(p.rot);
     p.x = b.x + nx * TOUCH;
     p.z = b.z + nz * TOUCH;
+    // the run into the ball stops (so the walk cycle and anything reading the speed see the player held)
+    const into = -(p.vx * nx + p.vz * nz);
+    if (into > 0) { p.vx += into * nx; p.vz += into * nz; }
+    p.speed = Math.min(p.speed, Math.hypot(p.vx, p.vz));
   }
 
   private touch(p: SimWorld['player']): void {
@@ -141,10 +145,11 @@ export class FootballMechanic implements Mechanic {
     // contact normal (player -> ball); dead center: along the player's run, else their facing
     let nx: number, nz: number;
     if (d > 1e-4) { nx = dx / d; nz = dz / d; } else if (ps > 0.01) { nx = p.vx / ps; nz = p.vz / ps; } else { nx = Math.sin(p.rot); nz = Math.cos(p.rot); }
+    const pv = p.vx * nx + p.vz * nz, bv = b.vx * nx + b.vz * nz;
+    // the ball is already moving away at least as fast: leave it be (no snapping it back to the player)
+    if (pv <= bv) return;
     b.x = p.x + nx * TOUCH;
     b.z = p.z + nz * TOUCH;
-    const pv = p.vx * nx + p.vz * nz, bv = b.vx * nx + b.vz * nz;
-    if (pv <= bv) return; // moving away from it already
     if (this.kickT <= 0 && pv > KICK_SPEED) {
       let kx = (p.vx / ps) * KICK_AIM + nx * (1 - KICK_AIM), kz = (p.vz / ps) * KICK_AIM + nz * (1 - KICK_AIM);
       const kl = Math.hypot(kx, kz) || 1;

@@ -17,6 +17,8 @@ export interface FactoryMachine {
 /** Factory supplier: eggs and milk from the shop counters' surplus (or full piles) into the machines. */
 class SupplyJob implements WorkerJob {
   readonly key = 'factory.supply';
+  /** (eggs or milk: a station whose stock is left for the shop's line isn't waited on) */
+  readonly repick = true;
   /** Per worker slot: station index and machine index of the current trip. */
   private st: number[] = [];
   private mc: number[] = [];

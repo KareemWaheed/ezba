@@ -54,13 +54,15 @@ export class OrderPanel {
     // one tap for everything running out: farm surplus first (free), the rest wholesale
     const need = m.shelves.filter((s) => s.open && m.needsBox(s.def.item));
     const needCost = need.reduce((a, s) => a + (m.farmSpare(s.def.item) > 0 ? 0 : m.boxCost(s.def.item)), 0);
+    // (disabled while not one of those boxes can be had: no farm surplus, money or supplier credit)
+    const can = need.some((s) => m.canGetBox(s.def.item));
     const all = need.length
-      ? `<button class="m-btn o-all" data-all>📦 اطلب لكل الناقص (${ltr(`${need.length}`)}) ${need.map((s) => ITEM_ICON[s.def.item]).join('')}<br><small>${needCost ? ltr(fmtMoney(needCost)) + ' 💰' : 'ببلاش من المزرعة 🚚'}</small></button>`
+      ? `<button class="m-btn o-all" data-all ${can ? '' : 'disabled'}>📦 اطلب لكل الناقص (${ltr(`${need.length}`)}) ${need.map((s) => ITEM_ICON[s.def.item]).join('')}<br><small>${can ? (needCost ? ltr(fmtMoney(needCost)) + ' 💰' : 'ببلاش من المزرعة 🚚') : 'مش معاك فلوس كفاية: لم فلوس الكاشير الأول 💵'}</small></button>`
       : `<div class="o-allok">✅ كل الرفوف ليها بضاعة في المخزن أو جاية</div>`;
     const card = this.modal.open(`
       <div class="m-title">📱 اطلب بضاعة</div>
       ${all}
-      <div class="m-note">البضاعة بتوصل المخزن بعد ${ECONOMY.supermarket.deliveryTime} ثواني · منتجات المزرعة ممكن تيجي من مزرعتك ببلاش 🚚 · ➖➕ السعر: الرخيص بيجيب زباين أكتر للمحل كله، والغالي زباين أقل بس مكسب أكتر في الحتة</div>
+      <div class="m-note">البضاعة بتوصل المخزن بعد ${ECONOMY.supermarket.deliveryTime} ثواني · منتجات المزرعة ممكن تيجي من مزرعتك ببلاش 🚚 · ➖➕ السعر: الرخيص بيجيب زباين أكتر للمحل كله، والغالي بيكسب أكتر في الحتة الواحدة بس بيتباع أقل</div>
       <div class="t-list">${rows}</div>
       <button class="m-btn" data-close>تمام</button>`, () => { this.shown = false; });
     this.shown = true;

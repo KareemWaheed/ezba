@@ -20,6 +20,8 @@ export interface WorkerJob {
   unloadAt(w: SimWorld, slot: number, out: { x: number; z: number }): void;
   /** Hand one item over; false if the target can't take it right now. */
   give(w: SimWorld, item: ItemId): boolean;
+  /** Chooses among several sources: after waiting empty-handed a while, the worker picks again. */
+  readonly repick?: boolean;
   /** How many more the target can take right now (workers never load more than this). */
   room?(w: SimWorld, slot: number): number;
   /** Put an item back where it came from (target stayed full / went away). */
@@ -123,6 +125,8 @@ export class Worker {
           if (it) { this.carry.push(it); this.t = interval; }
         }
         if (this.carry.full() || (this.carry.n > 0 && (this.carry.n >= room || this.wait > cfg.maxWait))) { this.state = 'toUnload'; this.stuck = 0; }
+        // nothing to take here for a while (empty, or left for the shop's line): pick the source again
+        else if (this.job.repick && this.carry.n === 0 && this.wait > cfg.maxWait * 2) this.state = 'toLoad';
         break;
       }
       case 'toUnload':

@@ -35,7 +35,7 @@ export function refundPriceDrops(w: SimWorld, pv: number): RefundLine[] {
     let amount = Math.max(0, diff);
     // paid into the next level beyond its new price: the rest comes back (the level completes on the next step onto it)
     const next = up.cost(id);
-    if (up.paid[id] > next) { amount += Math.floor(up.paid[id] - next); up.paid[id] = next; }
+    if (up.paid[id] > next) { amount += up.paid[id] - next; up.paid[id] = next; }
     if (amount > 0) lines.push({ id, amount });
   }
   for (const l of lines) w.money += l.amount;

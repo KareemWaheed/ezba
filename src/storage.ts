@@ -29,7 +29,13 @@ export function hasSave(m: GameMode): boolean {
 export function loadSave(): SaveData | null {
   let raw: unknown = null;
   let text: string | null = null;
-  try { text = localStorage.getItem(KEY); raw = text ? JSON.parse(text) : null; } catch { return null; }
+  try {
+    text = localStorage.getItem(KEY);
+    // supermarket switched off: a supermarket-first game (its own slot) loads as the farm, store refunded on load
+    // (the next autosave moves it to the farm slot)
+    if (!text && !FEATURES.supermarket) text = localStorage.getItem(keyOf('market'));
+    raw = text ? JSON.parse(text) : null;
+  } catch { return null; }
   if (!raw) return null;
   const v = (raw as { v?: number }).v ?? 0;
   if (v < SAVE_VERSION && text) {
@@ -80,12 +86,21 @@ export function importCode(code: string): SaveData | null {
 export function importSave(s: SaveData): boolean {
   const mode: GameMode = s.mode === 'market' ? 'market' : 'farm';
   const key = keyOf(mode);
+  const back = `${key}-before-import`;
+  let old: string | null = null, oldBack: string | null = null, oldMode: string | null = null;
   try {
-    const old = localStorage.getItem(key);
-    if (old) localStorage.setItem(`${key}-before-import`, old);
+    old = localStorage.getItem(key);
+    oldBack = localStorage.getItem(back);
+    oldMode = localStorage.getItem(MODE_KEY);
+    if (old) localStorage.setItem(back, old);
     localStorage.setItem(key, JSON.stringify({ ...s, mode }));
     localStorage.setItem(MODE_KEY, mode);
-  } catch { return false; }
+  } catch {
+    // all or nothing: put back whatever was written before the failure
+    const put = (k: string, v: string | null) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* storage gone */ } };
+    put(key, old); put(back, oldBack); put(MODE_KEY, oldMode);
+    return false;
+  }
   blocked = true;
   return true;
 }

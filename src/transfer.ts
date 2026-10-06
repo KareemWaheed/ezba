@@ -1,4 +1,5 @@
-import { migrate, type SaveData } from './sim/save';
+import { migrate, restore, type SaveData } from './sim/save';
+import { SimWorld } from './sim/world';
 
 /**
  * Progress transfer codes: the save, deflated, as text the player copies/shares ("EZBA1." + base64url) or
@@ -64,6 +65,27 @@ export function fromBase45(s: string): Uint8Array | null {
   return new Uint8Array(out);
 }
 
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const strings = (v: unknown) => v === undefined || (Array.isArray(v) && v.every((x) => typeof x === 'string'));
+
+/**
+ * A code is only taken when it's a real save: the shape restore relies on (numbers where numbers go, lists
+ * where lists go), and then a trial load into a scratch world must not throw. A bad save written in
+ * would stop the game from starting at all.
+ */
+function valid(s: SaveData): boolean {
+  if (!isNum(s.money) || !isObj(s.levels) || !Object.values(s.levels).every(isNum) || !isObj(s.stations)) return false;
+  if (s.paid !== undefined && (!isObj(s.paid) || !Object.values(s.paid).every(isNum))) return false;
+  if (!strings(s.carry) || (s.legacy !== undefined && !isNum(s.legacy)) || (s.mode !== undefined && s.mode !== 'farm' && s.mode !== 'market')) return false;
+  if (s.album !== undefined && (!isObj(s.album) || !strings(s.album.seen) || !strings(s.album.paid))) return false;
+  if (s.daily !== undefined && (!isObj(s.daily) || !Array.isArray(s.daily.tasks))) return false;
+  try {
+    restore(new SimWorld(1, s.mode === 'market' ? 'market' : 'farm'), JSON.parse(JSON.stringify(s)) as SaveData);
+  } catch { return false; }
+  return true;
+}
+
 const json = (s: SaveData) => new TextEncoder().encode(JSON.stringify(s));
 
 /** The save as a text code (to copy or send). */
@@ -96,7 +118,7 @@ export async function readCode(raw: string): Promise<SaveData | null> {
     }
     if (!bytes) return null;
     const s = migrate(JSON.parse(new TextDecoder().decode(bytes)));
-    return s && typeof s.money === 'number' && s.levels ? s : null;
+    return s && valid(s) ? s : null;
   } catch {
     return null;
   }

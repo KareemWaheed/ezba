@@ -329,9 +329,9 @@ html, body {
 #modal .o-btns { display: flex; flex-direction: column; gap: 5px; flex: none; }
 #modal .o-btns .t-claim { min-width: 92px; }
 
-/* new version ready: tap to save and reload */
+/* new version ready: tap to save and reload (under open cards: it waits behind the backdrop) */
 #update {
-  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30;
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 15;
   display: flex; flex-direction: column; align-items: center; gap: 1px; touch-action: manipulation;
   font: inherit; font-weight: 800; border: 3px solid #fff; border-radius: 18px; padding: 8px 18px 7px;
   background: #3d7fd9; color: #fff; box-shadow: 0 5px 0 #2a5da3; direction: rtl; animation: u-pulse 1.6s ease-in-out infinite;
@@ -364,7 +364,7 @@ html, body {
 #modal .m-btn.o-all { margin: 2px 0 6px; font-size: 16px; padding: 6px 16px; line-height: 1.25; }
 #modal .m-btn.o-all small { font-size: 13px; opacity: 0.9; }
 #modal .o-allok { font-size: 14px; font-weight: 800; color: #2f8f3a; margin: 2px 0 6px; }
-#mboard .mb-rush { font-size: 14px; font-weight: 800; color: #fff; background: #e8554e; border-radius: 9px; padding: 1px 8px; margin-bottom: 2px; }
+#mboard .mb-rush { display: inline-block; font-size: 14px; font-weight: 800; color: #fff; background: #e8554e; border-radius: 9px; padding: 1px 8px; margin-bottom: 2px; }
 /* refund card: one row per upgrade that got cheaper */
 #modal .r-list { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 2px; text-align: right; }
 #modal .r-row { display: flex; justify-content: space-between; gap: 10px; background: #fff; border: 2px solid var(--panel-edge); border-radius: 12px; padding: 4px 10px; font-size: 15px; }
@@ -377,7 +377,7 @@ html, body {
 #modal .x-code {
   width: 100%; height: 70px; margin: 6px 0; resize: none; direction: ltr; font: 600 11px/1.3 ui-monospace, monospace;
   border: 2px solid var(--panel-edge); border-radius: 10px; padding: 6px; background: #fff; color: var(--ink);
-  -webkit-user-select: text; user-select: text;
+  touch-action: auto; -webkit-user-select: text; user-select: text;
 }
 #modal .x-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 #modal .x-btns .m-btn { margin-top: 4px; font-size: 16px; padding: 8px 16px; }

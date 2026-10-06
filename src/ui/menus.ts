@@ -182,8 +182,8 @@ export class MetaMenus {
       this.showSettings();
     });
     card.querySelector('[data-switch]')?.addEventListener('click', () => { this.modal.close(); this.onSwitchGame?.(); });
-    card.querySelector('[data-send]')?.addEventListener('click', () => this.onTransfer?.('send'));
-    card.querySelector('[data-receive]')?.addEventListener('click', () => this.onTransfer?.('receive'));
+    card.querySelector('[data-send]')?.addEventListener('click', () => { this.open = null; this.onTransfer?.('send'); });
+    card.querySelector('[data-receive]')?.addEventListener('click', () => { this.open = null; this.onTransfer?.('receive'); });
     card.querySelector('[data-install]')?.addEventListener('click', () => {
       const e = this.installEvt;
       this.installEvt = null;

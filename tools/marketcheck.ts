@@ -17,6 +17,7 @@ import { Bot } from '../src/sim/bot';
 import { LAYOUT } from '../src/config/layout';
 import { UPGRADE_BY_ID } from '../src/config/upgrades';
 import { marketHint } from '../src/sim/guide';
+import { upgradeCost } from '../src/sim/upgrades';
 
 const DT = 1 / 30;
 let fails = 0;
@@ -319,7 +320,7 @@ for (const p of MARKET.products) {
   const d = new SimWorld(1);
   restore(d, migrate(c)!);
   const next = d.upgrades.cost('eggs.animals');
-  ok(d.upgrades.paid['eggs.animals'] === next && d.refunds.reduce((s, l) => s + l.amount, 0) === want + Math.floor(c.paid['eggs.animals'] - next), 'a part-paid level: the payment beyond its new price comes back');
+  ok(d.upgrades.paid['eggs.animals'] === next && d.refunds.reduce((s, l) => s + l.amount, 0) === want + (c.paid['eggs.animals'] - next), 'a part-paid level: the payment beyond its new price comes back');
   // the supermarket game: its own cost multipliers, old and new
   const m = new SimWorld(1, 'market');
   m.upgrades.levels['eggs.unlock'] = 1; m.upgrades.levels['eggs.expand'] = 1;
@@ -341,11 +342,12 @@ for (const p of MARKET.products) {
   const saved = JSON.parse(JSON.stringify(serialize(w, Date.now())));
   FEATURES.supermarket = false;
   const w2 = new SimWorld(1);
-  w2.money = 0;
   restore(w2, migrate(saved)!);
   w2.upgrades.apply();
+  let spent = 0;
+  for (const [id, n] of [['market.unlock', 1], ['market.shelves', 3], ['market.cashier', 1]] as const) for (let l = 0; l < n; l++) spent += upgradeCost(id, l);
   ok(!w2.market.open && w2.upgrades.level('market.unlock') === 0, 'switched off: a saved store stays shut');
-  ok(w2.money > saved.money + 120, `switched off: its spend and cash pile are refunded (${Math.round(saved.money)} -> ${Math.round(w2.money)})`);
+  ok(w2.money === saved.money + spent + 120 && w2.market.cash.value === 0, `switched off: every store upgrade and the cash pile come back (${Math.round(w2.money - saved.money)} of ${spent + 120})`);
   ok(w2.upgrades.hidden('market.unlock') && !w2.upgrades.available(UPGRADE_BY_ID.get('market.unlock')!), 'switched off: its tiles are hidden');
   FEATURES.supermarket = true;
 }

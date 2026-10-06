@@ -34,9 +34,8 @@ w.legacy = 2;
 for (const k of Object.keys(w.stats) as (keyof typeof w.stats)[]) w.stats[k] = 98765;
 for (let i = 0; i < 30 * 60 * 10; i++) w.tick(1 / 30);
 const save = serialize(w, Date.now());
-const same = (s: typeof save | null): boolean =>
-  !!s && s.money === save.money && s.legacy === save.legacy && JSON.stringify(s.levels) === JSON.stringify(save.levels)
-  && JSON.stringify(s.stations) === JSON.stringify(save.stations) && JSON.stringify(s.stats) === JSON.stringify(save.stats);
+// (the whole save, field for field: migrate leaves a current-version save as it is)
+const same = (s: typeof save | null): boolean => !!s && JSON.stringify(s) === JSON.stringify(save);
 
 void (async () => {
   const text = await textCode(save);
@@ -47,6 +46,10 @@ void (async () => {
   ok(same(await readCode(exportCode(save))), "the debug panel's older codes still read");
   ok((await readCode(text.slice(0, text.length - 40))) === null, 'a cut-off code is refused');
   ok((await readCode('hello')) === null && (await readCode('')) === null, 'random text is refused');
+  // crafted codes: a save that would stop the game loading, or smuggle markup into the preview card
+  const bad = async (patch: Record<string, unknown>) => readCode(await textCode({ ...save, ...patch } as typeof save));
+  ok((await bad({ carry: 5 })) === null && (await bad({ album: { seen: 'x', paid: [] } })) === null, 'a code that would crash the game on load is refused');
+  ok((await bad({ levels: { ...save.levels, 'eggs.animals': '<img src=x onerror=alert(1)>' } })) === null && (await bad({ money: '1e9' })) === null, 'a code with text where numbers go is refused');
 
   // QR: drawn module by module, read back the way the game reads a camera frame
   const payload = (await qrCode(save))!;

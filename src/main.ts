@@ -152,7 +152,8 @@ document.addEventListener('visibilitychange', () => {
 
 sim.daily.ensure(dayKey());
 const title = new TitleScreen(uiRoot, save);
-// first launch (or first since the supermarket game arrived): pick a game
+// first launch (or first since the supermarket game arrived): pick a game; with the supermarket switched off
+// there's nothing to pick and every game is the farm
 if (FEATURES.supermarket && !chosenMode()) title.show();
 const menus = new MetaMenus(uiRoot, sim, modal);
 menus.onSwitchGame = () => title.show(true);

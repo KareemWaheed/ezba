@@ -45,7 +45,8 @@ corn.pile = 200;
 w.carry.items.length = 0;
 for (let k = 0; k < 6; k++) w.carry.push('corn');
 tick(w, 3, () => { w.player.x = d.x; w.player.z = d.z; });
-ok(!w.carry.has('corn') && corn.pile >= 200, `the corn pile has no limit (${corn.pile} on it, ${w.carry.items.filter((x) => x === 'corn').length} left in hand)`);
+// (the corn worker keeps taking from it meanwhile: the point is the hand empties onto a pile way past the old cap of 24)
+ok(!w.carry.has('corn') && corn.pile > 150, `the corn pile has no limit (${corn.pile} on it, ${w.carry.items.filter((x) => x === 'corn').length} left in hand)`);
 const w2 = new SimWorld(1);
 restore(w2, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
 ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a save keeps the whole corn pile');

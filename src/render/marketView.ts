@@ -443,7 +443,7 @@ class ListChip {
         ctx.font = `26px ${EMOJI}`;
         ctx.fillText('💰', ox + 252, 34);
         // the tip for checking them out in person
-        if (this.family) { ctx.font = `800 26px ${FONT}`; ctx.fillStyle = '#e8554e'; ctx.fillText(c.byPlayer ? '+30% 🙋' : '🙋 +30%?', ox + 345, 36); }
+        if (this.family) { ctx.font = `800 24px ${FONT}`; ctx.fillStyle = '#e8554e'; ctx.fillText(c.byPlayer ? '+30% 🙋' : '🙋 +30%?', ox + 322, 36); }
         bar(c.got.length ? c.scanned / c.got.length : 0, '#3d7fd9');
       }
     });
