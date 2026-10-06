@@ -196,6 +196,8 @@ export class MarketView {
   private chips = new Map<number, ListChip>();
   private cashier: CharacterView | null = null;
   private time = 0;
+  /** Store sign over the back wall. */
+  private sign = new CanvasSprite(640, 112, 6.2, false);
 
   constructor(private scene: THREE.Scene) {
     this.lock = lockOverlay(scene, MARKET.plot);
@@ -203,12 +205,8 @@ export class MarketView {
     mesh.matrixAutoUpdate = false;
     this.root.add(mesh);
     // store sign over the back wall
-    const sign = new CanvasSprite(512, 112, 5.2, false);
-    sign.draw((c, w, h) => {
-      c.fillStyle = '#d94f45'; rr(c, 6, 6, w - 12, h - 12, 28); c.fill();
-      c.font = `800 60px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl';
-      c.fillStyle = '#fff'; c.fillText('🛒 سوبر ماركت العزبة', w / 2, h / 2 + 4);
-    });
+    const sign = this.sign;
+    this.drawSign();
     const P = MARKET.plot;
     sign.sprite.position.set((P.x0 + P.x1) / 2, 4.0, P.z0 + 0.3);
     this.root.add(sign.sprite);
@@ -354,7 +352,20 @@ export class MarketView {
     v.carrier.dispose();
   }
 
+  /** The sign's text shrinks to fit (measured with the web font once it has loaded: see invalidate). */
+  private drawSign(): void {
+    this.sign.draw((c, w, h) => {
+      c.fillStyle = '#d94f45'; rr(c, 6, 6, w - 12, h - 12, 28); c.fill();
+      const text = '🛒 سوبر ماركت العزبة';
+      c.font = `800 60px ${FONT}`;
+      const size = Math.min(60, Math.floor((60 * (w - 64)) / c.measureText(text).width));
+      c.font = `800 ${size}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl';
+      c.fillStyle = '#fff'; c.fillText(text, w / 2, h / 2 + 4);
+    });
+  }
+
   invalidate(): void {
+    this.drawSign();
     for (const v of this.shoppers.values()) v.invalidate();
     for (const c of this.chips.values()) c.invalidate();
   }
