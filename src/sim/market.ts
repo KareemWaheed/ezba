@@ -35,6 +35,10 @@ export interface Shopper {
   patience: number;
   patienceMax: number;
   gone: boolean;
+  /** A family with a trolley (big list; tips the player who checks them out in person). */
+  family?: boolean;
+  /** The player scanned at least one of their items. */
+  byPlayer?: boolean;
 }
 
 /** A wholesale order on its way (arrives after `t` seconds). */
@@ -47,7 +51,7 @@ export interface Delivery { item: ItemId; n: number; t: number; /** From the pla
 function farmTake(w: SimWorld, item: ItemId): boolean {
   const st = w.stations.find((s) => s.def.product === item);
   if (st) {
-    if (!st.open || st.counter <= ECONOMY.cafe.counterReserve) return false;
+    if (!st.open || w.counterSpare(st) <= 0) return false;
     st.counter--;
     return true;
   }
@@ -191,6 +195,9 @@ export class MarketSystem {
   angryEmpty = 0;
   private nextId = 1;
   private spawnT = 3;
+  /** Rush hour: seconds left (0 = none), and seconds until the next one. */
+  rushT = 0;
+  private rushNext: number = ECONOMY.supermarket.rush.first;
   private pickT = 0;
   private dropT = 0;
   private autoT = 0;
@@ -250,7 +257,7 @@ export class MarketSystem {
     const w = this.w;
     if (!MARKET_PRODUCT.get(item)?.farm) return 0;
     const st = w.stations.find((s) => s.def.product === item);
-    if (st) return st.open ? Math.max(0, st.counter - ECONOMY.cafe.counterReserve) : 0;
+    if (st) return st.open ? Math.max(0, w.counterSpare(st)) : 0;
     const m = w.factory.machines.find((x) => x.def.makes === item);
     if (m) return m.open ? m.conv.output[m.def.makes] : 0;
     return item === 'fish' && w.river.open ? w.river.pile : 0;
@@ -320,11 +327,23 @@ export class MarketSystem {
     for (let i = 0; i < n; i++) w.staff.ensureWorkers(this.stockers[i], 1, st.x - 0.5 - i * 0.6, st.z + 1);
   }
 
+  /**
+   * How much the price tags draw people in: the open shelves' average demand. Cheap tags fill the store
+   * (more profit an hour, but more shoppers to serve and restock for); dear tags bring fewer shoppers who
+   * each pay more (less profit an hour, less work).
+   */
+  get draw(): number {
+    let sum = 0, n = 0;
+    for (const s of this.shelves) if (s.open) { sum += this.demand(s.def.item); n++; }
+    return n ? sum / n : 1;
+  }
+
   get interval(): number {
     const up = this.w.upgrades, cfg = ECONOMY.supermarket;
     const rows = 1 + up.level('market.shelves');
     const ads = 1 + up.level('market.ads') * ECONOMY.upgrades['market.ads'].step;
-    return cfg.customerEvery / (ads * (0.6 + 0.4 * rows));
+    const rush = this.rushT > 0 ? cfg.rush.mult : 1;
+    return cfg.customerEvery / (ads * (0.6 + 0.4 * rows) * this.draw * rush);
   }
 
   update(dt: number): void {
@@ -359,7 +378,11 @@ export class MarketSystem {
     const w = this.w, rng = w.rng, cfg = ECONOMY.supermarket;
     const open = this.shelves.filter((s) => s.open);
     if (!open.length) return;
-    const n = 1 + rng.int(Math.min(cfg.maxLines, open.length));
+    // (families come once the store has grown a second shelf row: a corner shop doesn't draw them)
+    const family = rng.next() < cfg.family.chance && w.upgrades.level('market.shelves') > 0;
+    // (a family's list is long: at least 3 different products when the store has them)
+    const most = Math.min(family ? cfg.family.lines : cfg.maxLines, open.length), least = family ? Math.min(3, most) : 1;
+    const n = least + rng.int(most - least + 1);
     const lines: ShopLine[] = [];
     // each list line picks a shelf weighted by how much its price tag draws shoppers
     let total = 0;
@@ -368,7 +391,7 @@ export class MarketSystem {
       let r = rng.next() * total, s = open[open.length - 1];
       for (const o of open) { r -= this.demand(o.def.item); if (r <= 0) { s = o; break; } }
       if (lines.some((l) => l.shelf === s.index)) continue;
-      const qty = 1 + rng.int(cfg.maxQty);
+      const qty = 1 + rng.int(family ? cfg.family.qty : cfg.maxQty);
       lines.push({ product: s.def.item, shelf: s.index, qty, left: qty });
     }
     // walk the aisles front to back so the path doesn't zigzag
@@ -377,7 +400,7 @@ export class MarketSystem {
     this.shoppers.push({
       id: this.nextId++, look, type: pickType(w, look), x: sp.x + rng.range(-1, 1), z: sp.z, rot: Math.PI, speed: 0,
       state: 'shop', lines, li: 0, got: [], scanned: 0, waitT: 0, takeT: 0,
-      patience: cfg.patience, patienceMax: cfg.patience, gone: false,
+      patience: family ? cfg.family.patience : cfg.patience, patienceMax: family ? cfg.family.patience : cfg.patience, gone: false, family,
     });
   }
 
@@ -387,13 +410,35 @@ export class MarketSystem {
     return !this.w.away && dist(p.x, p.z, s.x, s.z) < MARKET.checkout.serveR;
   }
 
+  /**
+   * Rush hour: not while away (nobody's there to see it), only once there's a cashier (a one-person store
+   * has enough on its hands), and only into a stocked store (with most shelves bare, e.g. right after a new
+   * row opens, it waits a bit).
+   */
+  private updateRush(dt: number): void {
+    const w = this.w, cfg = ECONOMY.supermarket;
+    if (this.rushT > 0) {
+      this.rushT -= dt;
+      if (this.rushT <= 0) { this.rushT = 0; w.events.emit('storeRush', '', MARKET.spawn.x, MARKET.spawn.z, 0, 0); }
+      return;
+    }
+    if (w.away || !this.cashier || (this.rushNext -= dt) > 0) return;
+    const open = this.shelves.filter((s) => s.open);
+    if (open.filter((s) => s.stock > 0).length < open.length * 0.75) { this.rushNext = 30; return; }
+    this.rushNext = cfg.rush.every * w.rng.range(0.75, 1.25);
+    this.rushT = cfg.rush.time;
+    this.spawnT = Math.min(this.spawnT, 1);
+    w.events.emit('storeRush', '', MARKET.spawn.x, MARKET.spawn.z, cfg.rush.time, 1);
+  }
+
   private updateShoppers(dt: number): void {
     const w = this.w, cfg = ECONOMY.supermarket, walk = ECONOMY.customers.walkSpeed;
     this.spawnT -= dt;
+    this.updateRush(dt);
     let inside = 0;
     for (const c of this.shoppers) if (c.state !== 'leave' && c.state !== 'angry') inside++;
     if (this.spawnT <= 0) {
-      if (inside < cfg.maxInside) this.spawn();
+      if (inside < cfg.maxInside + (this.rushT > 0 ? cfg.rush.extra : 0)) this.spawn();
       this.spawnT = this.interval * w.rng.range(0.7, 1.3);
     }
     const q = MARKET.checkout.queue, via = MARKET.checkout.via;
@@ -444,6 +489,7 @@ export class MarketSystem {
             c.takeT -= dt;
             if (c.takeT <= 0) {
               c.scanned++;
+              if (player) c.byPlayer = true;
               c.takeT = cfg.scanInterval * (player ? 1 : w.staff.cashierSlow);
               if (!w.away) w.events.emit('sell', c.got[c.scanned - 1], c.x, c.z, 0, c.scanned, c.id);
               if (c.scanned >= c.got.length) this.pay(c);
@@ -483,6 +529,8 @@ export class MarketSystem {
     const w = this.w;
     let value = 0;
     for (const it of c.got) value += this.sellPrice(it);
+    // a family checked out by the player in person tips on top
+    if (c.family && c.byPlayer) value *= 1 + ECONOMY.supermarket.family.tip;
     value = Math.round(value);
     this.cash.value += value;
     this.cash.bills = Math.min(40, this.cash.bills + Math.min(6, c.got.length));

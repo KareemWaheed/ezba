@@ -7,7 +7,7 @@
 import { SimWorld } from '../src/sim/world';
 import { FEATURES } from '../src/config/features';
 
-// the supermarket is switched off in the game; its checks switch it on
+// the store checks run with the supermarket on, whatever the game's switch says
 FEATURES.supermarket = true;
 import { ECONOMY, type UpgradeId } from '../src/config/economy';
 import { MARKET, PRICE_TAGS, SHELVES } from '../src/config/market';
@@ -226,6 +226,51 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
   // time away: a staffed store earns while the player is gone (paid out with the rest, not left in its cash pile)
   const cash0 = m.cash.value, r = simulateAway(w, 600);
   ok(r.raw > 0 && m.cash.value === cash0, `time away counts the store's sales (${Math.round(r.raw)} raw in 10 min)`);
+}
+
+// the café always pays more for a dish than the supermarket sells it for
+for (const p of MARKET.products) {
+  if (!(p.item in ECONOMY.dishes)) continue;
+  const cafe = ECONOMY.dishes[p.item as keyof typeof ECONOMY.dishes].price;
+  ok(cafe > PRICE_TAGS[PRICE_TAGS.length - 1].mult * p.sell, `café ${p.name} (${cafe}) pays more than the store, even at its dearest (${Math.round(PRICE_TAGS[PRICE_TAGS.length - 1].mult * p.sell)})`);
+}
+
+// price tags change how many shoppers come: cheap fills the store, dear empties it
+{
+  const w = farm({ 'market.unlock': 1 }), m = w.market, base = m.interval;
+  for (const s of m.shelves) if (s.open) m.setPrice(s.def.item, 0);
+  const cheap = m.interval;
+  for (const s of m.shelves) if (s.open) m.setPrice(s.def.item, 3);
+  const dear = m.interval;
+  ok(cheap < base * 0.7 && dear > base * 2, `cheap tags bring shoppers faster, dear slower (every ${cheap.toFixed(1)}s / ${base.toFixed(1)}s / ${dear.toFixed(1)}s)`);
+}
+
+// families: long lists, and they tip the player who checks them out
+{
+  const w = farm({ 'market.unlock': 1, 'market.shelves': 2, 'market.cashier': 1 }), m = w.market;
+  let fam = 0, famItems = 0, other = 0, otherItems = 0;
+  for (let i = 0; i < 600; i++) {
+    (m as unknown as { spawn(): void }).spawn();
+    const c = m.shoppers.pop()!, n = c.lines.reduce((a, l) => a + l.qty, 0);
+    if (c.family) { fam++; famItems += n; } else { other++; otherItems += n; }
+  }
+  ok(fam > 30 && famItems / fam > 1.8 * (otherItems / other), `families come now and then with much longer lists (${fam}/600, ${(famItems / fam).toFixed(1)} vs ${(otherItems / other).toFixed(1)} items)`);
+}
+
+// rush hour (once there's a cashier, into stocked shelves): comes on its own, shoppers come much faster, then it ends
+{
+  const w = farm({ 'market.unlock': 1, 'market.cashier': 1 }), m = w.market, normal = m.interval;
+  let started = 0, ended = 0, fast = Infinity;
+  // bare shelves: no rush yet
+  run(w, ECONOMY.supermarket.rush.first + 5);
+  ok(m.rushT === 0, 'no rush hour into bare shelves');
+  for (let i = 0; i < (ECONOMY.supermarket.rush.time + 40) / DT; i++) {
+    for (const s of m.shelves) if (s.open) s.stock = Math.max(s.stock, 6);
+    w.tick(DT);
+    if (m.rushT > 0) fast = Math.min(fast, m.interval);
+    w.events.drain((e) => { if (e.type === 'storeRush') { if (e.n) started++; else ended++; } });
+  }
+  ok(started === 1 && ended === 1 && fast < normal / 2, `a rush hour comes, brings shoppers ${(normal / fast).toFixed(1)}x as fast, and ends`);
 }
 
 // store board hints and the order-everything button

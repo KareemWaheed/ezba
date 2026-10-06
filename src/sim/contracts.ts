@@ -34,7 +34,7 @@ class DockJob implements WorkerJob {
     let best = 0;
     for (const s of w.stations) {
       const need = this.sys.stillNeeds(s.def.product);
-      if (s.open && need > best && s.counter > ECONOMY.cafe.counterReserve) { best = need; this.target = s.index; }
+      if (s.open && need > best && w.counterSpare(s) > 0) { best = need; this.target = s.index; }
     }
     const st = w.stations[this.target >= 0 ? this.target : 0];
     out.x = st.def.counter.dropX + (slot - 0.5) * 0.5;
@@ -43,8 +43,8 @@ class DockJob implements WorkerJob {
   take(w: SimWorld): ItemId | null {
     // re-pick each time: the target may be stale (e.g. chosen while no truck was waiting)
     let s = w.stations[this.target];
-    if (!s || this.sys.stillNeeds(s.def.product) <= 0 || s.counter <= ECONOMY.cafe.counterReserve) {
-      s = w.stations.find((x) => x.open && this.sys.stillNeeds(x.def.product) > 0 && x.counter > ECONOMY.cafe.counterReserve)!;
+    if (!s || this.sys.stillNeeds(s.def.product) <= 0 || w.counterSpare(s) <= 0) {
+      s = w.stations.find((x) => x.open && this.sys.stillNeeds(x.def.product) > 0 && w.counterSpare(x) > 0)!;
       if (!s) return null;
       this.target = s.index;
     }

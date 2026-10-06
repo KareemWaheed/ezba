@@ -32,7 +32,7 @@ class SupplyJob implements WorkerJob {
       for (const s of w.stations) {
         const p = s.def.product;
         if (!s.open || !m.conv.wants(p)) continue;
-        if (s.pile < 3 && s.counter <= ECONOMY.cafe.counterReserve) continue;
+        if (s.pile < 3 && w.counterSpare(s) <= 0) continue;
         const n = m.conv.input[p];
         if (n < bestN) { best = s.index; bestM = mi; bestN = n; }
       }
@@ -56,8 +56,8 @@ class SupplyJob implements WorkerJob {
     for (let slot = 0; slot < this.st.length; slot++) {
       const s = w.stations[this.st[slot]], m = this.f.machines[this.mc[slot]];
       if (!s || !m || !m.conv.wants(s.def.product)) continue;
-      if (this.fromPile[slot]) { if (s.pile > 0) { s.pile--; return s.def.product; } }
-      else if (s.counter > ECONOMY.cafe.counterReserve) { s.counter--; return s.def.product; }
+      if (this.fromPile[slot]) { if (s.pile > 0 && !w.shopShort(s)) { s.pile--; return s.def.product; } }
+      else if (w.counterSpare(s) > 0) { s.counter--; return s.def.product; }
     }
     return null;
   }

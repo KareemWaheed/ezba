@@ -11,11 +11,16 @@ export interface MarketProduct {
   cost: number;
   /** Made on the farm (the player and stockers can bring it from there for free). */
   farm: boolean;
+  /** How it's displayed: dry goods on open shelves, chilled goods in glass-door fridges, vegetables in crates. */
+  unit?: DisplayUnit;
 }
+
+export type DisplayUnit = 'shelf' | 'fridge' | 'produce';
 
 /** One shelf unit (solid): one product, restocked and shopped from the `front` spot (aisle side). */
 export interface ShelfDef {
   item: ItemId;
+  unit: DisplayUnit;
   box: Box;
   front: { x: number; z: number };
   /** market.shelves level that opens this shelf (0 = opens with the store). */
@@ -42,7 +47,7 @@ export const MARKET = {
   products: [
     // row 1 (opens with the store): staples
     { item: 'egg', name: 'بيض', sell: 6, cost: 3, farm: true },
-    { item: 'milk', name: 'لبن', sell: 11, cost: 6, farm: true },
+    { item: 'milk', name: 'لبن', sell: 11, cost: 6, farm: true, unit: 'fridge' },
     { item: 'rice', name: 'رز', sell: 30, cost: 15, farm: false },
     { item: 'pasta', name: 'مكرونة', sell: 24, cost: 12, farm: false },
     { item: 'bread', name: 'عيش بلدي', sell: 8, cost: 4, farm: false },
@@ -51,13 +56,13 @@ export const MARKET = {
     { item: 'oil', name: 'زيت', sell: 60, cost: 30, farm: false },
     { item: 'tea', name: 'شاي', sell: 40, cost: 20, farm: false },
     { item: 'chips', name: 'شيبسي', sell: 14, cost: 7, farm: false },
-    { item: 'tomato', name: 'طماطم', sell: 12, cost: 6, farm: false },
+    { item: 'tomato', name: 'طماطم', sell: 12, cost: 6, farm: false, unit: 'produce' },
     // row 3: deli, drinks and more vegetables
-    { item: 'cheese', name: 'جبنة', sell: 70, cost: 50, farm: true },
-    { item: 'cake', name: 'كيك', sell: 90, cost: 64, farm: true },
-    { item: 'fish', name: 'سمك', sell: 28, cost: 20, farm: true },
-    { item: 'soda', name: 'بيبسي', sell: 18, cost: 9, farm: false },
-    { item: 'potato', name: 'بطاطس', sell: 10, cost: 5, farm: false },
+    { item: 'cheese', name: 'جبنة', sell: 26, cost: 13, farm: true, unit: 'fridge' },
+    { item: 'cake', name: 'كيك', sell: 40, cost: 20, farm: true },
+    { item: 'fish', name: 'سمك', sell: 28, cost: 14, farm: true, unit: 'fridge' },
+    { item: 'soda', name: 'بيبسي', sell: 18, cost: 9, farm: false, unit: 'fridge' },
+    { item: 'potato', name: 'بطاطس', sell: 10, cost: 5, farm: false, unit: 'produce' },
   ] as readonly MarketProduct[],
   /** Storeroom: the player/stockers pick here (what the shelves need most); racks show the stock. */
   store: { x: 25.7, z: 19.6, r: 1.0, racks: { x0: 26.55, x1: 27.3, z0: 16.4, z1: 23.6 } as Box },
@@ -89,7 +94,7 @@ const HALF_W = 0.75;
 /** 3 rows x 5 shelves, in MARKET.products order (row r opens with market.shelves level r). */
 export const SHELVES: readonly ShelfDef[] = MARKET.products.map((p, i) => {
   const r = Math.floor(i / COLS.length), x = COLS[i % COLS.length], z = ROWS[r];
-  return { item: p.item, row: r, box: { x0: x - HALF_W, x1: x + HALF_W, z0: z - 0.3, z1: z + 0.3 }, front: { x, z: z + 0.95 } };
+  return { item: p.item, unit: p.unit ?? 'shelf', row: r, box: { x0: x - HALF_W, x1: x + HALF_W, z0: z - 0.3, z1: z + 0.3 }, front: { x, z: z + 0.95 } };
 });
 
 /**
@@ -97,7 +102,7 @@ export const SHELVES: readonly ShelfDef[] = MARKET.products.map((p, i) => {
  * shopper wants it (cheap sells more, dear sells less).
  */
 export const PRICE_TAGS = [
-  { mult: 0.85, demand: 1.5, label: 'رخيص' },
+  { mult: 0.85, demand: 1.6, label: 'رخيص' },
   { mult: 1, demand: 1, label: 'عادي' },
   { mult: 1.2, demand: 0.65, label: 'غالي' },
   { mult: 1.45, demand: 0.4, label: 'غالي قوي' },

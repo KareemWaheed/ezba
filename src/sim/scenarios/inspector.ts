@@ -1,5 +1,4 @@
 import type { ScenarioDef, ScenarioGoal } from '../../config/scenarios';
-import { ECONOMY } from '../../config/economy';
 import { LAYOUT } from '../../config/layout';
 import { dist, moveToward } from '../math';
 import type { SimWorld } from '../world';
@@ -71,7 +70,7 @@ export class InspectorMechanic implements Mechanic {
       case 'trough': return w.stations[c.ref].boostT > 0;
       case 'machine': return !w.staff.machines[c.ref].broken;
       case 'table': return !w.cafe.tables[c.ref].dirty;
-      case 'pile': return w.stations[c.ref].pile < ECONOMY.pile.max * 0.8;
+      case 'pile': return w.stations[c.ref].pile < w.stations[c.ref].pileMax * 0.8;
     }
   }
 

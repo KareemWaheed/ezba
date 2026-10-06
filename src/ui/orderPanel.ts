@@ -60,7 +60,7 @@ export class OrderPanel {
     const card = this.modal.open(`
       <div class="m-title">📱 اطلب بضاعة</div>
       ${all}
-      <div class="m-note">البضاعة بتوصل المخزن بعد ${ECONOMY.supermarket.deliveryTime} ثواني · منتجات المزرعة ممكن تيجي من مزرعتك ببلاش 🚚 · ➖➕ السعر: الرخيص بيتباع أكتر</div>
+      <div class="m-note">البضاعة بتوصل المخزن بعد ${ECONOMY.supermarket.deliveryTime} ثواني · منتجات المزرعة ممكن تيجي من مزرعتك ببلاش 🚚 · ➖➕ السعر: الرخيص بيجيب زباين أكتر للمحل كله، والغالي زباين أقل بس مكسب أكتر في الحتة</div>
       <div class="t-list">${rows}</div>
       <button class="m-btn" data-close>تمام</button>`, () => { this.shown = false; });
     this.shown = true;

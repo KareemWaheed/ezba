@@ -132,6 +132,24 @@ export class SimWorld {
     return v + this.market.marginPerSec;
   }
 
+  /**
+   * Items on a shop counter that workers (kitchen helpers, factory suppliers, dock workers, store deliveries)
+   * may take: beyond the reserve and beyond what the shop's customers in line still want. Shop customers first.
+   */
+  counterSpare(s: Station): number {
+    return s.counter - ECONOMY.cafe.counterReserve - this.shopWants(s);
+  }
+
+  /** Items of this station's product the shop's customers in line still want. */
+  shopWants(s: Station): number {
+    let want = 0;
+    for (const c of this.customers.list) if (c.state === 'queue') for (const l of c.lines) if (l.station === s.index) want += l.left;
+    return want;
+  }
+
+  /** The shop's line wants more of this than its counter has: workers leave the pile for the shop too. */
+  shopShort(s: Station): boolean { return s.counter < this.shopWants(s); }
+
   /** Sale price multiplier from farm growth (see ECONOMY.market). */
   get priceMult(): number {
     return (1 + this.upgrades.bought * ECONOMY.market.growthPerUpgrade) * (1 + this.legacy * LEGACY.priceStep);

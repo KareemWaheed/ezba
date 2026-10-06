@@ -116,7 +116,7 @@ function fieldAction(w: SimWorld, out: { x: number; z: number }): boolean {
   // corn only walks to its shop counter slot while that pile is full
   if (c.n > 0 && (c.full() || f.ready === 0)) {
     const corn = w.stations.find((s) => s.def.product === 'corn');
-    const cornRoom = !!corn && corn.pile + corn.pending < ECONOMY.pile.max;
+    const cornRoom = !!corn && !corn.pileFull;
     if (c.has('wheat') || (c.has('corn') && cornRoom)) { out.x = FIELDS.stall.drop.x; out.z = FIELDS.stall.drop.z; return true; }
     if (corn && c.has('corn')) { out.x = corn.def.counter.dropX; out.z = corn.def.counter.dropZ; return true; }
   }

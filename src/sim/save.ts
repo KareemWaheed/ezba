@@ -140,7 +140,7 @@ export function restore(w: SimWorld, s: SaveData): void {
     const d = s.stations?.[st.def.id];
     if (!d) continue;
     st.open = st.def.startsOpen || !!d.open;
-    st.pile = Math.min(ECONOMY.pile.max, Math.max(0, Math.floor(num(d.pile))));
+    st.pile = Math.min(st.pileMax, Math.max(0, Math.floor(num(d.pile))));
     st.counter = Math.max(0, Math.floor(num(d.counter)));
   }
   w.player.x = num(s.player?.x, w.player.x);

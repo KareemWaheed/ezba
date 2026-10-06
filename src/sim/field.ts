@@ -340,10 +340,9 @@ export class FieldSystem {
     this.sellT -= dt;
     if (this.sellT <= 0 && dist(pl.x, pl.z, st.drop.x, st.drop.z) < (this.driving ? 1.9 : 1.25)) {
       const cornSt = w.stations.find((s) => s.def.product === 'corn');
-      const cornRoom = !!cornSt && cornSt.open && cornSt.pile + cornSt.pending < ECONOMY.pile.max;
+      const cornRoom = !!cornSt && cornSt.open && !cornSt.pileFull;
       for (const p2 of this.plots) {
-        // carried bundles first — wheat, and corn while its pile (for the corn workers) has room; a full
-        // pile leaves the corn in hand for the shop counter — then the combine's hopper
+        // carried bundles first (wheat, and corn onto its pile for the corn workers), then the combine's hopper
         let fromHopper = false;
         const carried = p2.crop === 'wheat' ? c.take('wheat') : cornRoom && c.take('corn');
         if (!carried) {
@@ -376,7 +375,7 @@ export class FieldSystem {
     w.stats.crops++;
     if (crop === 'wheat' && w.factory.store(1)) { if (!w.away) w.events.emit('drop', 'wheat', x, z, 0, n); return; }
     const corn = crop === 'corn' ? w.stations.find((s) => s.def.product === 'corn') : undefined;
-    if (corn && corn.open && corn.pile + corn.pending < ECONOMY.pile.max) { corn.pile++; if (!w.away) w.events.emit('drop', 'corn', x, z, 0, n); return; }
+    if (corn && corn.open && !corn.pileFull) { corn.pile++; if (!w.away) w.events.emit('drop', 'corn', x, z, 0, n); return; }
     const v = Math.round(priceOf(crop) * w.priceMult);
     this.cash.value += v;
     this.cash.bills = Math.min(40, this.cash.bills + 1);

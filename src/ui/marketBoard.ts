@@ -34,24 +34,28 @@ export class MarketBoard {
     const show = m.open && w.scenario.phase === 'idle' && p.x > P.x0 && p.x < P.x1 && p.z > P.z0 && p.z < P.z1;
     this.el.hidden = !show;
     if (!show) { this.key = ''; return false; }
-    let shopping = 0, line = 0, wait = 0;
+    let shopping = 0, line = 0, wait = 0, famLine = 0;
     for (const c of m.shoppers) {
       if (c.state === 'shop' || c.state === 'toQueue') shopping++;
       else if (c.state === 'queue') line++;
       if (c.state === 'shop' && c.waitT > 0) wait++;
+      if (c.family && c.state === 'queue') famLine++;
     }
     const empty = m.shelves.filter((s) => s.open && s.stock === 0).map((s) => ITEM_ICON[s.def.item]);
     const hint = marketHint(w), serving = m.cashier ? '👩‍💼' : m.playerAtCheckout() ? '🙋' : '⚠️';
-    const key = `${hint}|${shopping}|${line}|${wait}|${serving}|${Math.round(m.cash.value)}|${empty.join('')}`;
+    const rush = m.rushT > 0 ? Math.ceil(m.rushT) : 0;
+    const key = `${rush}|${famLine}|${hint}|${shopping}|${line}|${wait}|${serving}|${Math.round(m.cash.value)}|${empty.join('')}`;
     if (key === this.key) return true;
     this.key = key;
     const cfg = ECONOMY.supermarket;
-    this.el.className = hint === 'checkout' || hint === 'order' ? 'urgent' : hint === 'ok' ? 'calm' : '';
+    this.el.className = rush || hint === 'checkout' || hint === 'order' ? 'urgent' : hint === 'ok' ? 'calm' : '';
     this.el.innerHTML = `
+      ${rush ? `<div class="mb-rush">🔥 زحمة! الزباين جايين كتير · ${ltr(`${rush}`)}ث</div>` : ''}
       <div class="mb-hint">${HINT[hint]}</div>
       <div class="mb-stats">
         <span title="بيتسوقوا">🛒 ${ltr(`${shopping}/${cfg.maxInside}`)}</span>
         <span title="في الطابور">🧾 ${ltr(`${line}`)} ${line ? serving : ''}</span>
+        ${famLine ? `<span>🛒👨‍👩‍👧 ${ltr(`${famLine}`)} عيلة: حاسبهم بنفسك +${ltr(`${Math.round(ECONOMY.supermarket.family.tip * 100)}%`)}</span>` : ''}
         ${wait ? `<span class="bad">⏳ ${ltr(`${wait}`)} مستنيين رف</span>` : ''}
         ${m.cash.value > 0 ? `<span>💵 ${ltr(fmtMoney(m.cash.value))}</span>` : ''}
       </div>

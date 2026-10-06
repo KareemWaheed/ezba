@@ -36,6 +36,7 @@ export type SimEventType =
   | 'cropSold'    // a bundle was sold at the grain stall (value)
   | 'trash'       // the player threw away the top carried item (n = stack size after)
   | 'delivery'    // a wholesale order landed in the supermarket storeroom (product, n = items)
+  | 'storeRush'   // supermarket rush hour: n = 1 starts (value = seconds), 0 ends
   | 'albumNew'    // first time this customer kind was served (n = page, id = entry)
   | 'albumPage'   // an album page was completed (value = bonus, n = page)
   | 'taskDone'    // a daily task is finished, ready to claim (value = reward, id = task)

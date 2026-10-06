@@ -37,7 +37,7 @@ export const ECONOMY = {
 
   /** Goods sold at stalls: wheat (grain stall; it also feeds the bakery), fish (fish stall; or the grill). */
   crops: {
-    wheat: { price: 9 },
+    wheat: { price: 14 },
     fish: { price: 12 },
   },
 
@@ -85,6 +85,13 @@ export const ECONOMY = {
     /** Supplier credit: with fewer items than this in the whole store, boxes can be ordered into debt (down to -creditMax). */
     creditBelow: 12,
     creditMax: 600,
+    /**
+     * Families (once the store has a second shelf row): a shopper with a trolley and a long list (lines x qty up to these), less patient in line;
+     * the player checking them out in person gets `tip` extra on the bill.
+     */
+    family: { chance: 0.12, lines: 5, qty: 4, patience: 65, tip: 0.3 },
+    /** Rush hour: the first `first` seconds after the store has a cashier, then every `every` seconds (randomized x0.75..1.25): shoppers come `mult` x as often for `time` seconds, up to `extra` more inside. */
+    rush: { first: 900, every: 540, time: 45, mult: 3, extra: 6 },
   },
 
   /** Stage 6 river: fishing boats and rowboat rental. */
@@ -143,8 +150,8 @@ export const ECONOMY = {
     omelette: { price: 18 },
     coffee: { price: 10 },
     /** Stage 5: made in the factories, carried to the café counter. */
-    cake: { price: 45 },
-    cheese: { price: 30 },
+    cake: { price: 60 },
+    cheese: { price: 40 },
     /** Stage 6: grilled at the river dock, carried to the café counter. */
     grilledFish: { price: 60 },
   },
@@ -165,7 +172,7 @@ export const ECONOMY = {
   /** Farm café. */
   cafe: {
     /** Café customers per minute per table (x rating; breakfast rush multiplies it). */
-    perTable: 1.2,
+    perTable: 1.8,
     /** Dishes per order: 1..maxDishes. */
     maxDishes: 3,
     /** Patience while waiting in line or for a free clean table. */
@@ -407,7 +414,7 @@ export const ECONOMY = {
    */
   upgrades: {
     /** +1 chicken per level. */
-    'eggs.animals': { base: 40, growth: 1.55, max: 8, step: 1 },
+    'eggs.animals': { base: 40, growth: 1.4, max: 8, step: 1 },
     /** Supermarket path only: open the chicken coop (the farm opens backwards). */
     'eggs.unlock': { base: 1800, growth: 1, max: 1, step: 1 },
     /** +step carry capacity per level. */
@@ -421,7 +428,7 @@ export const ECONOMY = {
     /** Open the cow pen (single level): milk station starts with producers.cow.start cows. */
     'milk.unlock': { base: 3800, growth: 1, max: 1, step: 1 },
     /** Bigger coop: fence moves out, +step chickens allowed per level. */
-    'eggs.expand': { base: 5000, growth: 3.5, max: 2, step: 6 },
+    'eggs.expand': { base: 3500, growth: 2.5, max: 2, step: 6 },
     /** Bigger cow pen: fence moves out, +step cows allowed per level. */
     'milk.expand': { base: 14000, growth: 3.2, max: 2, step: 4 },
     /** +1 cow per level. */
@@ -429,11 +436,11 @@ export const ECONOMY = {
     /** Milk workers: +1 worker per level. */
     'milk.worker': { base: 2500, growth: 3, max: 2, step: 1 },
     /** Milk belt: level 1 builds it, later levels speed it up. */
-    'milk.machine': { base: 6000, growth: 3, max: 4, step: 1 },
+    'milk.machine': { base: 6000, growth: 2.5, max: 4, step: 1 },
     /** Maintenance: breakdowns.mean x (1 + step x level). Never reaches zero breakdowns. */
     maint: { base: 3000, growth: 2, max: 4, step: 0.6 },
     /** Rush bonus share +step per level. */
-    'rush.reward': { base: 2500, growth: 2, max: 4, step: 0.25 },
+    'rush.reward': { base: 2500, growth: 2, max: 4, step: 0.5 },
     /** Rush warning +step seconds per level. */
     'rush.warning': { base: 1500, growth: 2, max: 3, step: 3 },
     /** Open the farm café: stove, café counter and the first tables. */
@@ -445,9 +452,9 @@ export const ECONOMY = {
     /** Kitchen machines (stove + coffee) work faster: time / (1 + step x level). */
     'cafe.stove': { base: 3000, growth: 2, max: 4, step: 0.4 },
     /** Extra kitchen helpers (the café opens with one) carrying eggs/milk to the stove. */
-    'cafe.helper': { base: 30000, growth: 3, max: 2, step: 1 },
+    'cafe.helper': { base: 15000, growth: 3, max: 2, step: 1 },
     /** Café cashier at the café counter. */
-    'cafe.waiter': { base: 160000, growth: 1, max: 1, step: 1 },
+    'cafe.waiter': { base: 130000, growth: 1, max: 1, step: 1 },
     /** Cleaners clear dirty tables (+1 per level). */
     'cafe.cleaner': { base: 15000, growth: 3, max: 2, step: 1 },
     /** Loading dock: company trucks with supply contracts. */
@@ -455,7 +462,7 @@ export const ECONOMY = {
     /** Dock workers load trucks from the shop counter's surplus (+1 per level). */
     'dock.worker': { base: 18000, growth: 3, max: 2, step: 1 },
     /** Bigger trucks / bigger deals: contract sizes x (1 + step x level). */
-    'dock.size': { base: 12000, growth: 2.4, max: 3, step: 0.4 },
+    'dock.size': { base: 6000, growth: 2, max: 3, step: 0.4 },
     /** Open the corn field (stage 4) north of the pens, with the grain stall. */
     'field.unlock': { base: 25000, growth: 1, max: 1, step: 1 },
     /** Wider cutting reach: radius + step per level (sickle -> bigger blades -> double blades). */
@@ -467,7 +474,7 @@ export const ECONOMY = {
     /** Combine harvester: very wide path, bundles go into its hopper (unloads at the stall). */
     'field.combine': { base: 300000, growth: 1, max: 1, step: 1 },
     /** Hired tractor drivers (+1 per level): they harvest on their own, also during time away. */
-    'field.driver': { base: 60000, growth: 2.2, max: 3, step: 1 },
+    'field.driver': { base: 100000, growth: 2, max: 3, step: 1 },
     /** Bigger engine: vehicles drive faster, x (1 + step x level). */
     'field.engine': { base: 20000, growth: 2.3, max: 3, step: 0.12 },
     /** Fertilizer: crops regrow faster, time / (1 + step x level). */
@@ -477,7 +484,7 @@ export const ECONOMY = {
     /** Dairy in the factory yard (milk -> cheese). */
     'factory.dairy': { base: 120000, growth: 1, max: 1, step: 1 },
     /** Factory machines work faster: time / (1 + step x level). */
-    'factory.speed': { base: 30000, growth: 2.2, max: 4, step: 0.35 },
+    'factory.speed': { base: 30000, growth: 1.9, max: 4, step: 0.35 },
     /** Factory supplier (+1 per level): brings eggs and milk from the shop counters' surplus. */
     'factory.worker': { base: 60000, growth: 2.5, max: 2, step: 1 },
     /** Factory porter (+1 per level): carries cake and cheese to the café counter. */

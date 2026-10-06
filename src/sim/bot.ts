@@ -215,7 +215,7 @@ export class Bot {
     const front = lane >= 0 ? w.customers.front(lane) : null;
     const line = front ? w.customers.takeable(front) : null;
     const stock = line ? w.stations[line.station].counter : 0;
-    const pileUrgent = bestN >= ECONOMY.pile.max * 0.75;
+    const pileUrgent = best >= 0 && bestN >= w.stations[best].pileMax * 0.75;
     if (lane >= 0 && stock >= 1 && !(pileUrgent && stock < 4)) { this.go('serve', shop.lanes[lane].x, shop.serveZ); return; }
     if (best >= 0 && (bestN >= Math.min(c.cap, 4) || lane < 0)) {
       this.pickStation = best;
@@ -236,7 +236,7 @@ export class Bot {
   private fieldTask(): boolean {
     const w = this.w, f = w.field, c = w.carry;
     if (!f.open || c.n > 0 || unservedLane(w) >= 0) return false;
-    if (w.stations.some((s) => s.open && s.pile >= ECONOMY.pile.max * 0.75)) return false;
+    if (w.stations.some((s) => s.open && s.pile >= s.pileMax * 0.75)) return false;
     const cap = f.vehicle === 'combine' ? ECONOMY.field.combine.hopper : c.cap;
     const need = cap * ECONOMY.field.stalksPerBundle;
     for (let i = f.plots.length - 1; i >= 0; i--) {

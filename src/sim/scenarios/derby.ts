@@ -13,11 +13,14 @@ const FOLLOW = 0.35;
 const GRACE = 12;
 /** Patience every derby fan loses in a clash (share of their max). */
 const CLASH_COST = 0.2;
+/** Fans in the lane the player is serving calm down: they count this much toward the meter. */
+const CALMED = 0.35;
 
 /**
  * Ahly vs Zamalek: red and white fans come in together, each side in its own lanes. A meter leans
- * toward the side with more fans kept waiting; keep it near the middle by serving that side's lane, or
- * they clash (everyone loses patience). The fans' side comes from their look seed (no extra random draws).
+ * toward the side with more fans kept waiting; keep it near the middle by serving that side's lane (the
+ * line the player serves calms down), or they clash (everyone loses patience). The fans' side comes from
+ * their look seed (no extra random draws).
  */
 export class DerbyMechanic implements Mechanic {
   /** -1 (white waited much longer) .. 1 (red waited much longer). */
@@ -41,12 +44,13 @@ export class DerbyMechanic implements Mechanic {
     return lanes >= 3 && waiting[2] < waiting[0] ? 2 : 0;
   }
 
-  /** Fans of each side waiting in line. */
-  private waiting(w: SimWorld): { red: number; white: number } {
+  /** Fans of each side waiting in line (`calm`: the ones in the lane the player serves count less). */
+  private waiting(w: SimWorld, calm = false): { red: number; white: number } {
     let red = 0, white = 0;
     for (const c of w.customers.list) {
       if (!c.scenario || c.state !== 'queue') continue;
-      if (c.style === 'fanRed') red++; else if (c.style === 'fanWhite') white++;
+      const k = calm && w.playerAtLane(c.lane) ? CALMED : 1;
+      if (c.style === 'fanRed') red += k; else if (c.style === 'fanWhite') white += k;
     }
     return { red, white };
   }
@@ -55,8 +59,8 @@ export class DerbyMechanic implements Mechanic {
     if (w.scenario.phase !== 'active') return;
     this.time += dt;
     if (this.time < GRACE) return;
-    // the side with more fans kept waiting gets rowdy
-    const { red, white } = this.waiting(w);
+    // the side with more fans kept waiting gets rowdy (the player calms the line they serve)
+    const { red, white } = this.waiting(w, true);
     const target = ((red - white) / Math.max(4, red + white)) * 1.4;
     this.meter += (Math.max(-1, Math.min(1, target)) - this.meter) * Math.min(1, dt * FOLLOW);
     if (Math.abs(this.meter) > HOT) this.hotT += dt; else this.hotT = 0;
@@ -77,15 +81,15 @@ export class DerbyMechanic implements Mechanic {
 
   progress(_w: SimWorld, g: ScenarioGoal): number { return g === 'balance' ? 1 - Math.abs(this.meter) : 0; }
 
-  /** The lane whose front fan is on the side the meter leans to (the one waiting longest there). */
+  /** The lane with the most fans of the side that has more waiting (its front may be an ordinary customer). */
   botTarget(w: SimWorld): { x: number; z: number } | null {
-    const want = this.meter >= 0 ? 'fanRed' : 'fanWhite';
-    let lane = -1, best = -1;
+    const { red, white } = this.waiting(w);
+    const want = red === white ? (this.meter >= 0 ? 'fanRed' : 'fanWhite') : red > white ? 'fanRed' : 'fanWhite';
+    let lane = -1, best = 0;
     for (let i = 0; i < w.lanes; i++) {
-      const f = w.customers.front(i);
-      if (!f || !f.scenario) continue;
-      const waited = f.patienceMax - f.patience + (f.style === want ? 1000 : 0);
-      if (waited > best) { best = waited; lane = i; }
+      let n = 0;
+      for (const c of w.customers.list) if (c.lane === i && c.state === 'queue' && c.scenario) n += c.style === want ? 1000 : 1;
+      if (n > best) { best = n; lane = i; }
     }
     return lane < 0 ? null : { x: LAYOUT.shop.lanes[lane].x, z: LAYOUT.shop.serveZ };
   }

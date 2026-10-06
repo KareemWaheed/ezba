@@ -96,7 +96,7 @@ class SupplyJob implements WorkerJob {
     this.target[slot] = best;
     const st = w.stations[best], d = st.def;
     // empty pile (belts/workers took it): use the shop counter's surplus instead
-    this.fromCounter[slot] = st.pile < 2 && st.counter > ECONOMY.cafe.counterReserve;
+    this.fromCounter[slot] = st.pile < 2 && w.counterSpare(st) > 0;
     if (this.fromCounter[slot]) { out.x = d.counter.dropX + 0.4 * slot; out.z = d.counter.dropZ - 0.4; return; }
     out.x = d.pile.x + 1.0 + slot * 0.4;
     out.z = d.pile.z + 1.1;
@@ -107,8 +107,8 @@ class SupplyJob implements WorkerJob {
       const m = s && this.cafe.machineFor(s.def.product);
       if (!s || !m || !m.conv.wants(s.def.product)) continue;
       if (this.fromCounter[slot]) {
-        if (s.counter > ECONOMY.cafe.counterReserve) { s.counter--; return s.def.product; }
-      } else if (s.pile > 0) { s.pile--; return s.def.product; }
+        if (w.counterSpare(s) > 0) { s.counter--; return s.def.product; }
+      } else if (s.pile > 0 && !w.shopShort(s)) { s.pile--; return s.def.product; }
     }
     return null;
   }

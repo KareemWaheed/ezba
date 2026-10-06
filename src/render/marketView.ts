@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ECONOMY, type ItemId } from '../config/economy';
-import { MARKET, SHELVES } from '../config/market';
+import { MARKET, SHELVES, type ShelfDef } from '../config/market';
 import { FEATURES } from '../config/features';
 import type { SimWorld } from '../sim/world';
 import type { MarketSystem, Shopper } from '../sim/market';
@@ -19,6 +19,72 @@ const CASHIER = { shirt: 0xd94f45, pants: 0x2e2e2e, skin: 0xd9a074, hair: 0x1d1d
 const ROW_COLOR = [0x3d7fd9, 0x3fae5a, 0xe8554e];
 /** Items on shelves and racks are shown at this scale. */
 const SHELF_SCALE = 0.55, RACK_SCALE = 0.45;
+
+type Parts = THREE.BufferGeometry[];
+
+/** Dry goods: an open gondola shelf (base, back panel, sides, three boards, the row's colored header). */
+function shelfParts(sh: ShelfDef): Parts {
+  const b = sh.box, cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2, w = b.x1 - b.x0, d = b.z1 - b.z0;
+  const g = [
+    part(box, 0xb9bec6, cx, 0.06, cz, 0, 0, 0, w, 0.12, d),
+    part(box, 0xdfe3e8, cx, 0.75, b.z0 + 0.03, 0, 0, 0, w, 1.5, 0.06),
+    part(box, 0x8f969f, b.x0 + 0.03, 0.75, cz, 0, 0, 0, 0.06, 1.5, d),
+    part(box, 0x8f969f, b.x1 - 0.03, 0.75, cz, 0, 0, 0, 0.06, 1.5, d),
+    part(box, ROW_COLOR[sh.row], cx, 1.58, b.z0 + 0.06, 0, 0, 0, w, 0.18, 0.08),
+  ];
+  for (const y of [0.13, 0.55, 0.97]) g.push(part(box, 0xc8cdd4, cx, y, cz + 0.02, 0, 0, 0, w - 0.1, 0.03, d - 0.06));
+  return g;
+}
+
+/**
+ * Chilled goods: an upright glass-door fridge. White cabinet with a pale blue cold interior, wire shelves,
+ * a lit header, and two glass doors drawn as a steel frame with handles (the goods show through).
+ */
+function fridgeParts(sh: ShelfDef): Parts {
+  const b = sh.box, cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2, w = b.x1 - b.x0 + 0.1, d = b.z1 - b.z0 + 0.1;
+  const x0 = cx - w / 2, x1 = cx + w / 2, z0 = cz - d / 2, front = cz + d / 2, H = 1.75, steel = 0xb8c2cc;
+  const g = [
+    // cabinet: plinth, back, sides, roof
+    part(box, 0x5a6270, cx, 0.07, cz, 0, 0, 0, w, 0.14, d),
+    part(box, 0xcfe9f7, cx, H / 2, z0 + 0.04, 0, 0, 0, w, H, 0.08),
+    part(box, 0xf4f6f8, x0 + 0.04, H / 2, cz, 0, 0, 0, 0.08, H, d),
+    part(box, 0xf4f6f8, x1 - 0.04, H / 2, cz, 0, 0, 0, 0.08, H, d),
+    part(box, 0xf4f6f8, cx, H - 0.04, cz, 0, 0, 0, w, 0.08, d),
+    // lit header strip and a cold-blue sign band
+    part(box, 0x3d9fd9, cx, H + 0.09, front - 0.05, 0, 0, 0, w, 0.18, 0.1),
+    part(box, 0xeaf8ff, cx, H - 0.12, cz, 0, 0, 0, w - 0.2, 0.03, d - 0.15),
+    // door frames: top, bottom, the two outer stiles and the middle mullion; a handle each side of it
+    part(box, steel, cx, H - 0.1, front, 0, 0, 0, w, 0.06, 0.04),
+    part(box, steel, cx, 0.17, front, 0, 0, 0, w, 0.06, 0.04),
+    part(box, steel, x0 + 0.05, H / 2, front, 0, 0, 0, 0.06, H - 0.2, 0.04),
+    part(box, steel, x1 - 0.05, H / 2, front, 0, 0, 0, 0.06, H - 0.2, 0.04),
+    part(box, steel, cx, H / 2, front, 0, 0, 0, 0.05, H - 0.2, 0.04),
+    part(box, 0x2b2b2b, cx - 0.1, 0.95, front + 0.04, 0, 0, 0, 0.03, 0.35, 0.03),
+    part(box, 0x2b2b2b, cx + 0.1, 0.95, front + 0.04, 0, 0, 0, 0.03, 0.35, 0.03),
+  ];
+  // wire shelves inside, at the same heights as the open shelves (the goods sit on them)
+  for (const y of [0.13, 0.55, 0.97]) g.push(part(box, 0xdde6ee, cx, y, cz, 0, 0, 0, w - 0.18, 0.025, d - 0.14));
+  return g;
+}
+
+/** Vegetables: a wooden market stand with three stepped crate tiers. */
+function produceParts(sh: ShelfDef): Parts {
+  const b = sh.box, cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2, w = b.x1 - b.x0, d = b.z1 - b.z0;
+  const wood = 0xa8743f, dark = 0x7a5230;
+  const g = [
+    part(box, dark, cx, 0.06, cz, 0, 0, 0, w, 0.12, d),
+    part(box, wood, cx, 0.75, b.z0 + 0.04, 0, 0, 0, w, 1.5, 0.08),
+    part(box, dark, b.x0 + 0.04, 0.75, cz, 0, 0, 0, 0.08, 1.5, d),
+    part(box, dark, b.x1 - 0.04, 0.75, cz, 0, 0, 0, 0.08, 1.5, d),
+    part(box, 0x3fae5a, cx, 1.58, b.z0 + 0.06, 0, 0, 0, w, 0.18, 0.08),
+  ];
+  // a crate on each tier: bottom slab plus a low front lip
+  for (const y of [0.13, 0.55, 0.97]) {
+    g.push(part(box, wood, cx, y, cz + 0.02, 0, 0, 0, w - 0.12, 0.04, d - 0.06));
+    g.push(part(box, dark, cx, y + 0.07, cz + d / 2 - 0.05, 0, 0, 0, w - 0.12, 0.1, 0.04));
+  }
+  return g;
+}
 
 /** Static store: floor, walls, sign, shelves, checkout, storeroom racks, desk. */
 function storeGeo(): THREE.BufferGeometry {
@@ -44,18 +110,7 @@ function storeGeo(): THREE.BufferGeometry {
     g.push(part(box, 0xf8f4ea, (s.x0 + s.x1) / 2, 0.8, (s.z0 + s.z1) / 2, 0, 0, 0, s.x1 - s.x0, 1.6, s.z1 - s.z0));
     g.push(part(box, 0xd94f45, (s.x0 + s.x1) / 2, 1.62, (s.z0 + s.z1) / 2, 0, 0, 0, s.x1 - s.x0 + 0.04, 0.1, s.z1 - s.z0));
   }
-  // gondola shelves: base, back panel, three boards, colored header
-  for (const sh of SHELVES) {
-    const b = sh.box, cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2, w = b.x1 - b.x0, d = b.z1 - b.z0;
-    g.push(
-      part(box, 0xb9bec6, cx, 0.06, cz, 0, 0, 0, w, 0.12, d),
-      part(box, 0xdfe3e8, cx, 0.75, b.z0 + 0.03, 0, 0, 0, w, 1.5, 0.06),
-      part(box, 0x8f969f, b.x0 + 0.03, 0.75, cz, 0, 0, 0, 0.06, 1.5, d),
-      part(box, 0x8f969f, b.x1 - 0.03, 0.75, cz, 0, 0, 0, 0.06, 1.5, d),
-      part(box, ROW_COLOR[sh.row], cx, 1.58, b.z0 + 0.06, 0, 0, 0, w, 0.18, 0.08),
-    );
-    for (const y of [0.13, 0.55, 0.97]) g.push(part(box, 0xc8cdd4, cx, y, cz + 0.02, 0, 0, 0, w - 0.1, 0.03, d - 0.06));
-  }
+  for (const sh of SHELVES) g.push(...(sh.unit === 'fridge' ? fridgeParts(sh) : sh.unit === 'produce' ? produceParts(sh) : shelfParts(sh)));
   // checkout: counter with a belt and a register
   const c = MARKET.checkout.box, ccx = (c.x0 + c.x1) / 2, ccz = (c.z0 + c.z1) / 2;
   g.push(
@@ -87,6 +142,17 @@ function storeGeo(): THREE.BufferGeometry {
   }
   return merge(g);
 }
+
+/** A shopping trolley (families push one), built at the origin. */
+const TROLLEY_GEO = merge([
+  part(box, 0xc0c6ce, 0, 0.5, 0, 0, 0, 0, 0.45, 0.3, 0.6),
+  part(box, 0x9aa3ad, 0, 0.36, 0, 0, 0, 0, 0.42, 0.03, 0.56),
+  part(box, 0x2b2b2b, 0, 0.72, -0.3, 0, 0, 0, 0.5, 0.04, 0.04),
+  part(cyl, 0x2b2b2b, -0.15, 0.07, -0.22, 0, 0, Math.PI / 2, 0.07, 0.04, 0.07),
+  part(cyl, 0x2b2b2b, 0.15, 0.07, -0.22, 0, 0, Math.PI / 2, 0.07, 0.04, 0.07),
+  part(cyl, 0x2b2b2b, -0.15, 0.07, 0.22, 0, 0, Math.PI / 2, 0.07, 0.04, 0.07),
+  part(cyl, 0x2b2b2b, 0.15, 0.07, 0.22, 0, 0, Math.PI / 2, 0.07, 0.04, 0.07),
+]);
 
 /** 12 items on a shelf: 4 across on each of the three boards (local units, before SHELF_SCALE). */
 const SHELF_SLOTS: SlotFn = (i, out) => {
@@ -241,8 +307,10 @@ export class MarketView {
       let v = this.shoppers.get(c.id);
       if (!v) {
         v = typedCustomerView({ kind: 'normal', look: c.look, type: c.type });
-        const chip = new ListChip();
+        const chip = new ListChip(!!c.family);
         v.char.root.add(chip.s.sprite);
+        // a family pushes a trolley
+        if (c.family) { const t = new THREE.Mesh(TROLLEY_GEO, MAT); t.position.set(0, 0, 0.55); v.char.root.add(t); }
         this.chips.set(c.id, chip);
         this.shoppers.set(c.id, v);
         this.scene.add(v.char.root);
@@ -303,9 +371,12 @@ function bubbleOf(c: Shopper): { look: number; state: string; patience: number; 
  * in the checkout line, their basket: items scanned so far and what it comes to.
  */
 class ListChip {
-  readonly s = new CanvasSprite(288, 84, 2.2);
+  readonly s: CanvasSprite;
   private key = '';
-  constructor() { this.s.sprite.position.set(0, 2.8, 0); }
+  constructor(private family: boolean) {
+    this.s = family ? new CanvasSprite(470, 84, 3.6) : new CanvasSprite(288, 84, 2.2);
+    this.s.sprite.position.set(0, 2.8, 0);
+  }
 
   invalidate(): void { this.key = ''; }
 
@@ -317,7 +388,7 @@ class ListChip {
     const empty = shopping && c.waitT > 0;
     const key = shopping
       ? `s${c.li}|${empty ? 1 : 0}|${c.lines.map((l) => l.left).join(',')}`
-      : `q${c.scanned}/${c.got.length}|${basket}`;
+      : `q${c.scanned}/${c.got.length}|${basket}|${c.byPlayer ? 1 : 0}`;
     if (key === this.key) return;
     this.key = key;
     this.s.draw((ctx, w, h) => {
@@ -330,11 +401,14 @@ class ListChip {
         ctx.fillStyle = '#e9e4d4'; rr(ctx, 18, h - 18, w - 36, 7, 4); ctx.fill();
         ctx.fillStyle = color; rr(ctx, 18, h - 18, Math.max(7, (w - 36) * frac), 7, 4); ctx.fill();
       };
+      // families: a 👨‍👩‍👧 badge on the left
+      const x0 = this.family ? 66 : 8;
+      if (this.family) { ctx.font = `34px ${EMOJI}`; ctx.fillText('👨‍👩‍👧', 38, 34); }
       if (shopping) {
-        const n = c.lines.length, cell = (w - 16) / Math.max(n, 1);
+        const n = c.lines.length, cell = (w - 8 - x0) / Math.max(n, 1);
         c.lines.forEach((l, i) => {
           // (laid out left to right in list order)
-          const x = 8 + cell * (i + 0.5), cur = i === c.li;
+          const x = x0 + cell * (i + 0.5), cur = i === c.li;
           if (cur) { ctx.fillStyle = empty ? '#ffd2cf' : '#fff1b8'; rr(ctx, x - cell / 2 + 3, 9, cell - 6, h - 30, 14); ctx.fill(); }
           ctx.globalAlpha = l.left > 0 || cur ? 1 : 0.45;
           ctx.font = `34px ${EMOJI}`;
@@ -346,16 +420,19 @@ class ListChip {
         });
         bar(total ? c.got.length / total : 0, '#f6c23e');
       } else {
+        const ox = x0 - 8 + (this.family ? 20 : 0);
         ctx.font = `30px ${EMOJI}`;
-        ctx.fillText('🧾', 34, 34);
+        ctx.fillText('🧾', ox + 34, 34);
         ctx.font = `800 30px ${FONT}`;
         ctx.fillStyle = '#2b2a1f';
         ctx.direction = 'ltr';
-        ctx.fillText(`${c.scanned}/${c.got.length}`, 100, 36);
+        ctx.fillText(`${c.scanned}/${c.got.length}`, ox + 100, 36);
         ctx.fillStyle = '#2f8f3a';
-        ctx.fillText(`${basket}`, 196, 36);
+        ctx.fillText(`${basket}`, ox + 196, 36);
         ctx.font = `26px ${EMOJI}`;
-        ctx.fillText('💰', 252, 34);
+        ctx.fillText('💰', ox + 252, 34);
+        // the tip for checking them out in person
+        if (this.family) { ctx.font = `800 26px ${FONT}`; ctx.fillStyle = '#e8554e'; ctx.fillText(c.byPlayer ? '+30% 🙋' : '🙋 +30%?', ox + 345, 36); }
         bar(c.got.length ? c.scanned / c.got.length : 0, '#3d7fd9');
       }
     });

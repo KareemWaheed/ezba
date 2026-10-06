@@ -247,6 +247,10 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       break;
     }
     case 'rushWarn': sfx.alarm(); break;
+    case 'storeRush':
+      if (e.n === 1) { sfx.alarm(); toast.show('🔥 زحمة في السوبر ماركت! الزباين جايين كتير'); }
+      else toast.show('✅ الزحمة خلصت في السوبر ماركت');
+      break;
     case 'truck': {
       const t = sim.contracts.truck;
       sfx.sparkle();

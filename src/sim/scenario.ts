@@ -72,6 +72,9 @@ const POSE_TIME = 5;
 const ENJOY_TIME = 10;
 const WALK_SPEED = 1.7;
 
+/** A crowd event features a product with at least this much on the counter and pile (else the best-stocked one). */
+const FEATURED_STOCK = 40;
+
 /**
  * Scenario events (special visits): idle -> warn (banner countdown, motorcade arrives) -> active
  * (themed crowd, rule changes, the guest's stage visit) -> settle (wait for the event's customers
@@ -165,7 +168,11 @@ export class ScenarioSystem {
   private start(def: ScenarioDef): void {
     const w = this.w, open = w.stations.filter((s) => s.open && s.farmed);
     this.def = def;
-    this.featured = def.featured === undefined || def.featured === null ? (open.length ? w.rng.pick(open).def.product : null) : def.featured;
+    // the crowd's product: one the farm has plenty of (a crowd all after something scarce can't be served)
+    const stock = (s: (typeof open)[number]) => s.counter + s.pile;
+    const most = open.reduce((m, s) => Math.max(m, stock(s)), 0);
+    const plenty = open.filter((s) => stock(s) >= Math.min(FEATURED_STOCK, most));
+    this.featured = def.featured === undefined || def.featured === null ? (plenty.length ? w.rng.pick(plenty).def.product : null) : def.featured;
     this.phase = 'warn';
     this.t = def.warning;
     this.angry = this.sales = this.likes = 0;
