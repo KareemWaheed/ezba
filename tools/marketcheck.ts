@@ -337,11 +337,18 @@ for (const p of MARKET.products) {
 
 // 'on its way' only when the low shelf's own product is coming, not any box
 {
+  // a box for a well-stocked shelf (pasta) is on its way; the other shelves are bare and no box can be had
+  // for them (no money, no farm surplus, too much stock for supplier credit): nothing is coming for them
   const w = farm({ 'market.unlock': 1 }), m = w.market, D = MARKET.desk;
-  w.money = 1e6;
   at(w, D.x, D.z, 0.1);
-  m.order('rice');
-  ok(marketHint(w) === 'order', `one box on its way doesn't cover the other empty shelves (${marketHint(w)})`);
+  w.money = 0;
+  m.cash.value = 0;
+  for (const st of w.stations) { st.counter = 0; st.pile = 0; }
+  m.shelfFor('pasta')!.stock = ECONOMY.supermarket.shelfMax;
+  m.incoming.push({ item: 'pasta', n: ECONOMY.supermarket.box, t: 60 });
+  const bare = m.shelves.filter((s) => m.low(s));
+  ok(bare.length > 0 && bare.every((s) => !m.canGetBox(s.def.item)) && m.totalStock >= ECONOMY.supermarket.creditBelow, 'setup: bare shelves, no box to be had for them');
+  ok(marketHint(w) === 'order', `a box for another shelf doesn't count as "on its way" for the bare ones (${marketHint(w)})`);
 }
 
 // switched off (as in the game now): a save that built the store gets its spend back and the store stays shut
