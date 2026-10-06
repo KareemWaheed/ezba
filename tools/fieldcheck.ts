@@ -5,9 +5,9 @@
  *   npm run fieldcheck
  */
 import { SimWorld } from '../src/sim/world';
+import { serialize, restore, migrate } from '../src/sim/save';
 import { Bot } from '../src/sim/bot';
 import { FIELDS } from '../src/config/fields';
-import { ECONOMY } from '../src/config/economy';
 
 const DT = 1 / 30;
 let fails = 0;
@@ -40,13 +40,16 @@ for (let i = 0; i < 60 / DT; i++) { w.tick(DT); w.events.drain((e) => { if (e.ty
 const reached = corn.counter - counter0 + cornSold;
 ok(reached >= 8, `the corn worker carried it to the shop counter (+${reached}, ${cornSold} already sold)`);
 
-// a full pile: corn stays in the player's hands (they can still take it to the counter)
-corn.pile = ECONOMY.pile.max;
+// the corn pile has no limit: a big pile still takes everything the player brings (and saves whole)
+corn.pile = 200;
 w.carry.items.length = 0;
-for (let k = 0; k < 3; k++) w.carry.push('corn');
-// (the corn worker keeps emptying the pile, so hold it full the whole time)
-tick(w, 4, () => { w.player.x = d.x; w.player.z = d.z; corn.pile = ECONOMY.pile.max; });
-ok(w.carry.items.filter((x) => x === 'corn').length === 3, 'with the corn pile full, the stall leaves the corn in hand');
+for (let k = 0; k < 6; k++) w.carry.push('corn');
+tick(w, 3, () => { w.player.x = d.x; w.player.z = d.z; });
+// (the corn worker keeps taking from it meanwhile: the point is the hand empties onto a pile way past the old cap of 24)
+ok(!w.carry.has('corn') && corn.pile > 150, `the corn pile has no limit (${corn.pile} on it, ${w.carry.items.filter((x) => x === 'corn').length} left in hand)`);
+const w2 = new SimWorld(1);
+restore(w2, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
+ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a save keeps the whole corn pile');
 
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }
 console.log('\nall field checks passed');

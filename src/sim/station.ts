@@ -55,7 +55,10 @@ export class Station {
   /** Has animals (eggs, milk); corn doesn't (golden animals, troughs, rushes and pens skip it). */
   get farmed(): boolean { return !!this.def.producer; }
 
-  get pileFull(): boolean { return this.pile + this.pending >= ECONOMY.pile.max; }
+  /** Pile cap: animals' piles hold ECONOMY.pile.max; the corn pile by the grain stall has no limit. */
+  get pileMax(): number { return this.farmed ? ECONOMY.pile.max : Infinity; }
+
+  get pileFull(): boolean { return this.pile + this.pending >= this.pileMax; }
 
   addAnimal(rng: Rng): Animal {
     const a = this.area;

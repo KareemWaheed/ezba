@@ -6,6 +6,7 @@ import { Rng } from './rng';
 import { createPlayer, updatePlayer, type PlayerState } from './player';
 import { Carrier } from './carrier';
 import { Station } from './station';
+import type { RefundLine } from './refund';
 import { CustomerSystem } from './customers';
 import { UpgradeSystem } from './upgrades';
 import { StaffSystem, nextBreak } from './staff';
@@ -132,6 +133,27 @@ export class SimWorld {
     return v + this.market.marginPerSec;
   }
 
+  /**
+   * Items on a shop counter that workers (kitchen helpers, factory suppliers, dock workers, store deliveries)
+   * may take: beyond the reserve and beyond what the shop's customers in line still want. Shop customers first.
+   */
+  counterSpare(s: Station): number {
+    return s.counter - ECONOMY.cafe.counterReserve - this.shopWants(s);
+  }
+
+  /** Items of this station's product the shop's customers in line still want. */
+  shopWants(s: Station): number {
+    let want = 0;
+    for (const c of this.customers.list) if (c.state === 'queue') for (const l of c.lines) if (l.station === s.index) want += l.left;
+    return want;
+  }
+
+  /** The shop's line wants more of this than its counter has: workers leave the pile for the shop too. */
+  shopShort(s: Station): boolean { return s.counter < this.shopWants(s); }
+
+  /** Refunds from upgrade price drops given on the last load (main.ts shows them once). Not saved. */
+  refunds: RefundLine[] = [];
+
   /** Sale price multiplier from farm growth (see ECONOMY.market). */
   get priceMult(): number {
     return (1 + this.upgrades.bought * ECONOMY.market.growthPerUpgrade) * (1 + this.legacy * LEGACY.priceStep);
@@ -139,7 +161,7 @@ export class SimWorld {
 
   /** Milestone upgrades not bought yet (all bought = the farm can be sold for a bigger one). */
   get legacyMissing(): typeof UPGRADES[number][] {
-    return UPGRADES.filter((d) => d.milestone && !this.path.hidden.includes(d.id) && this.upgrades.level(d.id) === 0);
+    return UPGRADES.filter((d) => d.milestone && !this.upgrades.hidden(d.id) && this.upgrades.level(d.id) === 0);
   }
 
   /** Open checkout lanes (1 at the start). */

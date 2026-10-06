@@ -47,6 +47,7 @@ export const PATHS: Record<GameMode, PathDef> = {
       'market.stocker': 0.015,
       'market.auto': 0.05,
       'eggs.unlock': 0.3,
+      'eggs.expand': 0.5,
     },
     requires: {
       'eggs.animals': [{ id: 'eggs.unlock', level: 1 }],

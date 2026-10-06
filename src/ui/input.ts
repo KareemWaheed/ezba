@@ -51,7 +51,12 @@ export class Input {
     };
     addEventListener('pointerup', end);
     addEventListener('pointercancel', end);
-    addEventListener('keydown', (e) => { this.onGesture?.(); this.keys.add(e.key.toLowerCase()); });
+    addEventListener('keydown', (e) => {
+      this.onGesture?.();
+      // typing in a text box (the transfer code) doesn't walk the player
+      if ((e.target as HTMLElement).closest?.('textarea, input')) return;
+      this.keys.add(e.key.toLowerCase());
+    });
     addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
     addEventListener('blur', () => { this.keys.clear(); this.id = null; this.sx = this.sz = 0; this.joy.hidden = true; });
   }

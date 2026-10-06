@@ -20,9 +20,10 @@ import { Hud } from './ui/hud';
 import { music, sfx, unlockAudio } from './audio';
 import { guideTarget, nextGoal } from './sim/guide';
 import { restore, serialize } from './sim/save';
-import { UPGRADES } from './config/upgrades';
+import { UPGRADES, UPGRADE_BY_ID } from './config/upgrades';
 import { MODE, chosenMode, clearSave, loadSave, requestPersistence, writeSave } from './storage';
 import { TitleScreen } from './ui/titleScreen';
+import { FEATURES } from './config/features';
 import { GoalCard, Toast } from './ui/panels';
 import { preventZoom } from './ui/noZoom';
 import { PressureHud } from './ui/pressureHud';
@@ -36,6 +37,9 @@ import { Modal, fmtAway, fmtMoney, ltr } from './ui/modal';
 import { DebugPanel } from './ui/debug';
 import { MetaMenus, dayKey } from './ui/menus';
 import { OrderPanel } from './ui/orderPanel';
+import { updateBanner } from './ui/updateBanner';
+import { MarketBoard } from './ui/marketBoard';
+import { TransferPanel } from './ui/transferPanel';
 import { ITEM_ICON } from './render/models';
 import { ALBUM_PAGES } from './config/album';
 import { simulateAway } from './sim/offline';
@@ -72,6 +76,7 @@ const hud = new Hud(uiRoot);
 hud.onRide = () => sim.field.toggleVehicle();
 const toast = new Toast(uiRoot);
 const goalCard = new GoalCard(uiRoot);
+const marketBoard = new MarketBoard(uiRoot);
 const pressureHud = new PressureHud(uiRoot);
 const scenarioHud = new ScenarioHud(uiRoot);
 const scenarioView = new ScenarioView(view.scene, view);
@@ -85,10 +90,13 @@ const saved = loadSave();
 if (saved) restore(sim, saved);
 else hud.showHint(true);
 const save = () => writeSave(serialize(sim, Date.now()));
+// a price-drop refund was just credited: save right away so it's never given twice
+if (sim.refunds.length) save();
 setInterval(save, ECONOMY.save.autosaveEvery * 1000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 addEventListener('pagehide', save);
 void requestPersistence();
+updateBanner(uiRoot, save);
 
 const modal = new Modal(uiRoot);
 
@@ -116,6 +124,25 @@ function welcomeBack(seconds: number): void {
   save();
 }
 if (saved) welcomeBack((Date.now() - saved.t) / 1000);
+
+/** Upgrades that got cheaper in an update: the difference was credited on load; say so once (after any other card). */
+function showRefund(): void {
+  const lines = sim.refunds;
+  sim.refunds = [];
+  const total = lines.reduce((a, l) => a + l.amount, 0);
+  sfx.kaching();
+  modal.open(`
+    <div class="m-icon">💰</div>
+    <div class="m-title">رجّعنالك فلوس!</div>
+    <div>رخّصنا أسعار شوية ترقيات، وانت كنت اشتريتها بالسعر القديم، فرجّعنالك الفرق:</div>
+    <div class="r-list">${lines.map((l) => {
+      const d = UPGRADE_BY_ID.get(l.id);
+      return `<div class="r-row"><span>${d?.icon ?? '⬆️'} ${d?.label ?? l.id}</span><b>${ltr(`+${fmtMoney(l.amount)}`)}</b></div>`;
+    }).join('')}</div>
+    <div class="m-big">+${fmtMoney(total)} 💰</div>
+    <button class="m-btn" data-close>شكراً! 🎉</button>`);
+  save();
+}
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = Date.now(); return; }
@@ -125,10 +152,13 @@ document.addEventListener('visibilitychange', () => {
 
 sim.daily.ensure(dayKey());
 const title = new TitleScreen(uiRoot, save);
-// first launch (or first since the supermarket game arrived): pick a game
-if (!chosenMode()) title.show();
+// first launch (or first since the supermarket game arrived): pick a game; with the supermarket switched off
+// there's nothing to pick and every game is the farm
+if (FEATURES.supermarket && !chosenMode()) title.show();
 const menus = new MetaMenus(uiRoot, sim, modal);
 menus.onSwitchGame = () => title.show(true);
+const transfer = new TransferPanel(modal, () => serialize(sim, Date.now()), () => menus.showSettings());
+menus.onTransfer = (kind) => { if (kind === 'send') void transfer.showSend(); else transfer.showReceive(); };
 const orderPanel = new OrderPanel(sim, modal);
 menus.onLegacyReady = () => { sfx.fanfare(); toast.show('🏆 فتحت كل حاجة! دوس 🏆 وابدأ عزبة أكبر'); };
 
@@ -242,6 +272,10 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       break;
     }
     case 'rushWarn': sfx.alarm(); break;
+    case 'storeRush':
+      if (e.n === 1) { sfx.alarm(); toast.show('🔥 زحمة في السوبر ماركت! الزباين جايين كتير'); }
+      else toast.show('✅ الزحمة خلصت في السوبر ماركت');
+      break;
     case 'truck': {
       const t = sim.contracts.truck;
       sfx.sparkle();
@@ -357,7 +391,11 @@ function frame(now: number): void {
   scenarioView.sync(sim, real);
   if (sim.scenario.phase === 'idle') music.stop();
   goalT -= real;
-  if (goalT <= 0) { goalT = 0.25; goalCard.update(nextGoal(sim), sim.money); }
+  if (goalT <= 0) {
+    goalT = 0.25;
+    // inside the supermarket its board takes the goal card's place
+    goalCard.update(marketBoard.update(sim) ? null : nextGoal(sim), sim.money);
+  }
   if (sim.carry.full()) {
     const s = toScreen(p.x, 0.78 + playerStack.height + 0.5, p.z);
     hud.setFull(s.x, s.y, true);
@@ -367,6 +405,7 @@ function frame(now: number): void {
   debug.update(real);
   menus.update(real);
   orderPanel.update();
+  if (sim.refunds.length && !modal.isOpen) showRefund();
 
   view.render(real);
   requestAnimationFrame(frame);

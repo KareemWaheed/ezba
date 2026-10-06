@@ -3,6 +3,9 @@ import { SimWorld } from './world';
 import { LEGACY } from '../config/legacy';
 import { FIELDS } from '../config/fields';
 import type { GameMode } from '../config/paths';
+import { FEATURES } from '../config/features';
+import { PRICE_VERSION } from '../config/priceHistory';
+import { refundPriceDrops } from './refund';
 
 /**
  * Versioned save format. Bump SAVE_VERSION when the shape changes and add a migration from the
@@ -47,6 +50,8 @@ export interface SaveData {
   daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
   /** Prestige level (config/legacy.ts). */
   legacy?: number;
+  /** Upgrade price version the levels were bought at (config/priceHistory.ts; absent = before refunds existed). */
+  pv?: number;
   /** VIP cooldown left (s). */
   vipT?: number;
   /** Supermarket: shelf and storeroom stock per product (orders on the way are saved as arrived), checkout cash. */
@@ -88,7 +93,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     v: SAVE_VERSION, mode: w.mode, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
-    rating: w.service.rating, legacy: w.legacy, vipT: w.customers.vipT,
+    rating: w.service.rating, legacy: w.legacy, pv: PRICE_VERSION, vipT: w.customers.vipT,
     market: marketSave(w),
     trust: { ...w.contracts.trust },
     boost: Object.fromEntries(w.stations.map((s) => [s.def.id, s.boostT])),
@@ -139,7 +144,7 @@ export function restore(w: SimWorld, s: SaveData): void {
     const d = s.stations?.[st.def.id];
     if (!d) continue;
     st.open = st.def.startsOpen || !!d.open;
-    st.pile = Math.min(ECONOMY.pile.max, Math.max(0, Math.floor(num(d.pile))));
+    st.pile = Math.min(st.pileMax, Math.max(0, Math.floor(num(d.pile))));
     st.counter = Math.max(0, Math.floor(num(d.counter)));
   }
   w.player.x = num(s.player?.x, w.player.x);
@@ -207,6 +212,14 @@ export function restore(w: SimWorld, s: SaveData): void {
   }
   w.cash.value = num(s.cash?.value);
   w.cash.bills = Math.floor(num(s.cash?.bills));
+  // the supermarket is switched off: refund its upgrades and the cash waiting at its checkout
+  const refund = up.refundClosedFeatures();
+  if (refund > 0 || w.market.cash.value > 0) {
+    w.money += refund + (FEATURES.supermarket ? 0 : w.market.cash.value);
+    if (!FEATURES.supermarket) { w.market.cash.value = 0; w.market.cash.bills = 0; }
+  }
+  // upgrades that got cheaper since this save was priced: the difference comes back (main.ts says so)
+  w.refunds = refundPriceDrops(w, Math.floor(num(s.pv)));
   up.apply();
   w.carry.items.length = 0;
   for (const p of s.carry ?? []) if ((ITEM_IDS as string[]).includes(p) && !w.carry.full()) w.carry.push(p as ItemId);

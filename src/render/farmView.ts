@@ -35,6 +35,9 @@ class StationView {
   readonly herd: AnimalHerdView | null;
   private label = new CanvasSprite(192, 96, 1.1);
   private labelN = -1;
+  /** "x120" over a pile taller than its stack (the corn pile has no limit). */
+  private pileLabel = new CanvasSprite(192, 96, 1.1);
+  private pileLabelN = -1;
   private objs: THREE.Object3D[] = [];
   private shownOpen = false;
 
@@ -47,7 +50,7 @@ class StationView {
     const marker = groundMarker(ITEM_ICON[d.product], 1.5, 'rgba(255,255,255,0.25)', '#ffffff');
     marker.position.x = d.counter.dropX;
     marker.position.z = d.counter.dropZ;
-    this.objs.push(this.pile.group, this.counter.group, pallet, marker, this.label.sprite);
+    this.objs.push(this.pile.group, this.counter.group, pallet, marker, this.label.sprite, this.pileLabel.sprite);
     for (const o of this.objs) { o.visible = false; scene.add(o); }
     this.herd = d.producer ? new AnimalHerdView(scene, d.producer, st.index * 2.1) : null;
   }
@@ -75,7 +78,27 @@ class StationView {
     }
   }
 
-  invalidateLabel(): void { this.labelN = -1; }
+  private syncPileLabel(count: number): void {
+    const over = count > this.pile.max;
+    this.pileLabel.sprite.visible = over;
+    if (!over || count === this.pileLabelN) return;
+    this.pileLabelN = count;
+    this.pileLabel.draw((c, w, h) => {
+      c.font = `800 64px ${FONT}`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.direction = 'ltr';
+      c.lineWidth = 12;
+      c.strokeStyle = 'rgba(28,38,18,0.85)';
+      c.strokeText(`x${count}`, w / 2, h / 2 + 4);
+      c.fillStyle = '#ffffff';
+      c.fillText(`x${count}`, w / 2, h / 2 + 4);
+    });
+    const top = this.pile.slotWorld(this.pile.max - 1, _v);
+    this.pileLabel.sprite.position.set(top.x, top.y + ITEM_H[this.st.def.product] + 0.55, top.z);
+  }
+
+  invalidateLabel(): void { this.labelN = -1; this.pileLabelN = -1; }
 
   sync(time: number, dt: number, flyers: Flyers, pop: boolean): void {
     const st = this.st;
@@ -83,9 +106,11 @@ class StationView {
       this.shownOpen = st.open;
       for (const o of this.objs) o.visible = st.open;
       this.label.sprite.visible = false;
+      this.pileLabel.sprite.visible = false;
     }
     if (!st.open) return;
     this.pile.set(st.pile, pop);
+    this.syncPileLabel(st.pile);
     this.syncCounter(st.counter, pop);
     this.pile.update(dt);
     this.counter.update(dt);

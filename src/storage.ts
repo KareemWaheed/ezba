@@ -1,5 +1,6 @@
 import { SAVE_VERSION, migrate, type SaveData } from './sim/save';
 import type { GameMode } from './config/paths';
+import { FEATURES } from './config/features';
 
 const MODE_KEY = 'ezba.mode';
 /** Each game has its own save slot (the farm keeps the original key, so old saves load as the farm). */
@@ -10,8 +11,8 @@ export function chosenMode(): GameMode | null {
   try { const m = localStorage.getItem(MODE_KEY); return m === 'farm' || m === 'market' ? m : null; } catch { return null; }
 }
 
-/** The game this page runs: the one picked, else the farm. */
-export const MODE: GameMode = chosenMode() ?? 'farm';
+/** The game this page runs: the one picked, else the farm (always the farm while the supermarket is off). */
+export const MODE: GameMode = FEATURES.supermarket ? chosenMode() ?? 'farm' : 'farm';
 const KEY = keyOf(MODE);
 
 /** Remember the picked game (the caller reloads the page when it changes). */
@@ -28,7 +29,13 @@ export function hasSave(m: GameMode): boolean {
 export function loadSave(): SaveData | null {
   let raw: unknown = null;
   let text: string | null = null;
-  try { text = localStorage.getItem(KEY); raw = text ? JSON.parse(text) : null; } catch { return null; }
+  try {
+    text = localStorage.getItem(KEY);
+    // supermarket switched off: a supermarket-first game (its own slot) loads as the farm, store refunded on load
+    // (the next autosave moves it to the farm slot)
+    if (!text && !FEATURES.supermarket) text = localStorage.getItem(keyOf('market'));
+    raw = text ? JSON.parse(text) : null;
+  } catch { return null; }
   if (!raw) return null;
   const v = (raw as { v?: number }).v ?? 0;
   if (v < SAVE_VERSION && text) {
@@ -69,4 +76,31 @@ export function exportCode(s: SaveData): string {
 
 export function importCode(code: string): SaveData | null {
   try { return migrate(JSON.parse(decodeURIComponent(escape(atob(code.trim()))))); } catch { return null; }
+}
+
+/**
+ * Bring in progress from another device: the save goes into its game's slot (the current one there is kept
+ * as `<slot>-before-import`), that game becomes the one this page opens, and later writes from this page
+ * are blocked until the caller reloads.
+ */
+export function importSave(s: SaveData): boolean {
+  const mode: GameMode = s.mode === 'market' ? 'market' : 'farm';
+  const key = keyOf(mode);
+  const back = `${key}-before-import`;
+  let old: string | null = null, oldBack: string | null = null, oldMode: string | null = null;
+  try {
+    old = localStorage.getItem(key);
+    oldBack = localStorage.getItem(back);
+    oldMode = localStorage.getItem(MODE_KEY);
+    if (old) localStorage.setItem(back, old);
+    localStorage.setItem(key, JSON.stringify({ ...s, mode }));
+    localStorage.setItem(MODE_KEY, mode);
+  } catch {
+    // all or nothing: put back whatever was written before the failure
+    const put = (k: string, v: string | null) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* storage gone */ } };
+    put(key, old); put(back, oldBack); put(MODE_KEY, oldMode);
+    return false;
+  }
+  blocked = true;
+  return true;
 }

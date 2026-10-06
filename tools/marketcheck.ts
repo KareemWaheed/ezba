@@ -5,12 +5,19 @@
  *   npm run marketcheck
  */
 import { SimWorld } from '../src/sim/world';
+import { FEATURES } from '../src/config/features';
+
+// the store checks run with the supermarket on, whatever the game's switch says
+FEATURES.supermarket = true;
 import { ECONOMY, type UpgradeId } from '../src/config/economy';
 import { MARKET, PRICE_TAGS, SHELVES } from '../src/config/market';
 import { serialize, restore, migrate, legacyReset } from '../src/sim/save';
 import { simulateAway } from '../src/sim/offline';
 import { Bot } from '../src/sim/bot';
 import { LAYOUT } from '../src/config/layout';
+import { UPGRADE_BY_ID } from '../src/config/upgrades';
+import { marketHint } from '../src/sim/guide';
+import { upgradeCost } from '../src/sim/upgrades';
 
 const DT = 1 / 30;
 let fails = 0;
@@ -220,6 +227,145 @@ const run = (w: SimWorld, s: number) => { for (let i = 0; i < s / DT; i++) { w.t
   // time away: a staffed store earns while the player is gone (paid out with the rest, not left in its cash pile)
   const cash0 = m.cash.value, r = simulateAway(w, 600);
   ok(r.raw > 0 && m.cash.value === cash0, `time away counts the store's sales (${Math.round(r.raw)} raw in 10 min)`);
+}
+
+// the café always pays more for a dish than the supermarket sells it for
+for (const p of MARKET.products) {
+  if (!(p.item in ECONOMY.dishes)) continue;
+  const cafe = ECONOMY.dishes[p.item as keyof typeof ECONOMY.dishes].price;
+  ok(cafe > PRICE_TAGS[PRICE_TAGS.length - 1].mult * p.sell, `café ${p.name} (${cafe}) pays more than the store, even at its dearest (${Math.round(PRICE_TAGS[PRICE_TAGS.length - 1].mult * p.sell)})`);
+}
+
+// price tags change how many shoppers come: cheap fills the store, dear empties it
+{
+  const w = farm({ 'market.unlock': 1 }), m = w.market, base = m.interval;
+  for (const s of m.shelves) if (s.open) m.setPrice(s.def.item, 0);
+  const cheap = m.interval;
+  for (const s of m.shelves) if (s.open) m.setPrice(s.def.item, 3);
+  const dear = m.interval;
+  ok(cheap < base * 0.7 && dear > base * 2, `cheap tags bring shoppers faster, dear slower (every ${cheap.toFixed(1)}s / ${base.toFixed(1)}s / ${dear.toFixed(1)}s)`);
+}
+
+// families: long lists, and they tip the player who checks them out
+{
+  const w = farm({ 'market.unlock': 1, 'market.shelves': 2, 'market.cashier': 1 }), m = w.market;
+  let fam = 0, famItems = 0, other = 0, otherItems = 0;
+  for (let i = 0; i < 600; i++) {
+    (m as unknown as { spawn(): void }).spawn();
+    const c = m.shoppers.pop()!, n = c.lines.reduce((a, l) => a + l.qty, 0);
+    if (c.family) { fam++; famItems += n; } else { other++; otherItems += n; }
+  }
+  ok(fam > 30 && famItems / fam > 1.8 * (otherItems / other), `families come now and then with much longer lists (${fam}/600, ${(famItems / fam).toFixed(1)} vs ${(otherItems / other).toFixed(1)} items)`);
+}
+
+// rush hour (once there's a cashier, into stocked shelves): comes on its own, shoppers come much faster, then it ends
+{
+  const w = farm({ 'market.unlock': 1, 'market.cashier': 1 }), m = w.market, normal = m.interval;
+  let started = 0, ended = 0, fast = Infinity;
+  // bare shelves: no rush yet
+  run(w, ECONOMY.supermarket.rush.first + 5);
+  ok(m.rushT === 0, 'no rush hour into bare shelves');
+  for (let i = 0; i < (ECONOMY.supermarket.rush.time + 40) / DT; i++) {
+    for (const s of m.shelves) if (s.open) s.stock = Math.max(s.stock, 6);
+    w.tick(DT);
+    if (m.rushT > 0) fast = Math.min(fast, m.interval);
+    w.events.drain((e) => { if (e.type === 'storeRush') { if (e.n) started++; else ended++; } });
+  }
+  ok(started === 1 && ended === 1 && fast < normal / 2, `a rush hour comes, brings shoppers ${(normal / fast).toFixed(1)}x as fast, and ends`);
+}
+
+// store board hints and the order-everything button
+{
+  const w = farm({ 'market.unlock': 1 }), m = w.market, D = MARKET.desk;
+  w.money = 1e6;
+  at(w, D.x, D.z, 0.1);
+  ok(marketHint(w) === 'order', `empty store: the board says order (${marketHint(w)})`);
+  const open = m.shelves.filter((s) => s.open);
+  const n = m.restockAll();
+  ok(n === open.length && open.every((s) => !m.needsBox(s.def.item)), `one tap orders a box for every empty shelf (${n}/${open.length})`);
+  ok(m.restockAll() === 0, 'a second tap orders nothing more');
+  ok(marketHint(w) === 'coming', `then: on its way (${marketHint(w)})`);
+  at(w, D.x, D.z, ECONOMY.supermarket.deliveryTime + 1);
+  ok(marketHint(w) === 'fetch', `delivered: fetch it to the shelves (${marketHint(w)})`);
+  const S = MARKET.store;
+  at(w, S.x, S.z, 3);
+  ok(w.carry.n > 0 && marketHint(w) === 'stock', `carrying: stock the shelf (${marketHint(w)})`);
+  m.shoppers.push({ id: 999, look: 1, type: 'normal', x: 0, z: 0, rot: 0, speed: 0, state: 'queue', lines: [], li: 0, got: ['rice'], scanned: 0, waitT: 0, takeT: 0, patience: 90, patienceMax: 90, gone: false });
+  ok(marketHint(w) === 'checkout', `someone in line and no cashier: go to the checkout (${marketHint(w)})`);
+}
+
+// price drops: a save from before them gets the difference back once (not for prices that went up)
+{
+  const w = new SimWorld(5);
+  const up = w.upgrades;
+  up.levels['eggs.animals'] = 12; up.levels['cafe.helper'] = 1; up.levels['field.driver'] = 1;
+  up.paid['eggs.animals'] = 0;
+  const old = JSON.parse(JSON.stringify(serialize(w, Date.now())));
+  delete old.pv;
+  old.money = 1000;
+  let want = 0;
+  for (let l = 0; l < 12; l++) want += Math.round(40 * 1.55 ** l) - Math.round(40 * 1.4 ** l);
+  want += 30000 - 15000;
+  const a = new SimWorld(1);
+  restore(a, migrate(old)!);
+  const got = a.refunds.reduce((s, l) => s + l.amount, 0);
+  ok(got === want && a.money === 1000 + want, `an old save gets the price drops back (${got} of ${want}, money ${a.money})`);
+  ok(!a.refunds.some((l) => l.id === 'field.driver') && a.refunds.some((l) => l.id === 'eggs.animals'), 'only for what got cheaper (no charge for the dearer drivers)');
+  const b = new SimWorld(1);
+  restore(b, migrate(JSON.parse(JSON.stringify(serialize(a, Date.now()))))!);
+  ok(b.refunds.length === 0 && b.money === a.money, 'given once: the next load gives nothing');
+  // paid toward the next level beyond its new price: the rest comes back and the level completes on the next step
+  const c = JSON.parse(JSON.stringify(old));
+  c.paid['eggs.animals'] = Math.round(40 * 1.55 ** 12) - 5;
+  const d = new SimWorld(1);
+  restore(d, migrate(c)!);
+  const next = d.upgrades.cost('eggs.animals');
+  ok(d.upgrades.paid['eggs.animals'] === next && d.refunds.reduce((s, l) => s + l.amount, 0) === want + (c.paid['eggs.animals'] - next), 'a part-paid level: the payment beyond its new price comes back');
+  // the supermarket game: its own cost multipliers, old and new
+  const m = new SimWorld(1, 'market');
+  m.upgrades.levels['eggs.unlock'] = 1; m.upgrades.levels['eggs.expand'] = 1;
+  const ms = JSON.parse(JSON.stringify(serialize(m, Date.now())));
+  delete ms.pv;
+  const m2 = new SimWorld(1, 'market');
+  restore(m2, migrate(ms)!);
+  ok(m2.refunds.find((l) => l.id === 'eggs.expand')?.amount === 5000 - Math.round(3500 * 0.5), `the supermarket game is refunded at its own prices (${m2.refunds.map((l) => `${l.id} ${l.amount}`).join(', ')})`);
+  // a brand-new game has nothing to get back
+  const n = new SimWorld(1);
+  restore(n, migrate(JSON.parse(JSON.stringify(serialize(new SimWorld(2), Date.now()))))!);
+  ok(n.refunds.length === 0, 'a new game gets no refund');
+}
+
+// 'on its way' only when the low shelf's own product is coming, not any box
+{
+  // a box for a well-stocked shelf (pasta) is on its way; the other shelves are bare and no box can be had
+  // for them (no money, no farm surplus, too much stock for supplier credit): nothing is coming for them
+  const w = farm({ 'market.unlock': 1 }), m = w.market, D = MARKET.desk;
+  at(w, D.x, D.z, 0.1);
+  w.money = 0;
+  m.cash.value = 0;
+  for (const st of w.stations) { st.counter = 0; st.pile = 0; }
+  m.shelfFor('pasta')!.stock = ECONOMY.supermarket.shelfMax;
+  m.incoming.push({ item: 'pasta', n: ECONOMY.supermarket.box, t: 60 });
+  const bare = m.shelves.filter((s) => m.low(s));
+  ok(bare.length > 0 && bare.every((s) => !m.canGetBox(s.def.item)) && m.totalStock >= ECONOMY.supermarket.creditBelow, 'setup: bare shelves, no box to be had for them');
+  ok(marketHint(w) === 'order', `a box for another shelf doesn't count as "on its way" for the bare ones (${marketHint(w)})`);
+}
+
+// switched off (as in the game now): a save that built the store gets its spend back and the store stays shut
+{
+  const w = farm({ 'market.unlock': 1, 'market.shelves': 3, 'market.cashier': 1 });
+  w.market.cash.value = 120;
+  const saved = JSON.parse(JSON.stringify(serialize(w, Date.now())));
+  FEATURES.supermarket = false;
+  const w2 = new SimWorld(1);
+  restore(w2, migrate(saved)!);
+  w2.upgrades.apply();
+  let spent = 0;
+  for (const [id, n] of [['market.unlock', 1], ['market.shelves', 3], ['market.cashier', 1]] as const) for (let l = 0; l < n; l++) spent += upgradeCost(id, l);
+  ok(!w2.market.open && w2.upgrades.level('market.unlock') === 0, 'switched off: a saved store stays shut');
+  ok(w2.money === saved.money + spent + 120 && w2.market.cash.value === 0, `switched off: every store upgrade and the cash pile come back (${Math.round(w2.money - saved.money)} of ${spent + 120})`);
+  ok(w2.upgrades.hidden('market.unlock') && !w2.upgrades.available(UPGRADE_BY_ID.get('market.unlock')!), 'switched off: its tiles are hidden');
+  FEATURES.supermarket = true;
 }
 
 console.log(fails ? `\n${fails} failed` : '\nall market checks passed');

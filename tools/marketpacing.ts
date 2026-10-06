@@ -5,6 +5,10 @@
  *   npm run marketpacing            timeline + checks
  */
 import { SimWorld } from '../src/sim/world';
+import { FEATURES } from '../src/config/features';
+
+// the store checks run with the supermarket on, whatever the game's switch says
+FEATURES.supermarket = true;
 import { Bot, type BotProfile } from '../src/sim/bot';
 import { UPGRADES } from '../src/config/upgrades';
 import type { UpgradeId } from '../src/config/economy';

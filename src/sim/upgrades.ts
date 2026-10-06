@@ -6,6 +6,7 @@ import { FIELDS } from '../config/fields';
 import { FACTORY } from '../config/factories';
 import { RIVER } from '../config/river';
 import { MARKET, SHELVES } from '../config/market';
+import { FEATURES } from '../config/features';
 import { dist } from './math';
 import type { SimWorld } from './world';
 
@@ -53,8 +54,32 @@ export class UpgradeSystem {
   remaining(id: UpgradeId): number { return Math.max(0, this.cost(id) - this.paid[id]); }
 
   /** Tile is shown when requirements are met and the track isn't maxed. */
+  /** Never offered in this game: hidden on its path, or part of a feature that's switched off. */
+  hidden(id: UpgradeId): boolean {
+    return this.w.path.hidden.includes(id) || (!FEATURES.supermarket && id.startsWith('market.'));
+  }
+
+  /**
+   * The supermarket is switched off: give back what its upgrades cost (and anything paid toward the
+   * next level) and take the levels away. Returns the money refunded (0 when there was nothing).
+   */
+  refundClosedFeatures(): number {
+    if (FEATURES.supermarket) return 0;
+    let refund = 0;
+    for (const id of Object.keys(this.levels) as UpgradeId[]) {
+      if (!id.startsWith('market.')) continue;
+      const free = this.w.path.startLevels[id] ?? 0;
+      for (let l = free; l < this.levels[id]; l++) refund += Math.round(upgradeCost(id, l) * (this.w.path.costMult[id] ?? 1));
+      refund += this.paid[id];
+      this.bought -= Math.max(0, this.levels[id] - free);
+      this.levels[id] = 0;
+      this.paid[id] = 0;
+    }
+    return refund;
+  }
+
   available(def: UpgradeDef): boolean {
-    if (this.w.path.hidden.includes(def.id) || this.maxed(def.id)) return false;
+    if (this.hidden(def.id) || this.maxed(def.id)) return false;
     if (def.capBy && this.level(def.id) >= 1 + this.level(def.capBy)) return false;
     if (def.requiresMaxed && !this.maxed(def.requiresMaxed)) return false;
     for (const r of this.requires(def)) if (this.level(r.id) < r.level) return false;

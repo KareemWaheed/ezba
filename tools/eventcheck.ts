@@ -182,13 +182,14 @@ if (!only || only === 'inspector') {
 function dribbleTo(w: SimWorld, aim: { x: number; z: number }): void {
   const m = w.scenario.mech as FootballMechanic, b = m.ball;
   if (!b) return;
-  // start on the pitch (it's on the customers' side of the counter)
-  if (w.player.z < FOOTBALL.z0) { w.player.x = FOOTBALL.x0 + 0.3; w.player.z = FOOTBALL.kick.z; }
+  // start on the pitch (it's on the customers' side of the counter); later the player may step just
+  // off its edge to get behind a ball lying by the line
+  if (w.player.z < FOOTBALL.z0 - 1.5) { w.player.x = FOOTBALL.x0 + 0.3; w.player.z = FOOTBALL.kick.z; }
   const dx = aim.x - b.x, dz = aim.z - b.z, d = Math.hypot(dx, dz) || 1;
-  const bx = b.x - (dx / d) * 0.55, bz = b.z - (dz / d) * 0.55;
+  const bx = b.x - (dx / d) * 0.8, bz = b.z - (dz / d) * 0.8;
   const p = w.player, px = bx - p.x, pz = bz - p.z, pd = Math.hypot(px, pz);
   // get behind the ball first (without touching it), then run through it
-  if (pd > 0.25) { const k = Math.min(1, pd); w.input.x = (px / pd) * k; w.input.z = (pz / pd) * k; }
+  if (pd > 0.3) { const k = Math.min(1, pd); w.input.x = (px / pd) * k; w.input.z = (pz / pd) * k; }
   else { w.input.x = dx / d; w.input.z = dz / d; }
 }
 for (const id of ['salah', 'messi'] as const) {
@@ -211,6 +212,30 @@ for (const id of ['salah', 'messi'] as const) {
     });
     w.input.x = w.input.z = 0;
     ok(scored >= 3, `${id}: a player following the aim scores 3 (${scored})`);
+  }
+}
+if (!only || only === 'salah' || only === 'messi') {
+  // ball physics: never inside the player, a kick rolls and then stops for good
+  const w = fresh();
+  w.scenario.trigger('messi');
+  let minGap = Infinity, kicked = 0, live = 0;
+  runUntilIdle(w, (w) => {
+    const m = w.scenario.mech as FootballMechanic;
+    if (!m.ball) return;
+    // (from the second frame of play: before kick-off the ball is just set out on the spot)
+    if (w.scenario.active && live++) minGap = Math.min(minGap, Math.hypot(w.player.x - m.ball.x, w.player.z - m.ball.z));
+    kicked = Math.max(kicked, Math.hypot(m.ball.vx, m.ball.vz));
+    dribbleTo(w, m.nextAim(w));
+  }, 25);
+  ok(minGap > 0.55, `football: the ball is never inside the player (closest ${minGap.toFixed(2)})`);
+  ok(kicked > 4, `football: running into the ball kicks it (top speed ${kicked.toFixed(1)})`);
+  const m = w.scenario.mech as FootballMechanic;
+  if (m.ball) {
+    w.input.x = w.input.z = 0;
+    w.player.x = FOOTBALL.x0 + 0.3; w.player.z = FOOTBALL.z0 + 0.3;
+    m.ball.x = 3; m.ball.z = 18.6; m.ball.vx = -6; m.ball.vz = 1;
+    tickFor(w, 6);
+    ok(Math.hypot(m.ball.vx, m.ball.vz) === 0, `football: a rolling ball comes to rest (${Math.hypot(m.ball.vx, m.ball.vz).toFixed(3)})`);
   }
 }
 if (!only || only === 'messi') {

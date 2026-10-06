@@ -161,3 +161,67 @@ This file records the decisions made on top of it.
   margin for traffic. Tags are saved; the order panel shows the free farm delivery only once the farm makes
   that product.
 
+- Supermarket polish (playtest: couldn't scroll the order panel on a phone; couldn't tell what shoppers buy or
+  when they're done; it felt unfinished). Panels scroll with a finger (they used to inherit the joystick's
+  `touch-action: none`). Every shopper carries a list chip: their items with ✓ as they're picked, the one
+  they're after highlighted (red with "!" while its shelf is empty) and a progress bar; in the checkout line
+  it turns into their basket (scanned/total and what it comes to). Inside the store a board replaces the
+  goal card: the next thing to do (sim/guide.ts `marketHint`: checkout > stock > fetch > order > coming >
+  cash > ok), shoppers in the store and in line, who's serving, cash waiting, empty shelves. The order panel
+  highlights products running out and has one button that orders a box of each (farm surplus first).
+  `FEATURES.supermarket` (config/features.ts) can still switch the whole store off: tiles and start screen
+  hidden, store spend refunded on load.
+- Updates: the service worker no longer reloads the game by itself. An open game checks for a new version
+  every 20 min and when it comes back to the front; when one is ready a button says so (progress is kept);
+  tapping it saves and reloads (ui/updateBanner.ts). Saves keep progress, not prices, so balance changes in
+  config apply to existing saves.
+- Football (Salah/Messi) physics redo (playtest: ball glitched, goal too small): the goal mouth is 2.6 wide (was
+  1.4) with a real net. The ball is solid (never inside the player; a pinned ball stops the player); walking into
+  it dribbles it a touch ahead, running into it kicks it (mostly the way the player runs, power from speed, one
+  kick per touch); it rolls with drag + constant friction so it settles, bounces off the pitch edges and round
+  posts. The ball model spins about its center (it used to swing around its bottom and wobble).
+- Economy review (measured: each available upgrade's added income/min for an active player and its payback,
+  at minutes 60/150/260/400/540 of an efficient run). Findings: income is capped by buyers, not production
+  (by minute 540 ~80k eggs sat unsold on the counter), so late production upgrades never paid back;
+  buyer-side upgrades (cashier, lanes, café cleaner, dock worker) paid back in 15-30 min; the café earned
+  ~15% for a lot of running and its staff were the priciest in the early stages; the supermarket sold
+  cheese/cake for more than the café. Changes: café customers per table 1.2 -> 1.8 (more of the egg/milk
+  surplus becomes dishes), kitchen helper (🧑‍🍳) 30k -> 15k, café cashier 160k -> 130k; café cheese 30 -> 40,
+  cake 45 -> 60, and the store's cheese 26 / cake 40 / fish 28 at 50% margins under them (rule, checked in
+  marketcheck: the café always pays more than the store, even at the dearest tag); wheat 9 -> 14; cheaper
+  late chickens (growth 1.55 -> 1.4), coop expansion, milk belt and factory speed; rush reward step 0.25 ->
+  0.5; dock size halved; tractor drivers 60k -> 100k (they came two days earlier with the cheaper upgrades and
+  made automation earn nearly as much as play). Store upgrade prices stay: sale prices grow ~4x by the time
+  it opens, so it pays back fast already (a 40% cut made the farm finish a day early). Result (npm run
+  simulate): every pacing target passes; the efficient player finishes at 441 min (was 497), the casual one
+  by day 7 (was 154 of 171).
+- Shop customers come first: kitchen helpers, factory suppliers, dock workers and store deliveries leave on the
+  counter what the shop's line still wants, and leave the pile alone while the line wants more than the
+  counter has (SimWorld.counterSpare / shopShort).
+- Price tags now change how many shoppers come (the open shelves' average demand scales arrivals): cheap
+  fills the store (more profit an hour, more work), dear brings fewer who each pay more.
+- Families (12% of shoppers, once the store has a second shelf row): a trolley and a long list (3-5 lines, up
+  to 4 each); less patient; checked out by the player in person they tip 30%. Rush hour (15 min after the
+  store has a cashier, then every ~9 min, only into a mostly stocked store): shoppers come 3x as often for
+  45 s (toast + the store board counts down).
+- Display units: chilled goods (milk, cheese, fish, soda) in glass-door fridges, vegetables (tomatoes,
+  potatoes) on wooden crate stands, the rest on gondola shelves (MarketProduct.unit).
+- The corn pile at the grain stall has no limit (it used to cap at 24 and leave corn in the player's hands);
+  a "x120" label shows over a pile taller than its stack.
+- Crowd events feature a product the farm has plenty of (>= 40 on counter + pile, else the best stocked).
+  Derby: fans in the lane the player serves calm down (count 35% toward the meter) and the guide arrow points
+  at the lane with the most fans of the bigger side; measured over 8 runs: following it, 0 clashes; unattended,
+  clashes in 6 of 8.
+- Price-drop refunds (config/priceHistory.ts, sim/refund.ts): saves carry the upgrade price version they were
+  bought at (`pv`). Loading an older save credits, once, per track that got cheaper: what its owned levels
+  cost then minus what they cost now (dearer tracks charge nothing; free starting levels skipped; each game's
+  own cost multipliers), plus any partial payment beyond the next level's new price. The game saves at once
+  and shows a "رجّعنالك فلوس!" card listing each upgrade and the total (after any welcome-back card). To cut a
+  price later: change it, add the old values to PRICE_CHANGES, bump PRICE_VERSION.
+- Moving progress between devices (no server): ⚙️ -> "📤 انقل تقدّمك" shows a QR and a text code; on the other
+  device "📥 عندي كود" takes a pasted code or scans the QR with the camera (BarcodeDetector where the browser
+  has it, else jsQR, loaded only then). A card shows what comes and what goes; the old save is kept as
+  `<slot>-before-import`. Codes (src/transfer.ts): text "EZBA1." + base64url(deflate-raw(save JSON)), ~1.5 KB
+  late game, tolerant of line breaks from chat apps; QR "EZ1:" + base45 so it packs in QR alphanumeric mode
+  (version ~27 for a late-game save). The debug panel's older plain codes still read. `npm run transfercheck`;
+  checked in a browser across separate contexts, including a fake camera showing the QR.

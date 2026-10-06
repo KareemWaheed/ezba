@@ -328,3 +328,61 @@ html, body {
 #modal .o-tag-3 { background: #fbd0cc; color: #b0302a; }
 #modal .o-btns { display: flex; flex-direction: column; gap: 5px; flex: none; }
 #modal .o-btns .t-claim { min-width: 92px; }
+
+/* new version ready: tap to save and reload (under open cards: it waits behind the backdrop) */
+#update {
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 15;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; touch-action: manipulation;
+  font: inherit; font-weight: 800; border: 3px solid #fff; border-radius: 18px; padding: 8px 18px 7px;
+  background: #3d7fd9; color: #fff; box-shadow: 0 5px 0 #2a5da3; direction: rtl; animation: u-pulse 1.6s ease-in-out infinite;
+}
+#update .u-top { font-size: 17px; }
+#update .u-sub { font-size: 13px; opacity: 0.9; }
+#update:disabled { opacity: 0.6; animation: none; }
+@keyframes u-pulse { 50% { transform: translateX(-50%) scale(1.05); } }
+
+/* panels scroll with a finger (the rest of the UI blocks touch gestures for the joystick) */
+#modal .m-card, #modal .m-card * { touch-action: pan-y; }
+#modal .m-card { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; max-height: calc(100dvh - 32px); }
+#modal .m-card button { touch-action: manipulation; }
+
+/* supermarket board: next step + live store numbers (in place of the goal card while inside the store) */
+#mboard {
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 66px); transform: translateX(-50%);
+  z-index: 5; pointer-events: none; direction: rtl; text-align: center; width: min(340px, calc(100% - 120px));
+  background: rgba(255, 251, 234, 0.94); color: var(--ink); border: 2px solid var(--panel-edge);
+  border-radius: 14px; padding: 4px 10px 5px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
+}
+#mboard.urgent { border-color: #e8554e; background: rgba(255, 236, 232, 0.95); }
+#mboard.calm { border-color: #7cc576; }
+#mboard .mb-hint { font-size: 14px; font-weight: 800; line-height: 1.3; }
+#mboard .mb-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; font-size: 13px; font-weight: 800; margin-top: 2px; }
+#mboard .mb-stats .bad { color: #d0342c; }
+#mboard .mb-empty { font-size: 13px; font-weight: 800; color: #d0342c; margin-top: 1px; }
+#modal .t-row.o-need { border-color: #e8554e; background: #fff1ef; }
+#modal .t-row.o-empty { border-color: #f0a33a; }
+#modal .m-btn.o-all { margin: 2px 0 6px; font-size: 16px; padding: 6px 16px; line-height: 1.25; }
+#modal .m-btn.o-all small { font-size: 13px; opacity: 0.9; }
+#modal .o-allok { font-size: 14px; font-weight: 800; color: #2f8f3a; margin: 2px 0 6px; }
+#mboard .mb-rush { display: inline-block; font-size: 14px; font-weight: 800; color: #fff; background: #e8554e; border-radius: 9px; padding: 1px 8px; margin-bottom: 2px; }
+/* refund card: one row per upgrade that got cheaper */
+#modal .r-list { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 2px; text-align: right; }
+#modal .r-row { display: flex; justify-content: space-between; gap: 10px; background: #fff; border: 2px solid var(--panel-edge); border-radius: 12px; padding: 4px 10px; font-size: 15px; }
+#modal .r-row b { color: #2f8f3a; direction: ltr; }
+
+/* move progress between devices */
+#modal .s-move { font-size: 16px; background: #3d7fd9; box-shadow: 0 4px 0 #2a5da3; }
+#modal .x-qr { background: #fff; border-radius: 12px; padding: 6px; margin: 8px auto; width: min(300px, 100%); }
+#modal .x-qr svg { display: block; width: 100%; height: auto; shape-rendering: crispEdges; }
+#modal .x-code {
+  width: 100%; height: 70px; margin: 6px 0; resize: none; direction: ltr; font: 600 11px/1.3 ui-monospace, monospace;
+  border: 2px solid var(--panel-edge); border-radius: 10px; padding: 6px; background: #fff; color: var(--ink);
+  touch-action: auto; -webkit-user-select: text; user-select: text;
+}
+#modal .x-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+#modal .x-btns .m-btn { margin-top: 4px; font-size: 16px; padding: 8px 16px; }
+#modal .x-scan video { width: 100%; border-radius: 12px; background: #000; margin-top: 6px; }
+#modal .x-err { color: #d0342c; font-weight: 800; font-size: 14px; margin: 2px 0; }
+#modal .x-sum { background: #fff; border: 2px solid #7cc576; border-radius: 12px; padding: 6px 10px; margin: 6px 0; font-size: 15px; }
+#modal .x-sum.x-old { border-color: #e8554e; }
+#modal .s-move + .m-note { margin-top: 10px; }
