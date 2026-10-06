@@ -6,6 +6,7 @@ import { Rng } from './rng';
 import { createPlayer, updatePlayer, type PlayerState } from './player';
 import { Carrier } from './carrier';
 import { Station } from './station';
+import type { RefundLine } from './refund';
 import { CustomerSystem } from './customers';
 import { UpgradeSystem } from './upgrades';
 import { StaffSystem, nextBreak } from './staff';
@@ -149,6 +150,9 @@ export class SimWorld {
 
   /** The shop's line wants more of this than its counter has: workers leave the pile for the shop too. */
   shopShort(s: Station): boolean { return s.counter < this.shopWants(s); }
+
+  /** Refunds from upgrade price drops given on the last load (main.ts shows them once). Not saved. */
+  refunds: RefundLine[] = [];
 
   /** Sale price multiplier from farm growth (see ECONOMY.market). */
   get priceMult(): number {

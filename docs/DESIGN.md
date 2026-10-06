@@ -212,3 +212,9 @@ This file records the decisions made on top of it.
   Derby: fans in the lane the player serves calm down (count 35% toward the meter) and the guide arrow points
   at the lane with the most fans of the bigger side; measured over 8 runs: following it, 0 clashes; unattended,
   clashes in 6 of 8.
+- Price-drop refunds (config/priceHistory.ts, sim/refund.ts): saves carry the upgrade price version they were
+  bought at (`pv`). Loading an older save credits, once, per track that got cheaper: what its owned levels
+  cost then minus what they cost now (dearer tracks charge nothing; free starting levels skipped; each game's
+  own cost multipliers), plus any partial payment beyond the next level's new price. The game saves at once
+  and shows a "رجّعنالك فلوس!" card listing each upgrade and the total (after any welcome-back card). To cut a
+  price later: change it, add the old values to PRICE_CHANGES, bump PRICE_VERSION.

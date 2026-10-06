@@ -20,7 +20,7 @@ import { Hud } from './ui/hud';
 import { music, sfx, unlockAudio } from './audio';
 import { guideTarget, nextGoal } from './sim/guide';
 import { restore, serialize } from './sim/save';
-import { UPGRADES } from './config/upgrades';
+import { UPGRADES, UPGRADE_BY_ID } from './config/upgrades';
 import { MODE, chosenMode, clearSave, loadSave, requestPersistence, writeSave } from './storage';
 import { TitleScreen } from './ui/titleScreen';
 import { FEATURES } from './config/features';
@@ -89,6 +89,8 @@ const saved = loadSave();
 if (saved) restore(sim, saved);
 else hud.showHint(true);
 const save = () => writeSave(serialize(sim, Date.now()));
+// a price-drop refund was just credited: save right away so it's never given twice
+if (sim.refunds.length) save();
 setInterval(save, ECONOMY.save.autosaveEvery * 1000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 addEventListener('pagehide', save);
@@ -121,6 +123,25 @@ function welcomeBack(seconds: number): void {
   save();
 }
 if (saved) welcomeBack((Date.now() - saved.t) / 1000);
+
+/** Upgrades that got cheaper in an update: the difference was credited on load; say so once (after any other card). */
+function showRefund(): void {
+  const lines = sim.refunds;
+  sim.refunds = [];
+  const total = lines.reduce((a, l) => a + l.amount, 0);
+  sfx.kaching();
+  modal.open(`
+    <div class="m-icon">💰</div>
+    <div class="m-title">رجّعنالك فلوس!</div>
+    <div>رخّصنا أسعار شوية ترقيات، وانت كنت اشتريتها بالسعر القديم، فرجّعنالك الفرق:</div>
+    <div class="r-list">${lines.map((l) => {
+      const d = UPGRADE_BY_ID.get(l.id);
+      return `<div class="r-row"><span>${d?.icon ?? '⬆️'} ${d?.label ?? l.id}</span><b>${ltr(`+${fmtMoney(l.amount)}`)}</b></div>`;
+    }).join('')}</div>
+    <div class="m-big">+${fmtMoney(total)} 💰</div>
+    <button class="m-btn" data-close>شكراً! 🎉</button>`);
+  save();
+}
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = Date.now(); return; }
@@ -380,6 +401,7 @@ function frame(now: number): void {
   debug.update(real);
   menus.update(real);
   orderPanel.update();
+  if (sim.refunds.length && !modal.isOpen) showRefund();
 
   view.render(real);
   requestAnimationFrame(frame);

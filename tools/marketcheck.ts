@@ -293,6 +293,47 @@ for (const p of MARKET.products) {
   ok(marketHint(w) === 'checkout', `someone in line and no cashier: go to the checkout (${marketHint(w)})`);
 }
 
+// price drops: a save from before them gets the difference back once (not for prices that went up)
+{
+  const w = new SimWorld(5);
+  const up = w.upgrades;
+  up.levels['eggs.animals'] = 12; up.levels['cafe.helper'] = 1; up.levels['field.driver'] = 1;
+  up.paid['eggs.animals'] = 0;
+  const old = JSON.parse(JSON.stringify(serialize(w, Date.now())));
+  delete old.pv;
+  old.money = 1000;
+  let want = 0;
+  for (let l = 0; l < 12; l++) want += Math.round(40 * 1.55 ** l) - Math.round(40 * 1.4 ** l);
+  want += 30000 - 15000;
+  const a = new SimWorld(1);
+  restore(a, migrate(old)!);
+  const got = a.refunds.reduce((s, l) => s + l.amount, 0);
+  ok(got === want && a.money === 1000 + want, `an old save gets the price drops back (${got} of ${want}, money ${a.money})`);
+  ok(!a.refunds.some((l) => l.id === 'field.driver') && a.refunds.some((l) => l.id === 'eggs.animals'), 'only for what got cheaper (no charge for the dearer drivers)');
+  const b = new SimWorld(1);
+  restore(b, migrate(JSON.parse(JSON.stringify(serialize(a, Date.now()))))!);
+  ok(b.refunds.length === 0 && b.money === a.money, 'given once: the next load gives nothing');
+  // paid toward the next level beyond its new price: the rest comes back and the level completes on the next step
+  const c = JSON.parse(JSON.stringify(old));
+  c.paid['eggs.animals'] = Math.round(40 * 1.55 ** 12) - 5;
+  const d = new SimWorld(1);
+  restore(d, migrate(c)!);
+  const next = d.upgrades.cost('eggs.animals');
+  ok(d.upgrades.paid['eggs.animals'] === next && d.refunds.reduce((s, l) => s + l.amount, 0) === want + Math.floor(c.paid['eggs.animals'] - next), 'a part-paid level: the payment beyond its new price comes back');
+  // the supermarket game: its own cost multipliers, old and new
+  const m = new SimWorld(1, 'market');
+  m.upgrades.levels['eggs.unlock'] = 1; m.upgrades.levels['eggs.expand'] = 1;
+  const ms = JSON.parse(JSON.stringify(serialize(m, Date.now())));
+  delete ms.pv;
+  const m2 = new SimWorld(1, 'market');
+  restore(m2, migrate(ms)!);
+  ok(m2.refunds.find((l) => l.id === 'eggs.expand')?.amount === 5000 - Math.round(3500 * 0.5), `the supermarket game is refunded at its own prices (${m2.refunds.map((l) => `${l.id} ${l.amount}`).join(', ')})`);
+  // a brand-new game has nothing to get back
+  const n = new SimWorld(1);
+  restore(n, migrate(JSON.parse(JSON.stringify(serialize(new SimWorld(2), Date.now()))))!);
+  ok(n.refunds.length === 0, 'a new game gets no refund');
+}
+
 // switched off (as in the game now): a save that built the store gets its spend back and the store stays shut
 {
   const w = farm({ 'market.unlock': 1, 'market.shelves': 3, 'market.cashier': 1 });
