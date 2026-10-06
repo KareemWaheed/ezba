@@ -247,7 +247,8 @@ export function marketHint(w: SimWorld): MarketHint {
   if (low.some((s) => m.store[s.def.item] > 0)) return 'fetch';
   // (a box it can get now; one it can't pay for yet waits for the cash below)
   if (low.some((s) => m.needsBox(s.def.item) && m.canGetBox(s.def.item))) return 'order';
-  if (m.incoming.length && low.length) return 'coming';
+  // (a delivery for one of the low shelves themselves, not just any box on its way)
+  if (low.some((s) => m.incoming.some((d) => d.item === s.def.item))) return 'coming';
   if (m.cash.value > 0) return 'cash';
   if (low.some((s) => m.needsBox(s.def.item))) return 'order';
   return 'ok';

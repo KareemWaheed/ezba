@@ -335,6 +335,15 @@ for (const p of MARKET.products) {
   ok(n.refunds.length === 0, 'a new game gets no refund');
 }
 
+// 'on its way' only when the low shelf's own product is coming, not any box
+{
+  const w = farm({ 'market.unlock': 1 }), m = w.market, D = MARKET.desk;
+  w.money = 1e6;
+  at(w, D.x, D.z, 0.1);
+  m.order('rice');
+  ok(marketHint(w) === 'order', `one box on its way doesn't cover the other empty shelves (${marketHint(w)})`);
+}
+
 // switched off (as in the game now): a save that built the store gets its spend back and the store stays shut
 {
   const w = farm({ 'market.unlock': 1, 'market.shelves': 3, 'market.cashier': 1 });

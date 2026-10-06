@@ -48,8 +48,10 @@ void (async () => {
   ok((await readCode('hello')) === null && (await readCode('')) === null, 'random text is refused');
   // crafted codes: a save that would stop the game loading, or smuggle markup into the preview card
   const bad = async (patch: Record<string, unknown>) => readCode(await textCode({ ...save, ...patch } as typeof save));
-  ok((await bad({ carry: 5 })) === null && (await bad({ album: { seen: 'x', paid: [] } })) === null, 'a code that would crash the game on load is refused');
-  ok((await bad({ levels: { ...save.levels, 'eggs.animals': '<img src=x onerror=alert(1)>' } })) === null && (await bad({ money: '1e9' })) === null, 'a code with text where numbers go is refused');
+  ok((await bad({ carry: 5 })) === null, 'a code with a non-list carry is refused');
+  ok((await bad({ album: { seen: 'x', paid: [] } })) === null, 'a code with a malformed album is refused');
+  ok((await bad({ levels: { ...save.levels, 'eggs.animals': '<img src=x onerror=alert(1)>' } })) === null, 'a code with text in a levels slot is refused');
+  ok((await bad({ money: '1e9' })) === null, 'a code with text in the money field is refused');
 
   // QR: drawn module by module, read back the way the game reads a camera frame
   const payload = (await qrCode(save))!;
