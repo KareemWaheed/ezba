@@ -39,6 +39,7 @@ import { MetaMenus, dayKey } from './ui/menus';
 import { OrderPanel } from './ui/orderPanel';
 import { updateBanner } from './ui/updateBanner';
 import { MarketBoard } from './ui/marketBoard';
+import { TransferPanel } from './ui/transferPanel';
 import { ITEM_ICON } from './render/models';
 import { ALBUM_PAGES } from './config/album';
 import { simulateAway } from './sim/offline';
@@ -155,6 +156,8 @@ const title = new TitleScreen(uiRoot, save);
 if (FEATURES.supermarket && !chosenMode()) title.show();
 const menus = new MetaMenus(uiRoot, sim, modal);
 menus.onSwitchGame = () => title.show(true);
+const transfer = new TransferPanel(modal, () => serialize(sim, Date.now()), () => menus.showSettings());
+menus.onTransfer = (kind) => { if (kind === 'send') void transfer.showSend(); else transfer.showReceive(); };
 const orderPanel = new OrderPanel(sim, modal);
 menus.onLegacyReady = () => { sfx.fanfare(); toast.show('🏆 فتحت كل حاجة! دوس 🏆 وابدأ عزبة أكبر'); };
 

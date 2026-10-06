@@ -218,3 +218,10 @@ This file records the decisions made on top of it.
   own cost multipliers), plus any partial payment beyond the next level's new price. The game saves at once
   and shows a "رجّعنالك فلوس!" card listing each upgrade and the total (after any welcome-back card). To cut a
   price later: change it, add the old values to PRICE_CHANGES, bump PRICE_VERSION.
+- Moving progress between devices (no server): ⚙️ -> "📤 انقل تقدّمك" shows a QR and a text code; on the other
+  device "📥 عندي كود" takes a pasted code or scans the QR with the camera (BarcodeDetector where the browser
+  has it, else jsQR, loaded only then). A card shows what comes and what goes; the old save is kept as
+  `<slot>-before-import`. Codes (src/transfer.ts): text "EZBA1." + base64url(deflate-raw(save JSON)), ~1.5 KB
+  late game, tolerant of line breaks from chat apps; QR "EZ1:" + base45 so it packs in QR alphanumeric mode
+  (version ~27 for a late-game save). The debug panel's older plain codes still read. `npm run transfercheck`;
+  checked in a browser across separate contexts, including a fake camera showing the QR.

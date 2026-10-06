@@ -71,3 +71,21 @@ export function exportCode(s: SaveData): string {
 export function importCode(code: string): SaveData | null {
   try { return migrate(JSON.parse(decodeURIComponent(escape(atob(code.trim()))))); } catch { return null; }
 }
+
+/**
+ * Bring in progress from another device: the save goes into its game's slot (the current one there is kept
+ * as `<slot>-before-import`), that game becomes the one this page opens, and later writes from this page
+ * are blocked until the caller reloads.
+ */
+export function importSave(s: SaveData): boolean {
+  const mode: GameMode = s.mode === 'market' ? 'market' : 'farm';
+  const key = keyOf(mode);
+  try {
+    const old = localStorage.getItem(key);
+    if (old) localStorage.setItem(`${key}-before-import`, old);
+    localStorage.setItem(key, JSON.stringify({ ...s, mode }));
+    localStorage.setItem(MODE_KEY, mode);
+  } catch { return false; }
+  blocked = true;
+  return true;
+}

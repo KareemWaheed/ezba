@@ -37,6 +37,8 @@ export class MetaMenus {
   onLegacyReady: (() => void) | null = null;
   /** Settings' "switch game" button (opens the start screen). */
   onSwitchGame: (() => void) | null = null;
+  /** Settings' move-progress buttons. */
+  onTransfer: ((kind: 'send' | 'receive') => void) | null = null;
   private installEvt: InstallPrompt | null = null;
   private t = 0;
 
@@ -156,7 +158,8 @@ export class MetaMenus {
     });
   }
 
-  private showSettings(): void {
+  /** Open the settings card (also the transfer cards' way back). */
+  showSettings(): void {
     this.open = 'settings';
     const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
     const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -169,6 +172,8 @@ export class MetaMenus {
       <button class="m-btn s-sound" data-sound>${isMuted() ? '🔇 الصوت مقفول' : '🔊 الصوت شغال'}</button>
       ${FEATURES.supermarket ? `<button class="m-btn s-switch" data-switch>🔁 ${this.sim.mode === 'market' ? 'روح للمزرعة 🐔' : 'روح للسوبر ماركت 🛒'}</button>` : ''}
       ${install}
+      <button class="m-btn s-move" data-send>📤 انقل تقدّمك لجهاز تاني</button>
+      <button class="m-btn s-move" data-receive>📥 عندي كود من جهاز تاني</button>
       <div class="m-note">بتشتغل من غير نت، وتقدمك بيتحفظ لوحده</div>
       <button class="m-btn" data-close>تمام</button>`, () => { this.open = null; });
     card.querySelector('[data-sound]')?.addEventListener('click', () => {
@@ -177,6 +182,8 @@ export class MetaMenus {
       this.showSettings();
     });
     card.querySelector('[data-switch]')?.addEventListener('click', () => { this.modal.close(); this.onSwitchGame?.(); });
+    card.querySelector('[data-send]')?.addEventListener('click', () => this.onTransfer?.('send'));
+    card.querySelector('[data-receive]')?.addEventListener('click', () => this.onTransfer?.('receive'));
     card.querySelector('[data-install]')?.addEventListener('click', () => {
       const e = this.installEvt;
       this.installEvt = null;
