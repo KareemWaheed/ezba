@@ -366,6 +366,111 @@ for (const p of MARKET.products) {
   ok(w.staff.workers.filter((x) => x.job.key.startsWith('market.stock')).every((x) => x.carry.cap >= ECONOMY.supermarket.stockerCapacity), 'stockers carry a trolley load');
 }
 
+// ---- the store's extras ----
+// a second checkout and the self-checkout: shoppers spread over them; the kiosk only takes small baskets
+{
+  const w = farm({ 'market.unlock': 1, 'market.shelves': 2, 'market.cashier': 1 }), m = w.market, up = w.upgrades;
+  ok(!up.tiles.some((t) => t.def.id === 'market.cashier') && up.tiles.some((t) => t.def.id === 'market.lanes'), 'the second cashier waits for the second checkout (cashier tile capped, checkout tile up)');
+  up.levels['market.lanes'] = 1; up.levels['market.cashier'] = 2; up.levels['market.selfcheck'] = 1; up.apply(); up.refresh();
+  ok(m.laneOpen(1) && m.laneStaffed(1) && m.laneOpen(2) && !m.laneStaffed(2), 'second counter staffed, kiosk open');
+  for (const s of m.shelves) if (s.open) s.stock = ECONOMY.supermarket.shelfMax;
+  for (const k of Object.keys(m.store)) m.store[k as keyof typeof m.store] = 40;
+  const used = [0, 0, 0], kioskBaskets: number[] = [];
+  let paid = 0;
+  for (let i = 0; i < 240 / DT; i++) {
+    w.player.x = 25; w.player.z = 19; // (out of the way: staff do it all)
+    for (const s of m.shelves) if (s.open) s.stock = Math.max(s.stock, 6);
+    w.tick(DT);
+    for (const c of m.shoppers) if (c.state === 'queue' && c.scanned === 0) { used[c.lane ?? 0]++; if (c.lane === 2) kioskBaskets.push(c.got.length); }
+    w.events.drain((e) => { if (e.type === 'paid') paid++; });
+  }
+  ok(used[0] > 0 && used[1] > 0 && used[2] > 0 && paid > 20, `shoppers use all three lines (${used.join('/')} queue-ticks, ${paid} paid)`);
+  ok(kioskBaskets.every((n) => n <= ECONOMY.supermarket.selfMax), `only small baskets at the kiosk (max ${Math.max(0, ...kioskBaskets)})`);
+}
+
+// spills: slow shoppers, the player mops one (tip), the cleaner mops on his own
+{
+  const w = farm({ 'market.unlock': 1, 'market.shelves': 1 }), m = w.market, x = m.extras;
+  x.spills.push({ id: 1, x: 18, z: 21, mop: 0 });
+  const money0 = w.money;
+  at(w, 18, 21, ECONOMY.supermarket.spill.mopTime + 0.3);
+  ok(x.spills.length === 0 && w.money > money0, `standing in a spill mops it, with a tip (+${Math.round(w.money - money0)})`);
+  w.upgrades.levels['market.cleaner'] = 1; w.upgrades.apply();
+  x.spills.push({ id: 2, x: 21, z: 18.6, mop: 0 });
+  at(w, 25.7, 19.6, 25);
+  ok(x.spills.length === 0, 'the cleaner mops a spill on his own');
+  // a shopper walking through one is slowed and loses patience
+  x.spills.push({ id: 3, x: 0, z: 0, mop: 0 });
+  ok(!!x.spillAt(0.3, 0.2) && !x.spillAt(3, 3), 'spills have a reach');
+}
+
+// shoplifters: run for the door; the player catches one (goods back + bounty), the guard stops one, one gets away
+{
+  const thiefRun = (opts: { chase?: boolean; guard?: boolean }) => {
+    const w = farm({ 'market.unlock': 1, 'market.shelves': 1 }), m = w.market;
+    if (opts.guard) { w.upgrades.levels['market.guard'] = 1; w.upgrades.apply(); }
+    const sh = m.shelves[2];
+    sh.stock = 2;
+    m.shoppers.push({ id: 900, look: 1, type: 'normal', x: 20, z: 23.5, rot: 0, speed: 0, state: 'shop', lines: [], li: 0, got: ['rice', 'rice'], scanned: 0, waitT: 0, takeT: 0, patience: 90, patienceMax: 90, gone: false, thief: true });
+    const evs: number[] = [];
+    let money0 = w.money;
+    for (let i = 0; i < 20 / DT; i++) {
+      const t = m.shoppers.find((c) => c.id === 900);
+      if (opts.chase && t && t.state === 'flee') { w.player.x = t.x; w.player.z = t.z; } else { w.player.x = 25; w.player.z = 19; }
+      w.tick(DT);
+      w.events.drain((e) => { if (e.type === 'storeThief') evs.push(e.n); });
+    }
+    return { evs, gain: w.money - money0, stock: sh.stock + m.store.rice };
+  };
+  const caught = thiefRun({ chase: true }), guarded = thiefRun({ guard: true }), away = thiefRun({});
+  ok(caught.evs.join() === '1,2' && caught.gain > 0 && caught.stock >= 2, `caught by the player: goods back and a bounty (+${Math.round(caught.gain)})`);
+  ok(guarded.evs.join() === '1,4' && guarded.stock >= 2, 'the guard stops him at the door');
+  ok(away.evs.join() === '1,3' && away.stock < 2, 'with nobody to stop him he gets away with it');
+}
+
+// phone orders: one comes in, the player loads it into the van and gets paid; a late one is cancelled; the driver does it alone
+{
+  const w = farm({ 'market.unlock': 1, 'market.delivery': 1 }), m = w.market, x = m.extras;
+  for (const k of Object.keys(m.store)) m.store[k as keyof typeof m.store] = 20;
+  at(w, 14, 18, ECONOMY.supermarket.orders.first + 1);
+  const o = x.order!;
+  ok(!!o && o.lines.length >= 2, `a phone order comes in (${o?.lines.map((l) => `${l.item} x${l.qty}`).join(', ')})`);
+  // the storeroom hands out the order's items first
+  w.carry.items.length = 0;
+  const need = o.lines.reduce((a, l) => a + l.qty, 0);
+  at(w, MARKET.store.x, MARKET.store.z, 3);
+  const firsts = w.carry.items.slice(0, need);
+  ok(o.lines.every((l) => firsts.filter((it) => it === l.item).length === l.qty), `picking at the storeroom takes the order's items first (${firsts.join(', ')})`);
+  for (const l of o.lines) { const have = w.carry.items.filter((it) => it === l.item).length; for (let k = have; k < l.qty; k++) w.carry.push(l.item); }
+  const money0 = w.money;
+  let done = 0;
+  for (let i = 0; i < 6 / DT; i++) { w.player.x = MARKET.van.x; w.player.z = MARKET.van.z; w.tick(DT); w.events.drain((e) => { if (e.type === 'storeOrder' && e.n === 2) done = e.value; }); }
+  ok(done === o.value && w.money - money0 >= o.value && !x.order, `loading it all into the van pays ${done}`);
+  // a late one
+  const w2 = farm({ 'market.unlock': 1, 'market.delivery': 1 }), x2 = w2.market.extras;
+  let cancelled = 0;
+  for (let i = 0; i < (ECONOMY.supermarket.orders.first + ECONOMY.supermarket.orders.time + 5) / DT; i++) { w2.player.x = 14; w2.player.z = 18; w2.tick(DT); w2.events.drain((e) => { if (e.type === 'storeOrder' && e.n === 3) cancelled++; }); }
+  ok(cancelled >= 1 && !x2.order?.lines.some((l) => l.left < l.qty), 'an order nobody loads is cancelled in time');
+  // the driver
+  const w3 = farm({ 'market.unlock': 1, 'market.delivery': 2 }), m3 = w3.market;
+  for (const k of Object.keys(m3.store)) m3.store[k as keyof typeof m3.store] = 20;
+  let delivered = 0;
+  for (let i = 0; i < (ECONOMY.supermarket.orders.first + 60) / DT; i++) { w3.player.x = 14; w3.player.z = 18; w3.tick(DT); w3.events.drain((e) => { if (e.type === 'storeOrder' && e.n === 2) delivered++; }); }
+  ok(delivered >= 1, 'the driver loads and delivers an order on his own');
+}
+
+// supermarket-first game: farm customers come to the farm counters once the coop opens
+{
+  const w = new SimWorld(4, 'market'), up = w.upgrades;
+  run(w, 30);
+  const before = w.customers.list.length;
+  up.levels['eggs.unlock'] = 1; up.apply(); up.refresh();
+  w.stations[0].counter = 30;
+  run(w, 60);
+  ok(before === 0 && w.customers.list.length > 0, `the farm has its own customers in the supermarket game once the coop opens (${before} -> ${w.customers.list.length})`);
+  ok(!w.upgrades.hidden('cashier') && !w.upgrades.hidden('shop.lanes'), 'its cashier and checkout lanes can be bought there');
+}
+
 // switched off (as in the game now): a save that built the store gets its spend back and the store stays shut
 {
   const w = farm({ 'market.unlock': 1, 'market.shelves': 3, 'market.cashier': 1 });

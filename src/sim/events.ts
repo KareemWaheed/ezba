@@ -37,6 +37,9 @@ export type SimEventType =
   | 'trash'       // the player threw away the top carried item (n = stack size after)
   | 'delivery'    // a wholesale order landed in the supermarket storeroom (product, n = items)
   | 'storeRush'   // supermarket rush hour: n = 1 starts (value = seconds), 0 ends
+  | 'storeSpill'  // n = 1 a spill (x, z); 0 mopped (value = tip)
+  | 'storeThief'  // n = 1 a shoplifter runs (id = shopper); 2 caught by the player (value = bounty); 3 got away (value = goods); 4 the guard stopped him
+  | 'storeOrder'  // n = 1 a phone order (value = pay); 2 delivered (value); 3 cancelled
   | 'albumNew'    // first time this customer kind was served (n = page, id = entry)
   | 'albumPage'   // an album page was completed (value = bonus, n = page)
   | 'taskDone'    // a daily task is finished, ready to claim (value = reward, id = task)

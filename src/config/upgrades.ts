@@ -206,23 +206,43 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'market.shelves', icon: '🗄️', label: 'رفوف جديدة', msg: 'صف رفوف جديد ومنتجات أكتر 🗄️',
-    pos: { x: 17.8, z: 26.5 }, requires: [{ id: 'market.unlock', level: 1 }], milestone: true,
+    pos: { x: 21.4, z: 26.6 }, requires: [{ id: 'market.unlock', level: 1 }], milestone: true,
   },
   {
     id: 'market.cashier', icon: '🧾', label: 'كاشير السوبر ماركت', msg: 'الكاشير بيحاسب الزباين بدالك 🧾',
-    pos: { x: 19.8, z: 26.5 }, requires: [{ id: 'market.unlock', level: 1 }], milestone: true,
+    pos: { x: 23.4, z: 26.6 }, requires: [{ id: 'market.unlock', level: 1 }], milestone: true, capBy: 'market.lanes',
   },
   {
     id: 'market.stocker', icon: '📦', label: 'وظّف عامل رفوف', msg: 'عامل الرفوف بيملا الرفوف من المخزن والمزرعة 📦',
-    pos: { x: 21.8, z: 26.5 }, requires: [{ id: 'market.unlock', level: 1 }], milestone: true,
+    pos: { x: 25.4, z: 26.6 }, requires: [{ id: 'market.unlock', level: 1 }], milestone: true,
   },
   {
     id: 'market.ads', icon: '📣', label: 'إعلانات', msg: 'زباين أكتر جايين للسوبر ماركت 📣',
-    pos: { x: 23.8, z: 26.5 }, requires: [{ id: 'market.unlock', level: 1 }],
+    pos: { x: 27.4, z: 26.6 }, requires: [{ id: 'market.unlock', level: 1 }],
   },
   {
     id: 'market.auto', icon: '🤖', label: 'طلب أوتوماتيك', msg: 'البضاعة بتتطلب لوحدها لما تخلص 🤖',
-    pos: { x: 25.8, z: 26.5 }, requires: [{ id: 'market.stocker', level: 1 }], milestone: true,
+    pos: { x: 21.4, z: 28.6 }, requires: [{ id: 'market.stocker', level: 1 }], milestone: true,
+  },
+  {
+    id: 'market.lanes', icon: '🛒', label: 'كاشير تاني', msg: 'فتحت كاشير تاني بطابور لوحده 🛒',
+    pos: { x: 23.4, z: 28.6 }, requires: [{ id: 'market.cashier', level: 1 }], milestone: true,
+  },
+  {
+    id: 'market.selfcheck', icon: '🤳', label: 'دفع ذاتي', msg: 'ماكينة الدفع الذاتي شغالة: الحاجات القليلة بتتحاسب لوحدها 🤳',
+    pos: { x: 25.4, z: 28.6 }, requires: [{ id: 'market.lanes', level: 1 }],
+  },
+  {
+    id: 'market.delivery', icon: '🚚', label: 'توصيل للبيوت', msg: 'عربية التوصيل جاهزة! طلبات التليفون هتبدأ توصل 🚚',
+    pos: { x: 27.4, z: 28.6 }, requires: [{ id: 'market.stocker', level: 1 }],
+  },
+  {
+    id: 'market.cleaner', icon: '🧹', label: 'عامل نظافة', msg: 'عامل النظافة بيمسح أي حاجة بتقع 🧹',
+    pos: { x: 21.4, z: 30.6 }, requires: [{ id: 'market.shelves', level: 1 }],
+  },
+  {
+    id: 'market.guard', icon: '👮', label: 'أمن', msg: 'الأمن واقف على الباب: الحرامية مش هيعرفوا يهربوا 👮',
+    pos: { x: 23.4, z: 30.6 }, requires: [{ id: 'market.shelves', level: 1 }],
   },
   // Loading dock: company contracts with trucks
   {

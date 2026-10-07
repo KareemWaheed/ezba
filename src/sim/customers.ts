@@ -219,8 +219,8 @@ export class CustomerSystem {
     this.spawnT -= dt;
     this.vipT -= dt;
     if (this.forceVip) this.spawnT = 0;
-    // (the supermarket path has no farm shop: its counter is just the farm's storeroom)
-    if (this.spawnT <= 0 && w.mode === 'market') this.spawnT = 5;
+    // (the supermarket path's farm shop opens with the coop: until then nobody comes to the farm)
+    if (this.spawnT <= 0 && w.mode === 'market' && !w.stations.some((s) => s.open)) this.spawnT = 5;
     if (this.spawnT <= 0) {
       const lane = this.pickLane();
       if (lane >= 0) { this.spawn(lane); wl[lane]++; }

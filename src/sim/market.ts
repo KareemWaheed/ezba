@@ -5,6 +5,7 @@ import { FEATURES } from '../config/features';
 import type { WorkerJob } from './staff';
 import type { SimWorld } from './world';
 import type { Station } from './station';
+import { StoreEvents } from './storeEvents';
 import { dist, moveToward, turnToward } from './math';
 
 export interface Shelf {
@@ -16,7 +17,7 @@ export interface Shelf {
 
 export interface ShopLine { product: ItemId; shelf: number; qty: number; left: number }
 
-export type ShopperState = 'shop' | 'toQueue' | 'queue' | 'leave' | 'angry';
+export type ShopperState = 'shop' | 'toQueue' | 'queue' | 'leave' | 'angry' | 'flee';
 
 export interface Shopper {
   id: number;
@@ -40,7 +41,19 @@ export interface Shopper {
   family?: boolean;
   /** The player scanned at least one of their items. */
   byPlayer?: boolean;
+  /** Checkout line they're heading to / waiting in (0, 1: counters; 2: self-checkout). */
+  lane?: number;
+  /** A shoplifter: shops like anyone, then runs for the door instead of paying. */
+  thief?: boolean;
 }
+
+/** Checkout lines: 0 and 1 are counters (a cashier or the player scans), 2 is the self-checkout kiosk. */
+const LANES = [
+  { queue: MARKET.checkout.queue, via: MARKET.checkout.via, serve: MARKET.checkout.serve as { x: number; z: number } | null, serveR: MARKET.checkout.serveR },
+  { queue: MARKET.checkout2.queue, via: MARKET.checkout2.via, serve: MARKET.checkout2.serve as { x: number; z: number } | null, serveR: MARKET.checkout2.serveR },
+  { queue: MARKET.kiosk.queue, via: MARKET.kiosk.via, serve: null as { x: number; z: number } | null, serveR: 0 },
+] as const;
+export const KIOSK = 2;
 
 /** A wholesale order on its way (arrives after `t` seconds). */
 export interface Delivery { item: ItemId; n: number; t: number; /** From the player's own farm (free). */ farm?: boolean }
@@ -219,6 +232,8 @@ export class MarketSystem {
       && (this.fullFor[st.index] ?? 0) >= ECONOMY.supermarket.pileIdle && st.pile > 0;
   }
   private way = { x: 0, z: 0 };
+  /** Spills, phone orders and the cleaner (storeEvents.ts). */
+  readonly extras: StoreEvents;
   /** One job per possible stocker (they coordinate so no two fill the same shelf). */
   readonly stockers: StockerJob[] = [];
 
@@ -226,6 +241,7 @@ export class MarketSystem {
     this.shelves = SHELVES.map((def, index) => ({ def, index, open: false, stock: 0 }));
     for (const p of MARKET.products) { this.store[p.item] = 0; this.price[p.item] = PRICE_NORMAL; }
     for (let i = 0; i < ECONOMY.upgrades['market.stocker'].max; i++) this.stockers.push(new StockerJob(this, i));
+    this.extras = new StoreEvents(this, w);
   }
 
   shelfFor(item: ItemId): Shelf | undefined { return this.shelves.find((s) => s.def.item === item); }
@@ -346,7 +362,13 @@ export class MarketSystem {
     const w = this.w, up = w.upgrades;
     this.open = FEATURES.supermarket && up.level('market.unlock') > 0;
     const rows = this.open ? 1 + up.level('market.shelves') : 0;
-    for (const s of this.shelves) s.open = s.def.row < rows;
+    for (const s of this.shelves) {
+      const was = s.open;
+      s.open = s.def.row < rows;
+      // a new shelf row opens stocked (the supplier's opening delivery), so growing the store doesn't stall it
+      // (a loaded save sets the stock afterwards)
+      if (s.open && !was && s.def.row > 0 && s.stock === 0) s.stock = ECONOMY.supermarket.openingStock;
+    }
     const st = MARKET.store;
     const n = this.open ? up.level('market.stocker') : 0;
     for (let i = 0; i < n; i++) w.staff.ensureWorkers(this.stockers[i], 1, st.x - 0.5 - i * 0.6, st.z + 1);
@@ -416,14 +438,17 @@ export class MarketSystem {
       }
     }
     this.updateShoppers(dt);
+    this.extras.update(dt);
   }
 
   private spawn(): void {
     const w = this.w, rng = w.rng, cfg = ECONOMY.supermarket;
     const open = this.shelves.filter((s) => s.open);
     if (!open.length) return;
-    // (families come once the store has grown a second shelf row: a corner shop doesn't draw them)
-    const family = rng.next() < cfg.family.chance && w.upgrades.level('market.shelves') > 0;
+    // (families and shoplifters come once the store has grown a second shelf row: a corner shop doesn't draw them)
+    const grown = w.upgrades.level('market.shelves') > 0;
+    const family = rng.next() < cfg.family.chance && grown;
+    const thief = !family && !w.away && grown && rng.next() < cfg.thief.chance && !this.shoppers.some((c) => c.thief && !c.gone);
     // (a family's list is long: at least 3 different products when the store has them)
     const most = Math.min(family ? cfg.family.lines : cfg.maxLines, open.length), least = family ? Math.min(3, most) : 1;
     const n = least + rng.int(most - least + 1);
@@ -447,14 +472,60 @@ export class MarketSystem {
     this.shoppers.push({
       id: this.nextId++, look, type: pickType(w, look), x: sp.x + rng.range(-1, 1), z: sp.z, rot: Math.PI, speed: 0,
       state: 'shop', lines, li: 0, got: [], scanned: 0, waitT: 0, takeT: 0,
-      patience: family ? cfg.family.patience : cfg.patience, patienceMax: family ? cfg.family.patience : cfg.patience, gone: false, family,
+      patience: family ? cfg.family.patience : cfg.patience, patienceMax: family ? cfg.family.patience : cfg.patience, gone: false, family, thief,
     });
   }
 
   /** Player at the checkout's serve spot. */
-  playerAtCheckout(): boolean {
-    const p = this.w.player, s = MARKET.checkout.serve;
-    return !this.w.away && dist(p.x, p.z, s.x, s.z) < MARKET.checkout.serveR;
+  playerAtCheckout(): boolean { return this.playerAtLane(0) || this.playerAtLane(1); }
+
+  /** Player at a checkout counter's serve spot. */
+  playerAtLane(i: number): boolean {
+    const p = this.w.player, s = LANES[i].serve;
+    return !!s && !this.w.away && this.laneOpen(i) && dist(p.x, p.z, s.x, s.z) < LANES[i].serveR;
+  }
+
+  /** The first counter always; the second with market.lanes; the kiosk with market.selfcheck. */
+  laneOpen(i: number): boolean {
+    const up = this.w.upgrades;
+    return i === 0 || (i === 1 ? up.level('market.lanes') > 0 : up.level('market.selfcheck') > 0);
+  }
+
+  /** A cashier stands at this counter (market.cashier level 1 staffs the first, level 2 the second). */
+  laneStaffed(i: number): boolean { return i < KIOSK && this.laneOpen(i) && this.w.upgrades.level('market.cashier') > i; }
+
+  /** A counter whose line is waiting with no cashier (and, unless `evenServed`, the player not there; -1: none). */
+  unservedLane(evenServed = false): number {
+    for (let i = 0; i < KIOSK; i++) {
+      if (this.laneStaffed(i) || (!evenServed && this.playerAtLane(i))) continue;
+      if (this.shoppers.some((c) => c.state === 'queue' && (c.lane ?? 0) === i)) return i;
+    }
+    return -1;
+  }
+
+  /** Where the player stands to serve counter `i`. */
+  laneServe(i: number): { x: number; z: number } { return LANES[i].serve ?? MARKET.checkout.serve; }
+
+  /** A shoplifter on the run right now. */
+  get thief(): Shopper | undefined { return this.shoppers.find((c) => c.state === 'flee'); }
+
+  /** Shoppers waiting in (or walking to) each line. */
+  laneLoad(): number[] {
+    const n = [0, 0, 0];
+    for (const c of this.shoppers) if ((c.state === 'queue' || c.state === 'toQueue') && c.lane !== undefined) n[c.lane]++;
+    return n;
+  }
+
+  /** The line a shopper picks: the shortest open one (an unstaffed counter counts as longer); small baskets may use the kiosk. */
+  private pickLane(c: Shopper): number {
+    const load = this.laneLoad(), cfg = ECONOMY.supermarket;
+    let best = 0, bestScore = Infinity;
+    for (let i = 0; i < LANES.length; i++) {
+      if (!this.laneOpen(i) || (i === KIOSK && c.got.length > cfg.selfMax)) continue;
+      const score = load[i] + (i < KIOSK && !this.laneStaffed(i) ? 2.5 : 0) + (i === KIOSK ? 0.5 : 0);
+      if (score < bestScore) { best = i; bestScore = score; }
+    }
+    return best;
   }
 
   /**
@@ -488,22 +559,30 @@ export class MarketSystem {
       if (inside < cfg.maxInside + (this.rushT > 0 ? cfg.rush.extra : 0)) this.spawn();
       this.spawnT = this.interval * w.rng.range(0.7, 1.3);
     }
-    const q = MARKET.checkout.queue, via = MARKET.checkout.via;
-    const player = this.playerAtCheckout(), served = player || this.cashier;
-    let slot = 0;
+    const slots = [0, 0, 0];
     for (const c of this.shoppers) {
       switch (c.state) {
         case 'shop': {
           const l = c.lines[c.li];
           if (!l) {
+            if (c.thief && c.got.length) {
+              // a shoplifter: straight for the door with the goods
+              c.state = 'flee';
+              if (!w.away) w.events.emit('storeThief', c.got[0], c.x, c.z, 0, 1, c.id);
+              break;
+            }
             c.state = c.got.length ? 'toQueue' : 'angry';
+            if (c.got.length) c.lane = this.pickLane(c);
             if (!c.got.length) { this.angry++; this.angryEmpty++; if (!w.away) w.events.emit('angry', '', c.x, c.z, 0, 0, c.id); }
             break;
           }
           const sh = this.shelves[l.shelf], f = sh.def.front;
           // stand along the shelf front (spread by id so a crowd doesn't stack up)
           const tx = f.x + ((c.id % 3) - 1) * 0.45, tz = f.z + 0.1, r = aisleRoute(c.x, c.z, tx, tz, this.way);
-          if (!moveToward(c, r.x, r.z, walk, dt, 0.1) || r.x !== tx || r.z !== tz) break;
+          // a spill underfoot: slow going, and it gets on their nerves
+          const wet = !!this.extras.spillAt(c.x, c.z);
+          if (wet) c.patience -= cfg.spill.patience * dt;
+          if (!moveToward(c, r.x, r.z, wet ? walk * cfg.spill.slow : walk, dt, 0.1) || r.x !== tx || r.z !== tz) break;
           c.rot = turnToward(c.rot, 0, -1, 12, dt);
           c.takeT -= dt;
           if (sh.stock > 0) {
@@ -522,22 +601,27 @@ export class MarketSystem {
           }
           break;
         }
-        case 'toQueue':
+        case 'toQueue': {
           // round the counter's east end first, then join the line
-          { const r = aisleRoute(c.x, c.z, via.x, via.z, this.way); if (moveToward(c, r.x, r.z, walk, dt, 0.1) && r.x === via.x && r.z === via.z) c.state = 'queue'; }
+          const via = LANES[c.lane ?? 0].via;
+          const r = aisleRoute(c.x, c.z, via.x, via.z, this.way);
+          if (moveToward(c, r.x, r.z, walk, dt, 0.1) && r.x === via.x && r.z === via.z) c.state = 'queue';
           break;
+        }
         case 'queue': {
-          const s = slot++;
+          const lane = c.lane ?? 0, q = LANES[lane].queue, s = slots[lane]++;
           const arrived = moveToward(c, q.x, q.z + s * q.gap, walk, dt, 0.08);
           if (arrived) c.rot = turnToward(c.rot, 0, -1, 12, dt);
+          // who scans: the player at this counter, its cashier, or the shopper at the kiosk (slowly)
+          const player = this.playerAtLane(lane), self = lane === KIOSK;
           let scanning = false;
-          if (s === 0 && arrived && served) {
+          if (s === 0 && arrived && (player || self || this.laneStaffed(lane))) {
             scanning = true;
             c.takeT -= dt;
             if (c.takeT <= 0) {
               c.scanned++;
               if (player) c.byPlayer = true;
-              c.takeT = cfg.scanInterval * (player ? 1 : w.staff.cashierSlow);
+              c.takeT = cfg.scanInterval * (player ? 1 : self ? cfg.selfSlow : w.staff.cashierSlow);
               if (!w.away) w.events.emit('sell', c.got[c.scanned - 1], c.x, c.z, 0, c.scanned, c.id);
               if (c.scanned >= c.got.length) this.pay(c);
             }
@@ -561,6 +645,21 @@ export class MarketSystem {
           }
           break;
         }
+        case 'flee': {
+          const e = MARKET.exit, p = w.player;
+          const caught = (!w.away && dist(p.x, p.z, c.x, c.z) < cfg.thief.catchR) ? 2
+            : w.upgrades.level('market.guard') > 0 && dist(c.x, c.z, e.x, e.z) < cfg.thief.guardR ? 4 : 0;
+          if (caught) { this.catchThief(c, caught); break; }
+          if (moveToward(c, e.x, e.z, walk * cfg.thief.speed, dt, 0.3)) {
+            // got away with it
+            let lost = 0;
+            for (const it of c.got) lost += this.sellPrice(it);
+            c.got.length = 0;
+            c.gone = true;
+            if (!w.away) w.events.emit('storeThief', '', c.x, c.z, Math.round(lost), 3, c.id);
+          }
+          break;
+        }
         case 'leave':
         case 'angry': {
           const e = MARKET.exit;
@@ -570,6 +669,24 @@ export class MarketSystem {
       }
     }
     for (let i = this.shoppers.length - 1; i >= 0; i--) if (this.shoppers[i].gone) this.shoppers.splice(i, 1);
+  }
+
+  /** A shoplifter stopped (2: by the player, who gets a bounty; 4: by the guard): the goods go back. */
+  private catchThief(c: Shopper, by: number): void {
+    const w = this.w, cfg = ECONOMY.supermarket;
+    let value = 0;
+    for (const it of c.got) {
+      value += this.sellPrice(it);
+      const sh = this.shelfFor(it);
+      if (sh && sh.stock < cfg.shelfMax) sh.stock++;
+      else this.store[it] = (this.store[it] ?? 0) + 1;
+    }
+    c.got.length = 0;
+    c.state = 'angry';
+    const bounty = by === 2 ? Math.round(value * cfg.thief.bounty) : 0;
+    w.money += bounty;
+    w.stats.earned += bounty;
+    if (!w.away) w.events.emit('storeThief', '', c.x, c.z, bounty, by, c.id);
   }
 
   private pay(c: Shopper): void {
@@ -606,11 +723,17 @@ export class MarketSystem {
         break;
       }
     }
-    // storeroom: grab what the shelves need most (counting what's already in hand)
+    // spills: standing in one mops it
+    this.extras.mop(dt);
+    // the delivery van: hand over what the phone order needs
+    if (this.dropT <= 0 && this.extras.loadFromPlayer()) this.dropT = pc.dropInterval;
+    // storeroom: a phone order's items first, then what the shelves need most (counting what's already in hand)
     const st = MARKET.store;
     if (this.pickT <= 0 && !c.full() && dist(p.x, p.z, st.x, st.z) < st.r) {
       let best: Shelf | null = null, bestN = Infinity;
-      for (const s of this.shelves) {
+      const order = this.extras.order?.lines.find((l) => this.extras.orderNeeds(l.item) > 0 && (this.store[l.item] ?? 0) > 0);
+      if (order) best = this.shelfFor(order.item) ?? null;
+      else for (const s of this.shelves) {
         const it = s.def.item;
         if (!s.open || this.store[it] <= 0) continue;
         let held = 0;

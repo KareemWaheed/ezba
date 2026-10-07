@@ -25,7 +25,7 @@ const STAND_MAX = 1.3;
 
 const problems: string[] = [];
 /** Solids that only exist once the store is built (addSolid), checked like the static ones. */
-const MARKET_SOLIDS = [...MARKET.walls, MARKET.checkout.box, MARKET.store.racks, MARKET.desk.box, ...SHELVES.map((s) => s.box)];
+const MARKET_SOLIDS = [...MARKET.walls, MARKET.checkout.box, MARKET.checkout2.box, MARKET.kiosk.box, MARKET.store.racks, MARKET.desk.box, ...SHELVES.map((s) => s.box)];
 const d = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.hypot(a.x - b.x, a.z - b.z);
 
 /**
@@ -58,6 +58,8 @@ const zones: { name: string; x: number; z: number; r: number; owner?: string }[]
   { name: 'market storeroom', x: MARKET.store.x, z: MARKET.store.z, r: MARKET.store.r, owner: 'market.unlock' },
   { name: 'market desk', x: MARKET.desk.x, z: MARKET.desk.z, r: MARKET.desk.r, owner: 'market.unlock' },
   { name: 'market checkout', ...MARKET.checkout.serve, r: MARKET.checkout.serveR, owner: 'market.unlock' },
+  { name: 'market checkout 2', ...MARKET.checkout2.serve, r: MARKET.checkout2.serveR, owner: 'market.lanes' },
+  { name: 'delivery van', x: MARKET.van.x, z: MARKET.van.z, r: MARKET.van.r, owner: 'market.delivery' },
   { name: 'market cash', x: MARKET.cash.x, z: MARKET.cash.z, r: MARKET.cash.r, owner: 'market.unlock' },
   ...FACTORY.machines.flatMap((m) => [
     { name: `${m.id} input`, ...m.input, r: 1.1, owner: m.unlockTrack as string },

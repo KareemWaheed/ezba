@@ -386,3 +386,4 @@ html, body {
 #modal .x-sum { background: #fff; border: 2px solid #7cc576; border-radius: 12px; padding: 6px 10px; margin: 6px 0; font-size: 15px; }
 #modal .x-sum.x-old { border-color: #e8554e; }
 #modal .s-move + .m-note { margin-top: 10px; }
+#mboard .mb-order { font-size: 14px; font-weight: 800; background: #e7f1ff; border: 2px solid #3d7fd9; border-radius: 9px; padding: 1px 8px; margin: 2px auto; display: inline-block; }

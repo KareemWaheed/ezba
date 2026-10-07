@@ -276,6 +276,21 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       if (e.n === 1) { sfx.alarm(); toast.show('🔥 زحمة في السوبر ماركت! الزباين جايين كتير'); }
       else toast.show('✅ الزحمة خلصت في السوبر ماركت');
       break;
+    case 'storeSpill':
+      if (e.n === 1) { sfx.drop(); toast.show('🧃 زبون وقّع حاجة على الأرض! امسحها قبل ما الزباين تتضايق'); }
+      else if (e.value > 0) { sfx.coin(); toast.show(`🧹 نضّفت! ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
+      break;
+    case 'storeThief':
+      if (e.n === 1) { sfx.alarm(); toast.show('🦹 حرامي! بيجري على الباب، الحقه!'); }
+      else if (e.n === 2) { sfx.fanfare(); toast.show(`👮 مسكت الحرامي! الحاجة رجعت ومكافأة ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
+      else if (e.n === 4) { sfx.fixed(); toast.show('👮 الأمن مسك الحرامي على الباب'); }
+      else toast.show(`🏃 الحرامي هرب بحاجات بـ${ltr(fmtMoney(e.value))} 💸`);
+      break;
+    case 'storeOrder':
+      if (e.n === 1) { sfx.sparkle(); toast.show(`📞 طلب تليفون جديد! حمّله في عربية التوصيل 🚚 (${ltr(fmtMoney(e.value))} 💰)`); }
+      else if (e.n === 2) { sfx.kaching(); toast.show(`🚚 الطلب اتوصل! ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
+      else toast.show('📞 الزبون لغى الطلب: اتأخرنا عليه');
+      break;
     case 'truck': {
       const t = sim.contracts.truck;
       sfx.sparkle();

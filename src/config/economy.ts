@@ -61,6 +61,8 @@ export const ECONOMY = {
   supermarket: {
     /** Items one shelf holds, and per product in the storeroom. */
     shelfMax: 12,
+    /** A shelf row the store grows opens with this much on each new shelf. */
+    openingStock: 8,
     storeMax: 40,
     /** Items per wholesale box, and seconds until an order arrives. */
     box: 10,
@@ -80,6 +82,26 @@ export const ECONOMY = {
     /** Seconds a shopper takes per item off a shelf, and the player per item at the checkout. */
     takeInterval: 0.4,
     scanInterval: 0.22,
+    /**
+     * Spills (once the store has a second shelf row): one every `every` s (x0.6..1.4), at most `max` at once.
+     * Shoppers within `r` walk at `slow` x speed and lose `patience` a second; the player mops one by standing in
+     * it (`mopR`) for `mopTime` s (tip x price growth); the cleaner walks over at `cleanerSpeed` and mops `cleanerSlow` x slower.
+     */
+    spill: { every: 55, max: 3, r: 0.8, slow: 0.4, patience: 4, mopR: 0.9, mopTime: 1.2, tip: 15, cleanerSpeed: 2.4, cleanerSlow: 1.5 },
+    /**
+     * Shoplifters (once the store has a second shelf row): this share of shoppers; once their list is done they
+     * run for the door at `speed` x walking speed. Touching one (`catchR`) gets the goods back plus `bounty` x their
+     * value; the guard stops them within `guardR` of the door.
+     */
+    thief: { chance: 0.02, speed: 1.3, catchR: 0.95, bounty: 0.5, guardR: 4 },
+    /**
+     * Phone orders (market.delivery): the first `first` s after the van, then every `every` s (x0.75..1.25);
+     * `time` s to load, paying `mult` x the shelf price; the driver (level 2) loads one item every `driverEvery` s.
+     */
+    orders: { first: 30, every: 75, time: 150, mult: 1.8, driverEvery: 3 },
+    /** Self-checkout: baskets of at most this many items may use it; scanning takes this many times the player's time. */
+    selfMax: 5,
+    selfSlow: 3,
     /** Items a shelf stocker carries per trip (they push a trolley; HR capacity adds on top). */
     stockerCapacity: 8,
     /** Supermarket-first game: the farm sends a box of what it makes to the storeroom (when it fits) every this many seconds. */
@@ -516,7 +538,17 @@ export const ECONOMY = {
     /** Another shelf row per level (corn, oil, tea, chips; then cheese, cake, fish, soda). */
     'market.shelves': { base: 60000, growth: 2.5, max: 2, step: 1 },
     /** Cashier at the supermarket checkout. */
-    'market.cashier': { base: 90000, growth: 1, max: 1, step: 1 },
+    'market.cashier': { base: 90000, growth: 1.5, max: 2, step: 1 },
+    /** Second checkout counter with its own line (its cashier is market.cashier level 2). */
+    'market.lanes': { base: 80000, growth: 1, max: 1, step: 1 },
+    /** Self-checkout kiosk: shoppers with a small basket scan it themselves. */
+    'market.selfcheck': { base: 110000, growth: 1, max: 1, step: 1 },
+    /** Cleaner: mops spills on his own. */
+    'market.cleaner': { base: 50000, growth: 1, max: 1, step: 1 },
+    /** Security guard: catches shoplifters at the door. */
+    'market.guard': { base: 70000, growth: 1, max: 1, step: 1 },
+    /** Delivery van: phone orders (level 1); a driver who fills them on his own (level 2). */
+    'market.delivery': { base: 100000, growth: 2, max: 2, step: 1 },
     /** Shelf stockers (+1 per level): storeroom (or the farm) -> shelves. */
     'market.stocker': { base: 70000, growth: 2.5, max: 2, step: 1 },
     /** Ads: shoppers arrive (1 + step x level) times as often. */

@@ -77,12 +77,30 @@ export const MARKET = {
     via: { x: 16.0, z: 26.0 },
     serveR: 1.1,
   },
+  /** Second checkout (market.lanes): its own line; staffed by a second cashier (market.cashier level 2) or the player. */
+  checkout2: {
+    box: { x0: 16.2, x1: 17.8, z0: 24.9, z1: 25.5 } as Box,
+    serve: { x: 17.0, z: 24.3 },
+    queue: { x: 17.0, z: 26.4, gap: 1.05 },
+    via: { x: 18.6, z: 26.0 },
+    serveR: 1.1,
+  },
+  /** Self-checkout kiosk (market.selfcheck): shoppers with a small basket scan it themselves, slowly. */
+  kiosk: {
+    box: { x0: 19.0, x1: 19.8, z0: 24.9, z1: 25.5 } as Box,
+    queue: { x: 19.4, z: 26.2, gap: 1.05 },
+    via: { x: 20.6, z: 26.0 },
+  },
+  /** Delivery van (market.delivery): phone orders are loaded here; the van parks just past it. */
+  van: { x: 27.6, z: 30.8, r: 1.2, park: { x: 29.6, z: 30.8 } },
+  /** Once the store is built the yard south of it is walkable down to here (the upgrade tiles stand there). */
+  yardZ1: 31.2,
   cash: { x: 13.6, z: 22.9, r: 1.0 },
   /** Where a supermarket-first game starts the player (inside, between the checkout and the shelves). */
   startSpot: { x: 18.0, z: 24.4 },
   /** Shoppers come in from the road south-east and leave the same way. */
-  spawn: { x: 21.0, z: 30.5 },
-  exit: { x: 17.5, z: 30.5 },
+  spawn: { x: 19.0, z: 32.6 },
+  exit: { x: 16.0, z: 32.6 },
   shelfR: 0.75,
 } as const;
 

@@ -232,3 +232,19 @@ This file records the decisions made on top of it.
   animal pile that has sat full 20 s goes too (`MarketSystem.pileIdle`; earlier the player fetches by hand).
   Shelf stockers push a trolley: 8 items a trip (was the farm workers' 3). Playtest save over 5 minutes:
   empty shelves 6.8 -> 0.6 of 15, unhappy shoppers 20 -> 1, items sold 300 -> 517.
+- Supermarket-first game, more to do in the store (playtest: "the supermarket is very boring"; and the farm
+  had no customers of its own). The farm shop now opens with the coop in this mode too: its customers buy at
+  the farm counters first and the store gets what's left (shop rushes and shop events stay off). New store
+  upgrades (third tile row in the yard south of the store, which becomes walkable once the store is built):
+  `market.lanes` a second checkout with its own line (its cashier is `market.cashier` level 2, capped by the
+  lanes), `market.selfcheck` a kiosk for baskets of <= 5 items (3x slower than the player); shoppers pick the
+  shortest line (an unstaffed lane counts as longer). Spills (once the store has a second shelf row): a shopper
+  drops something every ~55 s (max 3), shoppers wade through slowly and lose patience; the player mops one by
+  standing in it (small tip), `market.cleaner` does it on his own. Shoplifters (2% of shoppers, same gate):
+  once their list is done they run for the door; touching one gets the goods back plus a bounty, the
+  `market.guard` stops them near the door, otherwise the goods are lost. Phone orders (`market.delivery`): a
+  2-4 product order every ~75 s with a 150 s timer, loaded into the van by hand (the storeroom hands order items
+  first) for 1.8x the shelf price; level 2 adds a driver who loads from the storeroom. The guide and the store
+  board point at whichever of these needs the player. A newly opened shelf row comes with 8 items a shelf (the
+  casual bot stalled ~6 min after buying it while saving to stock every empty shelf). None of the store events
+  happen during time away, and none are saved. `npm run marketcheck` covers each.

@@ -138,10 +138,14 @@ export class UpgradeSystem {
     w.contracts.sync();
     w.factory.sync();
     w.bounds.x1 = w.factory.open || w.mode === 'market' ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
+    // the yard south of a built store is walkable (its upgrade tiles stand there)
+    w.bounds.z1 = w.market.open ? MARKET.yardZ1 : LAYOUT.bounds.z1;
     if (w.market.open) {
       // the store stands on reachable grass: walls, counter, racks and desk turn solid once it's built
       MARKET.walls.forEach((b, i) => w.addSolid(`marketWall${i}`, b));
       w.addSolid('marketCheckout', MARKET.checkout.box);
+      if (this.level('market.lanes') > 0) w.addSolid('marketCheckout2', MARKET.checkout2.box);
+      if (this.level('market.selfcheck') > 0) w.addSolid('marketKiosk', MARKET.kiosk.box);
       w.addSolid('marketRacks', MARKET.store.racks);
       w.addSolid('marketDesk', MARKET.desk.box);
     }
