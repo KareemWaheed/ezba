@@ -4,6 +4,7 @@ import { pickType } from '../config/album';
 import { FEATURES } from '../config/features';
 import type { WorkerJob } from './staff';
 import type { SimWorld } from './world';
+import type { Station } from './station';
 import { dist, moveToward, turnToward } from './math';
 
 export interface Shelf {
@@ -46,12 +47,16 @@ export interface Delivery { item: ItemId; n: number; t: number; /** From the pla
 
 /**
  * Take one farm-made item from the farm's surplus for a farm delivery: the shop counter beyond its reserve
- * (eggs, milk, corn), the factory trays (cheese, cake) or the fish pile. False when there's none spare.
+ * (eggs, milk, corn), the factory trays (cheese, cake) or the fish pile. In a supermarket-first game there's
+ * no farm shop, so an animal pile that has stayed full a while goes too (nobody is carrying it, and the
+ * animals stop while it's full); one being collected is left for the player. False when there's none spare.
  */
 function farmTake(w: SimWorld, item: ItemId): boolean {
   const st = w.stations.find((s) => s.def.product === item);
   if (st) {
-    if (!st.open || w.counterSpare(st) <= 0) return false;
+    if (!st.open) return false;
+    if (w.market.pileIdle(st)) { st.pile--; return true; }
+    if (w.counterSpare(st) <= 0) return false;
     st.counter--;
     return true;
   }
@@ -201,6 +206,18 @@ export class MarketSystem {
   private pickT = 0;
   private dropT = 0;
   private autoT = 0;
+  private farmT = 0;
+  /** Seconds each animal pile has been full (supermarket-first game: an idle full pile goes to the store). */
+  private fullFor: number[] = [];
+
+  /**
+   * A supermarket-first game's animal pile that has stayed full a while (nobody's collecting it), once the
+   * store has stockers to bring it over (before that the player fetches the farm's goods by hand).
+   */
+  pileIdle(st: Station): boolean {
+    return this.w.mode === 'market' && this.w.upgrades.level('market.stocker') > 0
+      && (this.fullFor[st.index] ?? 0) >= ECONOMY.supermarket.pileIdle && st.pile > 0;
+  }
   private way = { x: 0, z: 0 };
   /** One job per possible stocker (they coordinate so no two fill the same shelf). */
   readonly stockers: StockerJob[] = [];
@@ -368,6 +385,25 @@ export class MarketSystem {
     }
     // restocking by staff, once a second for whatever runs low on open shelves: stockers fetch farm products
     // from the farm's surplus (a free farm delivery); auto-reorder also buys wholesale (farm surplus first)
+    // a supermarket-first game: what the farm makes goes to the storeroom by itself (free), a box at a time
+    // whenever there's room for it, so the farm never sits on stock while the store buys the same wholesale
+    // how long each animal pile has sat full (once it counts as idle, it stays so until it's emptied)
+    if (w.mode === 'market') {
+      for (const st of w.stations) {
+        const i = st.index;
+        if (st.open && st.pileFull) this.fullFor[i] = (this.fullFor[i] ?? 0) + dt;
+        else if (!this.pileIdle(st)) this.fullFor[i] = 0;
+      }
+    }
+    this.farmT -= dt;
+    if (w.mode === 'market' && this.farmT <= 0) {
+      this.farmT = cfg.farmEvery;
+      for (const s of this.shelves) {
+        const it = s.def.item;
+        const st = w.stations.find((x) => x.def.product === it), idle = st && this.pileIdle(st) ? st.pile : 0;
+        if (s.open && this.farmSpare(it) + idle >= Math.min(cfg.box, cfg.storeMax - this.stocked(it)) && this.orderFromFarm(it)) break;
+      }
+    }
     this.autoT -= dt;
     const stockers = w.upgrades.level('market.stocker') > 0, auto = w.upgrades.level('market.auto') > 0;
     if (this.autoT <= 0 && (stockers || auto)) {

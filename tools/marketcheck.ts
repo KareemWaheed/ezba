@@ -351,6 +351,21 @@ for (const p of MARKET.products) {
   ok(marketHint(w) === 'order', `a box for another shelf doesn't count as "on its way" for the bare ones (${marketHint(w)})`);
 }
 
+// supermarket-first game: the farm's goods reach the store by themselves (free), stockers push a trolley
+{
+  const w = new SimWorld(3, 'market'), up = w.upgrades;
+  up.levels['eggs.unlock'] = 1; up.levels['milk.unlock'] = 1; up.levels['market.cashier'] = 1; up.levels['market.stocker'] = 1;
+  up.apply(); up.refresh();
+  const eggs = w.stations[0], milk = w.stations[1], m = w.market;
+  eggs.counter = 40; milk.pile = ECONOMY.pile.max; milk.counter = 0;
+  for (const k of Object.keys(m.store)) m.store[k as keyof typeof m.store] = 0;
+  m.incoming.length = 0;
+  w.money = 0;
+  run(w, ECONOMY.supermarket.pileIdle + 20);
+  ok(m.store.egg + m.stocked('egg') > 0 && m.stocked('milk') > 0 && w.money >= 0, `the farm's eggs (counter) and a milk pile nobody collects go to the store for free (egg ${m.stocked('egg')}, milk ${m.stocked('milk')}, milk pile ${milk.pile})`);
+  ok(w.staff.workers.filter((x) => x.job.key.startsWith('market.stock')).every((x) => x.carry.cap >= ECONOMY.supermarket.stockerCapacity), 'stockers carry a trolley load');
+}
+
 // switched off (as in the game now): a save that built the store gets its spend back and the store stays shut
 {
   const w = farm({ 'market.unlock': 1, 'market.shelves': 3, 'market.cashier': 1 });

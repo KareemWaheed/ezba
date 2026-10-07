@@ -225,3 +225,10 @@ This file records the decisions made on top of it.
   late game, tolerant of line breaks from chat apps; QR "EZ1:" + base45 so it packs in QR alphanumeric mode
   (version ~27 for a late-game save). The debug panel's older plain codes still read. `npm run transfercheck`;
   checked in a browser across separate contexts, including a fake camera showing the QR.
+- Supermarket-first game, the farm as the store's supplier (playtest: eggs piled up on the farm counter, a full
+  milk pile sat untouched while the store bought milk wholesale, shelves stood half empty). There is still no
+  farm shop in this mode (by design: the farm supplies the store), but now: every 4 s the farm sends a box of
+  what it makes from the counter to the storeroom when it fits (free), and once the store has stockers an
+  animal pile that has sat full 20 s goes too (`MarketSystem.pileIdle`; earlier the player fetches by hand).
+  Shelf stockers push a trolley: 8 items a trip (was the farm workers' 3). Playtest save over 5 minutes:
+  empty shelves 6.8 -> 0.6 of 15, unhappy shoppers 20 -> 1, items sold 300 -> 517.

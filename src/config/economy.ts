@@ -80,6 +80,12 @@ export const ECONOMY = {
     /** Seconds a shopper takes per item off a shelf, and the player per item at the checkout. */
     takeInterval: 0.4,
     scanInterval: 0.22,
+    /** Items a shelf stocker carries per trip (they push a trolley; HR capacity adds on top). */
+    stockerCapacity: 8,
+    /** Supermarket-first game: the farm sends a box of what it makes to the storeroom (when it fits) every this many seconds. */
+    farmEvery: 4,
+    /** ...and takes from an animal pile that has stayed full this many seconds (nobody is collecting it). */
+    pileIdle: 20,
     /** Auto-reorder buys a box when a product's storeroom stock drops below this. */
     autoBelow: 10,
     /** Supplier credit: with fewer items than this in the whole store, boxes can be ordered into debt (down to -creditMax). */
