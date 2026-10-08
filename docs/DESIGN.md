@@ -266,6 +266,9 @@ This file records the decisions made on top of it.
   second corn plot (x 15.5-21.5), then a second wheat plot (22.5-28.5), shown locked until bought; the walkable
   area reaches them. Drivers, hands and the combine work them like the others (they still sell at the one
   stall). At 150k right after the wheat it pushed automation under the "active >= 1.5x" pacing target (1.47x).
+- Events felt like they'd stopped (playtest): the countdown to the next one restarted at 10-16 min of play on
+  every load and was never saved, so short phone sessions rarely reached one. Now it's saved (`eventT`), the
+  gap is 6-9 min, and back after 10+ min away the next event comes within 90 s. `npm run eventcheck` covers it.
 - Playtest round (the café cashier felt out of reach; progress lost after a phone call; events felt
   all-or-nothing and the footballers too hard):
   - `cafe.waiter` 130k -> 55k (PRICE_VERSION 2: earlier buyers get the difference back). Full automation of

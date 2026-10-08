@@ -579,6 +579,18 @@ if (!only || only === 'khamaseen') {
   ok(!bad, `fresh farm never picks a locked event${bad ? ` (picked ${bad})` : ''}`);
 }
 
+// the countdown to the next event survives a reload; after a long time away the next one comes soon
+{
+  const w = new SimWorld(5);
+  w.scenario.t = 200;
+  const a = new SimWorld(1);
+  restore(a, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
+  ok(Math.abs(a.scenario.t - 200) < 1, `a reload keeps the event countdown (${Math.round(a.scenario.t)} s left)`);
+  const b = new SimWorld(1);
+  restore(b, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now() - 3600_000))))!);
+  ok(b.scenario.t <= 90, `back after an hour: the next event comes soon (${Math.round(b.scenario.t)} s)`);
+}
+
 export { goalOk };
 
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }

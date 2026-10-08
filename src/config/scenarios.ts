@@ -355,4 +355,6 @@ export const SCENARIO_GOAL_LABEL: Record<ScenarioGoal, string> = {
 };
 
 /** How often scenarios happen (seconds of active play between them). */
-export const SCENARIO_GAP = { min: 600, max: 960 };
+export const SCENARIO_GAP = { min: 360, max: 540 };
+/** Back after this long away (real seconds): the next event comes within `soon` s of play. */
+export const SCENARIO_WELCOME = { away: 600, soon: 90 };
