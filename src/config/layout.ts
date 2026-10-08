@@ -88,6 +88,17 @@ export const LAYOUT = {
   army: { drop: { x: -7.4, z: 16.9 }, truck: { x: -10.0, z: 16.9 } },
   /** Where the health inspector walks in from (the yard's west side). */
   inspectorEntry: { x: -8.3, z: 13.0 },
+  /**
+   * The surplus corner (bottom left of the yard): the wholesale trader's truck parks west of `load`, the
+   * incubator stands at `incubator.box` (chicks are sold at `incubator.crate`), and records are set at `record`.
+   */
+  surplus: {
+    load: { x: -6.8, z: 11.8 },
+    park: { x: -9.4, z: 12.2 },
+    road: { x: -26, z: 12.2 },
+    incubator: { box: { x0: -7.9, x1: -6.5, z0: 7.95, z1: 8.85 } as Box, crate: { x: -7.2, z: 9.75 } },
+    record: { x: -4.2, z: 12.2 },
+  },
   /** Loading dock for company trucks (bottom right). The player loads at `load`; trucks park at `bay`. */
   dock: {
     load: { x: 8.4, z: 10.4 },
@@ -99,9 +110,9 @@ export const LAYOUT = {
   /** Sell counter body. */
   counter: { x0: -7.6, x1: 5.4, z0: 3.55, z1: 4.45 } as Box,
 
-  /** Decorative trees around the edge (x, z). */
+  /** Decorative trees around the edge (x, z); kept clear of the wholesale trader's road (z 12.2, west of the yard). */
   trees: [
-    [-18.5, -11], [-17.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 13], [-16.5, 12.5], [-14, -1], [17.5, -12.5], [31, -3], [31.5, 4],
+    [-18.5, -11], [-17.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 14.8], [-16.5, 15.0], [-14, -1], [17.5, -12.5], [31, -3], [31.5, 4],
     [31.5, 11], [-12.5, 27.5], [10.5, 28.5], [-13, 19.5], [11.3, 24.8], [-2, 30], [6, 31],
   ] as const,
   hay: [[19.6, -7.6], [19.6, -6.0], [19.6, -4.4], [20.8, -6.8]] as const,

@@ -3,6 +3,7 @@ import { RIVER } from '../config/river';
 import type { WorkerJob } from './staff';
 import type { SimWorld } from './world';
 import { dist, moveToward } from './math';
+import { jitter, newVisit, stepVisit, type Visit } from './visit';
 
 export interface FishBoat {
   x: number; z: number; rot: number; speed: number;
@@ -37,6 +38,9 @@ export interface Visitor {
   gone: boolean;
 }
 
+/** A seafood company's truck at the river (the visit itself: sim/visit.ts). */
+export interface FishTruck extends Visit { company: number }
+
 /** River worker: fish pile -> the grill (while it wants fish) or the fish stall; also ties returned rowboats. */
 class FishJob implements WorkerJob {
   readonly key = 'river.fish';
@@ -46,7 +50,8 @@ class FishJob implements WorkerJob {
     out.z = RIVER.pile.z + 1.0;
   }
   take(): ItemId | null {
-    if (this.r.pile <= 0) return null;
+    // (a seafood truck being loaded gets the pile: it pays better than the stall)
+    if (this.r.pile <= 0 || this.r.truckLoading()) return null;
     this.r.pile--;
     return 'fish';
   }
@@ -84,6 +89,10 @@ export class RiverSystem {
   private job = new FishJob(this);
   /** Rowboats that were out/untied when the game was saved (applied once the boats exist). */
   pendingUntied = 0;
+  /** The seafood truck waiting by the bank (null = none). Not saved. */
+  truck: FishTruck | null = null;
+  private truckT = 40;
+  private trucks = 0;
 
   constructor(private w: SimWorld) {}
 
@@ -134,6 +143,51 @@ export class RiverSystem {
     this.updateBoats(dt);
     this.updateRowboats(dt);
     this.updateVisitors(dt);
+    this.updateTruck(dt);
+  }
+
+  /** Price a seafood company pays for one fish right now. */
+  truckPrice(): number { return ECONOMY.crops.fish.price * this.w.priceMult * ECONOMY.river.trucks.price; }
+
+  /** A parked seafood truck is being loaded right now (river workers, or the player at it). */
+  truckLoading(): boolean {
+    const v = this.truck, w = this.w, T = RIVER.truck;
+    return !!v && v.state === 'parked' && v.left > 0
+      && (w.upgrades.level('river.worker') > 0 || dist(w.player.x, w.player.z, T.load.x, T.load.z) < 1.3);
+  }
+
+  /**
+   * Seafood trucks: with a big fish pile a company's truck drives along the bank and waits by the corn; the
+   * player loads it at the truck (river workers do it on their own). Pays better than the stall.
+   */
+  private updateTruck(dt: number): void {
+    const w = this.w, cfg = ECONOMY.river.trucks, T = RIVER.truck, v = this.truck;
+    if (w.away) { this.truck = null; return; }
+    const workers = w.upgrades.level('river.worker') > 0;
+    if (!v) {
+      if ((this.truckT -= dt) > 0) return;
+      // (its own jitter, like the wholesale trader: the world's random sequence stays untouched)
+      const n = ++this.trucks;
+      this.truckT = cfg.every * (0.8 + 0.4 * jitter(n, 78.233));
+      // a big pile; with river workers (who keep the pile low) it comes for what the boats bring meanwhile
+      if (this.pile < cfg.min && !workers) return;
+      const want = workers ? cfg.maxLoad : Math.min(cfg.maxLoad, this.pile);
+      const company = n % cfg.companies.length;
+      this.truck = { ...newVisit(want, cfg.stay), company };
+      w.events.emit('fishTruck', 'fish', T.load.x, T.load.z, want, 1, company);
+      return;
+    }
+    // (out of fish: the player's lot is what's there; workers keep loading as the boats bring more)
+    const ev = stepVisit(v, dt, {
+      drive: 4, loadTime: cfg.loadTime, onEmpty: workers ? 'wait' : 'end',
+      loading: this.truckLoading(),
+      take: () => { if (this.pile <= 0) return false; this.pile--; return true; },
+      price: () => this.truckPrice(),
+      pay: (m) => { w.money += m; w.stats.earned += m; },
+    });
+    if (ev === 'done') w.events.emit('fishTruck', 'fish', T.load.x, T.load.z, v.paid, 2, v.company);
+    else if (ev === 'left') w.events.emit('fishTruck', 'fish', T.park.x, T.park.z, v.paid, 3, v.company);
+    else if (ev === 'gone') this.truck = null;
   }
 
   private updateBoats(dt: number): void {

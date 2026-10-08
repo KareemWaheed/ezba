@@ -1,4 +1,5 @@
 import { ECONOMY } from '../config/economy';
+import { RIVER } from '../config/river';
 import { LAYOUT } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import { MARKET } from '../config/market';
@@ -32,6 +33,12 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
   const g = w.golden.animal;
   if (g) { out.x = g.x; out.z = g.z; return true; }
   if (storeAlert(w, out)) return true;
+  // a seafood truck waits by the river (river workers load it themselves)
+  const ft = w.river.truck;
+  if (ft && ft.state === 'parked' && ft.left > 0 && w.upgrades.level('river.worker') === 0) { out.x = RIVER.truck.load.x; out.z = RIVER.truck.load.z; return true; }
+  // the wholesale trader is only here for a while (with a deal he loads by himself)
+  const tv = w.surplus.visit;
+  if (tv && tv.state === 'parked' && tv.left > 0 && w.upgrades.level('trader.deal') === 0) { out.x = LAYOUT.surplus.load.x; out.z = LAYOUT.surplus.load.z; return true; }
   // the cheapest upgrade the player can afford right now
   const up = w.upgrades;
   let best: UpgradeDef | null = null, bestR = Infinity;
@@ -42,6 +49,9 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
     if (r <= w.money && r < bestR) { best = t.def; bestR = r; }
   }
   if (best) { out.x = best.pos.x; out.z = best.pos.z; return true; }
+  // a record ready to set, a crate of chicks to sell
+  if (w.surplus.ready) { out.x = LAYOUT.surplus.record.x; out.z = LAYOUT.surplus.record.z; return true; }
+  if (w.surplus.crate >= ECONOMY.surplus.incubator.crateMax / 2) { out.x = LAYOUT.surplus.incubator.crate.x; out.z = LAYOUT.surplus.incubator.crate.z; return true; }
   if (marketAction(w, out)) return true;
   if (cafeAction(w, out)) return true;
   if (fieldAction(w, out)) return true;

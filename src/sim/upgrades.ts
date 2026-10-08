@@ -155,6 +155,7 @@ export class UpgradeSystem {
     w.bounds.z0 = w.field.open ? FIELDS.unlockedZ0 : LAYOUT.bounds.z0;
     w.river.sync();
     if (w.river.open) { w.bounds.z0 = RIVER.unlockedZ0; w.addSolid('fishStall', RIVER.stall.box); }
+    if (this.level('eggs.incubator') > 0) w.addSolid('incubator', LAYOUT.surplus.incubator.box);
     const grill = FACTORY.machines.find((m) => m.id === 'grill');
     if (grill && this.level(grill.unlockTrack) > 0) w.addSolid('grill', grill.box);
     w.contracts.sync();

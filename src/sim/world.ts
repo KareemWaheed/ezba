@@ -16,6 +16,7 @@ import { GoldenSystem } from './golden';
 import { CafeSystem } from './cafe';
 import { ScenarioSystem } from './scenario';
 import { ContractSystem } from './contracts';
+import { SurplusSystem } from './surplus';
 import { FieldSystem } from './field';
 import { AlbumSystem, DailySystem } from './meta';
 import { FactorySystem } from './factory';
@@ -49,6 +50,8 @@ export class SimWorld {
   readonly cafe: CafeSystem;
   readonly scenario: ScenarioSystem;
   readonly contracts: ContractSystem;
+  /** Wholesale trader, incubator and records: what a big surplus is good for. */
+  readonly surplus: SurplusSystem;
   readonly field: FieldSystem;
   readonly factory: FactorySystem;
   readonly river: RiverSystem;
@@ -104,6 +107,7 @@ export class SimWorld {
     this.cafe = new CafeSystem(this);
     this.scenario = new ScenarioSystem(this);
     this.contracts = new ContractSystem(this);
+    this.surplus = new SurplusSystem(this);
     this.field = new FieldSystem(this);
     this.factory = new FactorySystem(this);
     this.river = new RiverSystem(this);
@@ -127,7 +131,7 @@ export class SimWorld {
   get perSec(): number {
     let v = 0;
     for (const st of this.stations) {
-      if (st.open && st.def.producer) v += (st.animals.length / ECONOMY.producers[st.def.producer].interval) * ECONOMY.products[st.def.product].price * this.priceMult;
+      if (st.open && st.def.producer) v += (st.animals.length / ECONOMY.producers[st.def.producer].interval) * ECONOMY.products[st.def.product].price * this.priceMult * this.surplus.productMult(st.def.product);
     }
     // the supermarket's margin (so rewards scale on the supermarket path before the farm exists)
     return v + this.market.marginPerSec;
@@ -202,6 +206,7 @@ export class SimWorld {
     this.cafe.update(dt);
     this.field.update(dt);
     this.factory.update(dt);
+    this.surplus.update(dt);
     this.river.update(dt);
     this.market.update(dt);
     if (!this.away) this.upgrades.update(dt);
@@ -276,6 +281,7 @@ export class SimWorld {
     this.cafe.interact(dt);
     this.scenario.deliver(dt);
     this.contracts.interact(dt);
+    this.surplus.interact(dt);
     const cash = LAYOUT.shop.cash;
     if (this.cash.value > 0 && dist(p.x, p.z, cash.x, cash.z) < ZONE.cash) {
       const v = this.cash.value, n = this.cash.bills;

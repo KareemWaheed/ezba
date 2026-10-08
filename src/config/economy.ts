@@ -139,6 +139,20 @@ export const ECONOMY = {
     tieTime: 0.8,
     /** A river worker ties a returned boat after this many seconds. */
     workerTie: 4,
+    /**
+     * Seafood trucks: once the fish pile has `min` crates (with river workers, any time: they hold the pile for
+     * it), a company's truck comes (checked every `every` s,
+     * x0.8..1.2) and waits `stay` s for up to `maxLoad` fish at `price` x the stall price. The player loads at
+     * the truck (the lot in `loadTime` s); river workers load it themselves. Never during time away.
+     */
+    trucks: {
+      min: 12, every: 75, stay: 45, maxLoad: 30, price: 1.4, loadTime: 3,
+      companies: [
+        { name: 'أسماك بحري', color: 0x1e7fb8 },
+        { name: 'سمكمك', color: 0xe0702a },
+        { name: 'مطعم سي جل', color: 0x0f5d8c },
+      ],
+    },
   },
 
   /** Crop fields (stage 4): walk through with a tool to cut every stalk in reach. */
@@ -491,6 +505,10 @@ export const ECONOMY = {
     'cafe.waiter': { base: 55000, growth: 1, max: 1, step: 1 },
     /** Cleaners clear dirty tables (+1 per level). */
     'cafe.cleaner': { base: 15000, growth: 3, max: 2, step: 1 },
+    /** A deal with the wholesale trader: he loads the surplus himself. */
+    'trader.deal': { base: 6000, growth: 1, max: 1, step: 1 },
+    /** Incubator: surplus eggs become chicks to sell (level 2: twice the trays). */
+    'eggs.incubator': { base: 3000, growth: 3, max: 2, step: 1 },
     /** Loading dock: company trucks with supply contracts. */
     'dock.unlock': { base: 7000, growth: 1, max: 1, step: 1 },
     /** Dock workers load trucks from the shop counter's surplus (+1 per level). */
@@ -597,6 +615,29 @@ export const ECONOMY = {
     efficiency: 0.3,
     /** Minimum time away before the welcome-back popup shows (s). */
     minSeconds: 30,
+  },
+
+  /**
+   * What to do with a big surplus on the shop counters (and factory trays nobody takes).
+   * Trader: when a product has at least `min` spare, a truck may come (checked every `every` s x0.8..1.2) and
+   * stay `stay` s; it takes `share` of the spare (between `minLoad` and `maxLoad`) at `price` x the sale price.
+   * The player stands at the load spot (`loadTime` s for the whole lot); with `trader.deal` he loads alone.
+   * Incubator: every `batchTime` s it takes `perChick` x `batch` (x level) spare eggs (leaving `reserve` spare for
+   * the kitchen, the factory and the dock) and hatches that many
+   * chicks into a crate (max `crateMax`); a chick sells for `chickPrice` x price growth. Every `goldenEvery`
+   * chicks one is a golden hen (max `goldenMax`), each making eggs sell for `goldenBonus` more.
+   * Records: with `need` spare of a product, set a record at the record stand (holding `hold` s): it uses
+   * `need` and pays `pay` x their sale value; the next record of that product needs `grow` x more.
+   */
+  surplus: {
+    trader: { min: 150, every: 150, stay: 50, share: 0.35, minLoad: 100, maxLoad: 4000, price: 0.4, loadTime: 3, trayMin: 8 },
+    incubator: { batchTime: 15, perChick: 10, batch: 5, reserve: 120, crateMax: 40, chickPrice: 30, goldenEvery: 30, goldenMax: 3, goldenBonus: 0.15 },
+    records: {
+      egg: { need: 2000, icon: '🍳', name: 'أكبر عجّة في مصر' },
+      milk: { need: 1000, icon: '🍮', name: 'أكبر طبق رز بلبن' },
+      corn: { need: 800, icon: '🍿', name: 'أكبر صينية فشار' },
+      pay: 2.5, grow: 1.5, hold: 2,
+    },
   },
 
   save: {

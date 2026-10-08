@@ -8,7 +8,7 @@ import { ANIMAL_GEO } from './models';
 const SMOKE_MAX = 24;
 
 /** Recolor a merged geometry's vertex colors toward gold (for golden animals). */
-function goldify(src: THREE.BufferGeometry): THREE.BufferGeometry {
+export function goldify(src: THREE.BufferGeometry): THREE.BufferGeometry {
   const g = src.clone();
   const col = g.attributes.color as THREE.BufferAttribute;
   for (let i = 0; i < col.count; i++) {
