@@ -43,7 +43,7 @@ export type SimEventType =
   | 'fishTruck'   // seafood truck at the river: n = 1 arrived (value = fish wanted, id = company), 2 loaded (value = money), 3 left
   | 'trader'      // wholesale trader: n = 1 arrived (product, value = items wanted), 2 sold (value = money, id = items), 3 left
   | 'incubator'   // n = 1 a batch hatched (value = chicks), 2 chicks sold (value = money), 3 a golden hen (id = how many)
-  | 'record'      // a surplus record: n = 1 ready (product), 2 set (value = reward, id = count)
+  | 'record'      // a surplus record: n = 0 the player is at the stand but none is ready (value = spare, id = need), 1 ready (product), 2 set (value = reward, id = count)
   | 'albumNew'    // first time this customer kind was served (n = page, id = entry)
   | 'albumPage'   // an album page was completed (value = bonus, n = page)
   | 'taskDone'    // a daily task is finished, ready to claim (value = reward, id = task)
