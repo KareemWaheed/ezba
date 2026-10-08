@@ -24,6 +24,9 @@ export function upgradeCost(id: UpgradeId, level: number): number {
 }
 
 /** Upgrade levels, partial payments and the visible tiles the player pays into. */
+/** Besides the `*.unlock` tracks (new areas), these big steps get a locked preview tile too. */
+const TEASED = new Set<UpgradeId>(['field.wheat', 'field.tractor', 'field.combine', 'factory.dairy', 'river.grill']);
+
 export class UpgradeSystem {
   readonly levels = {} as Record<UpgradeId, number>;
   /** Money already paid toward the next level of each track. */
@@ -84,6 +87,25 @@ export class UpgradeSystem {
     if (def.requiresMaxed && !this.maxed(def.requiresMaxed)) return false;
     for (const r of this.requires(def)) if (this.level(r.id) < r.level) return false;
     return true;
+  }
+
+  /**
+   * Big unlocks one step away (new areas and the big machines): one not yet on offer only because of upgrades the player can buy right
+   * now (each missing one has its tile up). Drawn as a faded, locked tile at its spot with what it needs, so
+   * the player sees what's next without it shouting. Skips spots a live tile already stands on.
+   */
+  teasers(): { def: UpgradeDef; needs: { id: UpgradeId; level: number }[] }[] {
+    const out: { def: UpgradeDef; needs: { id: UpgradeId; level: number }[] }[] = [];
+    for (const def of UPGRADES) {
+      if (!TEASED.has(def.id) && !def.id.endsWith('.unlock')) continue;
+      if (this.level(def.id) > 0 || this.hidden(def.id) || this.available(def)) continue;
+      const needs = this.requires(def).filter((r) => this.level(r.id) < r.level).map((r) => ({ id: r.id, level: r.level }));
+      if (def.requiresMaxed && !this.maxed(def.requiresMaxed)) needs.push({ id: def.requiresMaxed, level: this.maxOf(def.requiresMaxed) });
+      if (!needs.length || !needs.every((n) => this.tiles.some((t) => t.def.id === n.id))) continue;
+      if (this.tiles.some((t) => dist(t.def.pos.x, t.def.pos.z, def.pos.x, def.pos.z) < 1.6)) continue;
+      out.push({ def, needs });
+    }
+    return out;
   }
 
   /** Rebuild the visible tile list; keeps armed state of tiles that stay. */

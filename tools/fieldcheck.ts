@@ -51,6 +51,17 @@ const w2 = new SimWorld(1);
 restore(w2, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
 ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a save keeps the whole corn pile');
 
+// the corn field shows as a locked preview (what it needs) while the café is on offer, and goes once it's open
+{
+  const t = new SimWorld(4);
+  for (const [id, lv] of [['eggs.animals', 4], ['eggs.worker', 1], ['milk.unlock', 1], ['cashier', 1]] as const) { t.upgrades.levels[id] = lv; t.upgrades.bought += lv; }
+  t.upgrades.apply(); t.upgrades.refresh();
+  const corn = t.upgrades.teasers().find((x) => x.def.id === 'field.unlock');
+  ok(!!corn && corn.needs.length === 1 && corn.needs[0].id === 'cafe.unlock', `the corn field is previewed, needing the café (${corn?.needs.map((n) => n.id).join()})`);
+  t.upgrades.levels['cafe.unlock'] = 1; t.upgrades.apply(); t.upgrades.refresh();
+  ok(!t.upgrades.teasers().some((x) => x.def.id === 'field.unlock') && t.upgrades.tiles.some((x) => x.def.id === 'field.unlock'), 'with the café open the preview turns into the real tile');
+}
+
 // field hands: on foot with a sickle, slow but on their own (before any tractor)
 {
   const h = new SimWorld(3);
