@@ -52,6 +52,7 @@ const zones: { name: string; x: number; z: number; r: number; owner?: string }[]
   { name: 'fish stall drop', ...RIVER.stall.drop, r: 1.25, owner: 'river.unlock' },
   { name: 'fish stall cash', ...RIVER.stall.cash, r: 1.3, owner: 'river.unlock' },
   { name: 'rowboat tie spot', ...RIVER.tie, r: 1.3, owner: 'river.unlock' },
+  { name: 'seafood truck', ...RIVER.truck.load, r: 1.3, owner: 'river.unlock' },
   ...RIVER.queue && [0, 1, 2, 3, 4].map((i) => ({ name: `river queue ${i}`, x: RIVER.queue.x - i * RIVER.queue.gap, z: RIVER.queue.z, r: 0.6, owner: 'river.unlock' })),
   // the surplus corner: trader load spot, chick crate, record stand
   { name: 'trader load', ...LAYOUT.surplus.load, r: 1.2 },

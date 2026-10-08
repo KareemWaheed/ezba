@@ -48,6 +48,18 @@ class Bubble {
   }
 }
 
+/** A seafood company's refrigerated truck: colored cab, white insulated box (cab toward +z). */
+function fishTruckGeo(color: number): THREE.BufferGeometry {
+  return merge([
+    part(box, color, 0, 0.95, 1.5, 0, 0, 0, 1.8, 1.3, 1.1),
+    part(box, 0x2b3a4e, 0, 1.25, 2.06, 0, 0, 0, 1.5, 0.5, 0.02),
+    part(box, 0xf4f7fa, 0, 1.25, -0.5, 0, 0, 0, 2.0, 1.9, 2.9),
+    part(box, color, 0, 1.25, -0.5, 0, 0, 0, 2.02, 0.35, 2.92),
+    part(box, 0x9fd3f0, 0, 2.25, -1.4, 0, 0, 0, 0.8, 0.12, 0.6),
+    ...[[-1, 1.5], [1, 1.5], [-1, -1.2], [1, -1.2]].map(([a, z]) => part(cyl, 0x0a0a0a, a * 0.95, 0.35, z, 0, 0, Math.PI / 2, 0.35, 0.25, 0.35)),
+  ]);
+}
+
 /** Stage 6: the river (always there as scenery), dock area, boats, visitors. */
 export class RiverView {
   private dock = new THREE.Group();
@@ -59,6 +71,12 @@ export class RiverView {
   private pile: InstancedStack;
   private cash: InstancedStack;
   private tieRing = new Bubble();
+  /** Seafood truck (one mesh per company color) with its board, and the load marker. */
+  private truck = new THREE.Group();
+  private truckBodies: THREE.Mesh[] = [];
+  private truckBoard = new CanvasSprite(340, 130, 2.8);
+  private truckKey = '';
+  private truckMark = groundMarker('🐟', 1.6, 'rgba(30,127,184,0.3)', '#1e7fb8');
   private time = 0;
   private _m = new THREE.Matrix4();
 
@@ -112,11 +130,45 @@ export class RiverView {
     this.dock.add(new THREE.Mesh(merge(sg), MAT), sign.sprite, drop, cm, this.cash.group, pal, this.pile.group, tie, this.tieRing.s.sprite);
     this.dock.visible = false;
     scene.add(this.dock);
+    for (const c of ECONOMY.river.trucks.companies) { const m = new THREE.Mesh(fishTruckGeo(c.color), MAT); this.truckBodies.push(m); this.truck.add(m); }
+    this.truckBoard.sprite.position.set(0, 3.4, 0);
+    this.truck.add(this.truckBoard.sprite);
+    // (along the bank, cab toward the east where it came from: it backs in)
+    this.truck.rotation.y = Math.PI / 2;
+    this.truckMark.position.set(RIVER.truck.load.x, 0, RIVER.truck.load.z);
+    scene.add(this.truck, this.truckMark);
+  }
+
+  /** The seafood truck: along the bank from the east, a board with the company, fish left and its price. */
+  private syncTruck(sim: SimWorld): void {
+    const v = sim.river.truck, T = RIVER.truck;
+    this.truck.visible = !!v;
+    this.truckMark.visible = !!v && v.state === 'parked' && v.left > 0;
+    if (!v) return;
+    const k = 1 - Math.pow(1 - v.k, 2);
+    this.truck.position.set(T.road.x + (T.park.x - T.road.x) * k, 0, T.park.z);
+    this.truckBodies.forEach((m, i) => { m.visible = i === v.company; });
+    const co = ECONOMY.river.trucks.companies[v.company], price = sim.river.truckPrice();
+    const key = `${v.company}|${v.left}|${Math.round(price)}`;
+    if (key === this.truckKey) return;
+    this.truckKey = key;
+    this.truckBoard.draw((c, w, h) => {
+      c.fillStyle = 'rgba(255,255,255,0.95)';
+      rr(c, 4, 4, w - 8, h - 8, 22); c.fill();
+      c.lineWidth = 4; c.strokeStyle = `#${co.color.toString(16).padStart(6, '0')}`; c.stroke();
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl';
+      c.fillStyle = '#2b2a1f'; c.font = `800 30px ${FONT}`; c.fillText(co.name, w / 2, 36);
+      c.direction = 'ltr';
+      c.font = `40px ${EMOJI}`; c.fillText('🐟', 50, 88);
+      c.font = `800 34px ${FONT}`; c.fillText(v.left > 0 ? `× ${v.left}` : '✓', 140, 90);
+      c.fillStyle = '#2f8f3a'; c.font = `800 26px ${FONT}`; c.fillText(`💵 ${Math.round(price)}`, 260, 90);
+    });
   }
 
   sync(sim: SimWorld, dt: number): void {
     this.time += dt;
     const r = sim.river;
+    this.syncTruck(sim);
     // waves drift along the river
     const wtr = RIVER.water;
     for (let i = 0; i < 26; i++) {

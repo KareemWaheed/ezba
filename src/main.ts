@@ -311,6 +311,12 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       else if (e.n === 4) { sfx.fixed(); toast.show('👮 الأمن مسك الحرامي على الباب'); }
       else toast.show(`🏃 الحرامي هرب بحاجات بـ${ltr(fmtMoney(e.value))} 💸`);
       break;
+    case 'fishTruck': {
+      const co = ECONOMY.river.trucks.companies[e.id]?.name ?? '';
+      if (e.n === 1) { sfx.sparkle(); toast.show(sim.upgrades.level('river.worker') > 0 ? `🚚 عربية ${co} جاية تاخد ${ltr(String(e.value))} 🐟` : `🚚 عربية ${co} عايزة ${ltr(String(e.value))} 🐟! حمّلها عند النهر`); }
+      else if (e.n === 2 || (e.n === 3 && e.value > 0 && sim.river.truck && sim.river.truck.left > 0)) { sfx.kaching(); toast.show(`🐟 ${co} اشترت السمك ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
+      break;
+    }
     case 'trader': {
       const ic = ITEM_ICON[e.product as ItemId];
       if (e.n === 1) { sfx.sparkle(); toast.show(sim.upgrades.level('trader.deal') > 0 ? `🤝 تاجر الجملة جه ياخد ${ltr(e.value.toLocaleString('en-US'))} ${ic}` : `🧑‍💼 تاجر الجملة عايز ${ltr(e.value.toLocaleString('en-US'))} ${ic} الزيادة! قابله عند العربية 🚚`); }

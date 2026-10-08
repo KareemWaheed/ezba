@@ -139,6 +139,20 @@ export const ECONOMY = {
     tieTime: 0.8,
     /** A river worker ties a returned boat after this many seconds. */
     workerTie: 4,
+    /**
+     * Seafood trucks: once the fish pile has `min` crates (with river workers, any time: they hold the pile for
+     * it), a company's truck comes (checked every `every` s,
+     * x0.8..1.2) and waits `stay` s for up to `maxLoad` fish at `price` x the stall price. The player loads at
+     * the truck (the lot in `loadTime` s); river workers load it themselves. Never during time away.
+     */
+    trucks: {
+      min: 12, every: 75, stay: 45, maxLoad: 30, price: 1.4, loadTime: 3,
+      companies: [
+        { name: 'أسماك بحري', color: 0x1e7fb8 },
+        { name: 'سمكمك', color: 0xe0702a },
+        { name: 'مطعم سي جل', color: 0x0f5d8c },
+      ],
+    },
   },
 
   /** Crop fields (stage 4): walk through with a tool to cut every stalk in reach. */

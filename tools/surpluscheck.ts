@@ -9,6 +9,7 @@ import { SimWorld } from '../src/sim/world';
 import { serialize, restore, migrate } from '../src/sim/save';
 import { ECONOMY, type UpgradeId } from '../src/config/economy';
 import { LAYOUT } from '../src/config/layout';
+import { RIVER as LAYOUT_RIVER } from '../src/config/river';
 
 const DT = 1 / 30;
 let fails = 0;
@@ -127,6 +128,37 @@ const untilParked = (w: SimWorld, max: number) => {
   e.counter = 300;
   run(w, 1, away);
   ok(w.surplus.ready === null, 'a small surplus sets no record');
+}
+
+// ---- seafood trucks at the river ----
+{
+  const T = ECONOMY.river.trucks;
+  const w = farm({ 'river.unlock': 1 });
+  ok(w.river.open, 'test farm: the river is open');
+  w.river.pile = 35;
+  for (let i = 0; i < (T.every * 2) / DT && w.river.truck?.state !== 'parked'; i++) { w.river.pile = Math.max(w.river.pile, 35); w.player.x = away.x; w.player.z = away.z; w.tick(DT); w.events.drain(() => {}); }
+  const t = w.river.truck;
+  ok(!!t && t.want === Math.min(T.maxLoad, 35), `a big fish pile brings a seafood truck (${t ? T.companies[t.company].name : '-'} wants ${t?.want})`);
+  run(w, 3, away);
+  ok(w.river.truck?.left === w.river.truck?.want, 'it waits for the player');
+  const price = w.river.truckPrice();
+  let sold = 0, got = 0;
+  for (let i = 0; i < (T.loadTime + 1) / DT; i++) {
+    w.player.x = LAYOUT_RIVER.truck.load.x; w.player.z = LAYOUT_RIVER.truck.load.z;
+    w.tick(DT);
+    w.events.drain((ev) => { if (ev.type === 'fishTruck' && ev.n === 2) { got = ev.value; sold = t!.want; } });
+  }
+  ok(sold > 0 && Math.abs(got - sold * price) <= 2, `the player loads it (${sold} fish for ${got})`);
+  ok(price > ECONOMY.crops.fish.price * w.priceMult, 'it pays more than the fish stall');
+  const w2 = farm({ 'river.unlock': 1, 'river.worker': 1 });
+  w2.river.pile = 35;
+  let loaded = 0;
+  for (let i = 0; i < (T.every * 3) / DT && loaded === 0; i++) {
+    w2.player.x = away.x; w2.player.z = away.z; w2.tick(DT); w2.events.drain(() => {});
+    const tr = w2.river.truck;
+    if (tr && tr.state === 'parked') loaded = Math.max(loaded, tr.want - tr.left);
+  }
+  ok(loaded > 0, `river workers load it on their own (${loaded} fish)`);
 }
 
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }

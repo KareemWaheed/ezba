@@ -34,4 +34,6 @@ export const RIVER = {
   /** Visitors arrive from the west along the bank and queue here (line goes west). */
   queue: { x: -13.6, z: -19.6, gap: 1.0 },
   visitorSpawn: { x: -19, z: -17 },
+  /** Seafood companies' refrigerated trucks: they come along the bank from the east and park by the corn. */
+  truck: { load: { x: -2.6, z: -19.9 }, park: { x: 0.4, z: -19.9 }, road: { x: 26, z: -19.9 } },
 } as const;

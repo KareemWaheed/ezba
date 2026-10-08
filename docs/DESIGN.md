@@ -293,3 +293,10 @@ This file records the decisions made on top of it.
   - Records: 2,000 spare eggs / 1,000 milk / 800 corn (x1.5 each time after) can be turned into "the biggest
     omelette / rice pudding / popcorn tray in Egypt" by holding still at the record stand: pays 2.5x their sale
     value, a giant dish grows on the stand. `npm run surpluscheck` covers all three.
+- Fish has buyers (playtest: "fish needs a place to sell, trucks like Bahary or Samakmak, and the café should
+  become a restaurant"). The fish stall, the grill and grilled fish on the café menu were already there; now
+  seafood companies' refrigerated trucks (أسماك بحري، سمكمك، مطعم سي جل) drive along the river bank when the fish
+  pile has 12+ crates (with river workers: any time, and the workers hold the pile for the truck) and take up to
+  30 fish at 1.4x the stall price: the player loads at the truck, river workers load it themselves. Own timing
+  jitter (world random sequence untouched); never during time away. Once the grill is built the café's name
+  board reads "مطعم وكافيه المزرعة". Covered in `npm run surpluscheck`.

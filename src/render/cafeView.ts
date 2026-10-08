@@ -136,6 +136,9 @@ export class CafeView {
   private time = 0;
   /** Dish being eaten at each table this frame (rebuilt in one pass). */
   private diners: (DishId | null)[] = [];
+  /** Name board over the kitchen: the café, or "restaurant and café" once the grill serves fish. */
+  private nameBoard = new CanvasSprite(420, 90, 3.6);
+  private nameKey = '';
 
   constructor(private scene: THREE.Scene) {
     const cb = CAFE.counter;
@@ -160,6 +163,8 @@ export class CafeView {
       this.root.add(fx.sprite);
       this.machineFx.push(fx);
     }
+    this.nameBoard.sprite.position.set((CAFE.kitchen[0].box.x0 + CAFE.kitchen[1].box.x1) / 2, 3.6, CAFE.kitchen[0].box.z0);
+    this.root.add(this.nameBoard.sprite);
     mk('🍽️', cb.serve.x, cb.serve.z);
     mk('', CAFE.cash.x, CAFE.cash.z, 'rgba(94,198,208,0.35)', '#5ec6d0');
     this.counter = {} as Record<DishId, InstancedStack>;
@@ -181,10 +186,25 @@ export class CafeView {
     this.root.visible = false;
   }
 
+  private drawName(sim: SimWorld): void {
+    const restaurant = sim.upgrades.level('river.grill') > 0;
+    const key = restaurant ? 'r' : 'c';
+    if (key === this.nameKey) return;
+    this.nameKey = key;
+    this.nameBoard.draw((c, w, h) => {
+      c.fillStyle = restaurant ? 'rgba(30,90,140,0.95)' : 'rgba(150,80,30,0.95)';
+      rr(c, 4, 4, w - 8, h - 8, 20); c.fill();
+      c.fillStyle = '#fff8e8'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl';
+      c.font = `800 40px ${FONT}`;
+      c.fillText(restaurant ? '🍽️ مطعم وكافيه المزرعة 🐟' : '☕ كافيه المزرعة', w / 2, h / 2 + 2);
+    });
+  }
+
   sync(sim: SimWorld, dt: number): void {
     const cafe = sim.cafe;
     this.time += dt;
     this.root.visible = cafe.open;
+    if (cafe.open) this.drawName(sim);
     for (const t of this.tables) t.root.visible = cafe.open && t.shown;
     if (!cafe.open) return;
     for (const d of DISH_IDS) {
@@ -269,6 +289,6 @@ export class CafeView {
   /** World position of the café cash pile (for collect flyers). */
   cashSlot(i: number, out: THREE.Vector3): THREE.Vector3 { return this.cash.slotWorld(i, out); }
 
-  invalidate(): void { for (const v of this.customers.values()) v.invalidate(); }
+  invalidate(): void { for (const v of this.customers.values()) v.invalidate(); this.nameKey = ''; }
 }
 
