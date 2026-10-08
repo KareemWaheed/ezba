@@ -331,7 +331,7 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       const r = ECONOMY.surplus.records[e.product as 'egg' | 'milk' | 'corn'];
       if (!r) break;
       if (e.n === 1) { sfx.sparkle(); toast.show(`🏆 عندك ${ITEM_ICON[e.product as ItemId]} كفاية لـ"${r.name}"! اقف عند منصة الأرقام القياسية`); }
-      else { sfx.fanfare(); sfx.fanfare(); toast.show(`${r.icon} رقم قياسي! ${r.name} ${ltr(`+${fmtMoney(e.value)}`)} 💰🏆`); }
+      else { sfx.fanfare(); toast.show(`${r.icon} رقم قياسي! ${r.name} ${ltr(`+${fmtMoney(e.value)}`)} 💰🏆`); }
       break;
     }
     case 'storeOrder':

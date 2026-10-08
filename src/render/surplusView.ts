@@ -23,6 +23,8 @@ const TRUCK_GEO = merge([
 ]);
 /** Crates in the bed (shown as he loads). */
 const LOAD_GEO = merge([0, 1, 2].map((i) => part(box, 0xe9c46a, (i - 1) * 0.6, 1.05, -0.6, 0, 0, 0, 0.5, 0.45, 2.2)));
+/** Height of the crates' bottom (on the bed). */
+const LOAD_BOTTOM = 1.05 - 0.45 / 2;
 
 /** Incubator: a warm cabinet with a glass front, a red lamp, and the chick crate in front. */
 const INCUBATOR_GEO = (() => {
@@ -116,7 +118,10 @@ export class SurplusView {
       const k = 1 - Math.pow(1 - v.k, 2);
       this.truck.position.set(L.road.x + (L.park.x - L.road.x) * k, 0, L.park.z);
       this.load.visible = v.want - v.left > 0;
-      this.load.scale.y = 0.3 + 0.7 * ((v.want - v.left) / Math.max(1, v.want));
+      // (scaled about the truck's origin: lift it so the crates' bottom stays on the bed)
+      const sy = 0.3 + 0.7 * ((v.want - v.left) / Math.max(1, v.want));
+      this.load.scale.y = sy;
+      this.load.position.y = LOAD_BOTTOM * (1 - sy);
       this.drawBoard(sim);
     }
     // incubator, crate and chicks (once built)

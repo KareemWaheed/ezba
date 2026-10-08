@@ -3,6 +3,7 @@ import { RIVER } from '../config/river';
 import type { WorkerJob } from './staff';
 import type { SimWorld } from './world';
 import { dist, moveToward } from './math';
+import { jitter, newVisit, stepVisit, type Visit } from './visit';
 
 export interface FishBoat {
   x: number; z: number; rot: number; speed: number;
@@ -37,19 +38,8 @@ export interface Visitor {
   gone: boolean;
 }
 
-/** A seafood company's truck at the river: how many fish it still takes. */
-export interface FishTruck {
-  company: number;
-  want: number;
-  left: number;
-  state: 'arrive' | 'parked' | 'leave';
-  /** 0..1 along the bank while arriving/leaving. */
-  k: number;
-  t: number;
-  paid: number;
-  part: number;
-  owed: number;
-}
+/** A seafood company's truck at the river (the visit itself: sim/visit.ts). */
+export interface FishTruck extends Visit { company: number }
 
 /** River worker: fish pile -> the grill (while it wants fish) or the fish stall; also ties returned rowboats. */
 class FishJob implements WorkerJob {
@@ -60,8 +50,8 @@ class FishJob implements WorkerJob {
     out.z = RIVER.pile.z + 1.0;
   }
   take(): ItemId | null {
-    // (a seafood truck waiting by the bank gets the pile: it pays better than the stall)
-    if (this.r.pile <= 0 || (this.r.truck && this.r.truck.left > 0)) return null;
+    // (a seafood truck being loaded gets the pile: it pays better than the stall)
+    if (this.r.pile <= 0 || this.r.truckLoading()) return null;
     this.r.pile--;
     return 'fish';
   }
@@ -159,6 +149,13 @@ export class RiverSystem {
   /** Price a seafood company pays for one fish right now. */
   truckPrice(): number { return ECONOMY.crops.fish.price * this.w.priceMult * ECONOMY.river.trucks.price; }
 
+  /** A parked seafood truck is being loaded right now (river workers, or the player at it). */
+  truckLoading(): boolean {
+    const v = this.truck, w = this.w, T = RIVER.truck;
+    return !!v && v.state === 'parked' && v.left > 0
+      && (w.upgrades.level('river.worker') > 0 || dist(w.player.x, w.player.z, T.load.x, T.load.z) < 1.3);
+  }
+
   /**
    * Seafood trucks: with a big fish pile a company's truck drives along the bank and waits by the corn; the
    * player loads it at the truck (river workers do it on their own). Pays better than the stall.
@@ -166,39 +163,31 @@ export class RiverSystem {
   private updateTruck(dt: number): void {
     const w = this.w, cfg = ECONOMY.river.trucks, T = RIVER.truck, v = this.truck;
     if (w.away) { this.truck = null; return; }
+    const workers = w.upgrades.level('river.worker') > 0;
     if (!v) {
       if ((this.truckT -= dt) > 0) return;
       // (its own jitter, like the wholesale trader: the world's random sequence stays untouched)
-      const n = ++this.trucks, j = Math.sin(n * 78.233) * 43758.5453;
-      this.truckT = cfg.every * (0.8 + 0.4 * (j - Math.floor(j)));
+      const n = ++this.trucks;
+      this.truckT = cfg.every * (0.8 + 0.4 * jitter(n, 78.233));
       // a big pile; with river workers (who keep the pile low) it comes for what the boats bring meanwhile
-      const workers = w.upgrades.level('river.worker') > 0;
       if (this.pile < cfg.min && !workers) return;
       const want = workers ? cfg.maxLoad : Math.min(cfg.maxLoad, this.pile);
       const company = n % cfg.companies.length;
-      this.truck = { company, want, left: want, state: 'arrive', k: 0, t: cfg.stay, paid: 0, part: 0, owed: 0 };
+      this.truck = { ...newVisit(want, cfg.stay), company };
       w.events.emit('fishTruck', 'fish', T.load.x, T.load.z, want, 1, company);
       return;
     }
-    if (v.state === 'arrive') { v.k = Math.min(1, v.k + dt / 4); if (v.k >= 1) v.state = 'parked'; return; }
-    if (v.state === 'leave') { v.k = Math.max(0, v.k - dt / 4); if (v.k <= 0) this.truck = null; return; }
-    v.t -= dt;
-    const loading = w.upgrades.level('river.worker') > 0 || dist(w.player.x, w.player.z, T.load.x, T.load.z) < 1.3;
-    if (loading && v.left > 0) {
-      v.part += (v.want / cfg.loadTime) * dt;
-      while (v.part >= 1 && v.left > 0) {
-        v.part -= 1;
-        // (out of fish: the player's lot is what's there; workers keep loading as the boats bring more)
-        if (this.pile <= 0) { if (w.upgrades.level('river.worker') === 0) v.left = 0; v.part = 0; break; }
-        this.pile--;
-        v.left--;
-        v.owed += this.truckPrice();
-      }
-      const m = v.left > 0 ? Math.floor(v.owed) : Math.round(v.owed);
-      if (m > 0) { w.money += m; w.stats.earned += m; v.paid += m; v.owed -= m; }
-      if (v.left <= 0) { w.events.emit('fishTruck', 'fish', T.load.x, T.load.z, v.paid, 2, v.company); v.t = Math.min(v.t, 1.5); }
-    }
-    if (v.t <= 0) { v.state = 'leave'; w.events.emit('fishTruck', 'fish', T.park.x, T.park.z, v.paid, 3, v.company); }
+    // (out of fish: the player's lot is what's there; workers keep loading as the boats bring more)
+    const ev = stepVisit(v, dt, {
+      drive: 4, loadTime: cfg.loadTime, onEmpty: workers ? 'wait' : 'end',
+      loading: this.truckLoading(),
+      take: () => { if (this.pile <= 0) return false; this.pile--; return true; },
+      price: () => this.truckPrice(),
+      pay: (m) => { w.money += m; w.stats.earned += m; },
+    });
+    if (ev === 'done') w.events.emit('fishTruck', 'fish', T.load.x, T.load.z, v.paid, 2, v.company);
+    else if (ev === 'left') w.events.emit('fishTruck', 'fish', T.park.x, T.park.z, v.paid, 3, v.company);
+    else if (ev === 'gone') this.truck = null;
   }
 
   private updateBoats(dt: number): void {

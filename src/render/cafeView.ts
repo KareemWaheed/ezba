@@ -195,8 +195,12 @@ export class CafeView {
       c.fillStyle = restaurant ? 'rgba(30,90,140,0.95)' : 'rgba(150,80,30,0.95)';
       rr(c, 4, 4, w - 8, h - 8, 20); c.fill();
       c.fillStyle = '#fff8e8'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl';
+      // (shrinks to fit the board)
+      const text = restaurant ? '🍽️ مطعم وكافيه المزرعة 🐟' : '☕ كافيه المزرعة';
       c.font = `800 40px ${FONT}`;
-      c.fillText(restaurant ? '🍽️ مطعم وكافيه المزرعة 🐟' : '☕ كافيه المزرعة', w / 2, h / 2 + 2);
+      const fs = Math.min(40, Math.floor((40 * (w - 40)) / c.measureText(text).width));
+      c.font = `800 ${fs}px ${FONT}`;
+      c.fillText(text, w / 2, h / 2 + 2);
     });
   }
 

@@ -3,34 +3,15 @@ import { LAYOUT } from '../config/layout';
 import type { Station } from './station';
 import type { SimWorld } from './world';
 import { dist } from './math';
+import { jitter, newVisit, stepVisit, type Visit } from './visit';
 
 export type RecordProduct = 'egg' | 'milk' | 'corn';
 export const RECORD_PRODUCTS: readonly RecordProduct[] = ['egg', 'milk', 'corn'];
 
-/** The trader's truck this visit: what he came for and how much of it is still to load. */
-export interface TraderVisit {
-  product: ItemId;
-  want: number;
-  left: number;
-  state: 'arrive' | 'parked' | 'leave';
-  /** 0..1 along the road while arriving/leaving. */
-  k: number;
-  /** Seconds left parked. */
-  t: number;
-  /** Money paid so far this visit. */
-  paid: number;
-  /** Fraction of an item loaded toward the next one, and money owed below a whole unit. */
-  part: number;
-  owed: number;
-}
+/** The trader's truck this visit: what he came for (the visit itself: sim/visit.ts). */
+export interface TraderVisit extends Visit { product: ItemId }
 
 const DRIVE = 3;
-
-/** 0..1, fixed per n (a little variety without touching the world's random sequence). */
-function jitter(n: number): number {
-  const x = Math.sin(n * 12.9898) * 43758.5453;
-  return x - Math.floor(x);
-}
 const R = 1.2;
 
 /**
@@ -82,8 +63,9 @@ export class SurplusSystem {
   private takeOne(p: ItemId): boolean {
     const st = this.station(p);
     if (st) { if (this.stationSpare(st) <= 0) return false; st.counter--; return true; }
+    // (factory trays only while the café counter is still full: otherwise the café gets them)
     const m = this.w.factory.machines.find((x) => x.def.makes === p);
-    if (!m || m.conv.output[p as DishId] <= 0) return false;
+    if (!m || !m.open || !this.w.factory.cafeFull(m.def.makes) || m.conv.output[p as DishId] <= 0) return false;
     m.conv.output[p as DishId]--;
     return true;
   }
@@ -104,7 +86,7 @@ export class SurplusSystem {
       const n = this.spare(p), tray = !this.station(p);
       if (n < (tray ? cfg.trayMin : cfg.min)) continue;
       const want = tray ? n : Math.min(n, cfg.maxLoad, Math.max(cfg.minLoad, Math.round(n * cfg.share)));
-      const v = want * priceOf(p);
+      const v = want * priceOf(p) * this.productMult(p);
       if (v > bestV) { best = { product: p, want }; bestV = v; }
     }
     return best;
@@ -125,35 +107,21 @@ export class SurplusSystem {
       this.checkT = cfg.every * (0.8 + 0.4 * jitter(++this.checks));
       const load = this.pickLoad();
       if (!load) return;
-      this.visit = { product: load.product, want: load.want, left: load.want, state: 'arrive', k: 0, t: cfg.stay, paid: 0, part: 0, owed: 0 };
+      this.visit = { ...newVisit(load.want, cfg.stay), product: load.product };
       w.events.emit('trader', load.product, L.load.x, L.load.z, load.want, 1);
       return;
     }
-    if (v.state === 'arrive') { v.k = Math.min(1, v.k + dt / DRIVE); if (v.k >= 1) v.state = 'parked'; return; }
-    if (v.state === 'leave') { v.k = Math.max(0, v.k - dt / DRIVE); if (v.k <= 0) this.visit = null; return; }
-    v.t -= dt;
     // loading: the player at the load spot, or the trader himself with a deal; the whole lot in loadTime s
-    const loading = w.upgrades.level('trader.deal') > 0 || dist(w.player.x, w.player.z, L.load.x, L.load.z) < R;
-    if (loading && v.left > 0) {
-      v.part += (v.want / cfg.loadTime) * dt;
-      while (v.part >= 1 && v.left > 0) {
-        v.part -= 1;
-        if (!this.takeOne(v.product)) { v.left = 0; break; }
-        v.left--;
-        v.owed += this.traderPrice(v.product);
-      }
-      // paid in whole units as it goes (the rest when the lot is done)
-      const m = v.left > 0 ? Math.floor(v.owed) : Math.round(v.owed);
-      if (m > 0) { w.money += m; w.stats.earned += m; v.paid += m; v.owed -= m; }
-      if (v.left <= 0) {
-        w.events.emit('trader', v.product, L.load.x, L.load.z, v.paid, 2, v.want - v.left);
-        v.t = Math.min(v.t, 1.5);
-      }
-    }
-    if (v.t <= 0) {
-      v.state = 'leave';
-      w.events.emit('trader', v.product, L.park.x, L.park.z, v.paid, 3);
-    }
+    const ev = stepVisit(v, dt, {
+      drive: DRIVE, loadTime: cfg.loadTime, onEmpty: 'end',
+      loading: w.upgrades.level('trader.deal') > 0 || dist(w.player.x, w.player.z, L.load.x, L.load.z) < R,
+      take: () => this.takeOne(v.product),
+      price: () => this.traderPrice(v.product),
+      pay: (m) => { w.money += m; w.stats.earned += m; },
+    });
+    if (ev === 'done') w.events.emit('trader', v.product, L.load.x, L.load.z, v.paid, 2, v.want);
+    else if (ev === 'left') w.events.emit('trader', v.product, L.park.x, L.park.z, v.paid, 3);
+    else if (ev === 'gone') this.visit = null;
   }
 
   // ---- the incubator ----
@@ -221,7 +189,7 @@ export class SurplusSystem {
     this.updateRecords(dt);
   }
 
-  /** Player: sell the chicks at the crate; hold still at the record stand to set a record. */
+  /** Player: sell the chicks at the crate; stay at the record stand to set a record. */
   interact(dt: number): void {
     const w = this.w, p = w.player, L = LAYOUT.surplus;
     if (this.crate > 0 && w.upgrades.level('eggs.incubator') > 0 && dist(p.x, p.z, L.incubator.crate.x, L.incubator.crate.z) < R) {

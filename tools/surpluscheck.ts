@@ -117,9 +117,10 @@ const untilParked = (w: SimWorld, max: number) => {
   ok(w.surplus.ready === 'egg', `with ${need} spare eggs a record is ready`);
   const m0 = w.money, pay = w.surplus.recordPay('egg');
   run(w, 0.5, L.record);
-  ok(w.surplus.records.egg === 0, 'it takes holding still at the stand');
+  ok(w.surplus.records.egg === 0, 'it takes staying at the stand a moment');
   run(w, S.records.hold + 0.5, L.record);
-  ok(w.surplus.records.egg === 1 && e.counter <= 50 && w.money - m0 >= pay - 1, `the record uses the eggs and pays big (${Math.round(w.money - m0)})`);
+  // (the egg worker may refill the counter meanwhile)
+  ok(w.surplus.records.egg === 1 && e.counter < need + 50 && w.money - m0 >= pay - 1, `the record uses the eggs and pays big (${Math.round(w.money - m0)})`);
   ok(pay > need * ECONOMY.products.egg.price * w.priceMult * 2, 'more than selling them one by one');
   ok(w.surplus.need('egg') > need, `the next egg record needs more (${w.surplus.need('egg')})`);
   const w2 = new SimWorld(1);

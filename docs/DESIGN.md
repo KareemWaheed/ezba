@@ -282,21 +282,24 @@ This file records the decisions made on top of it.
   needs are bought. Usually one or two at a time.
 - Surplus has a use (playtest: 15,000 egg crates on the counter with nothing to do with them). In the yard's
   bottom-left corner (`LAYOUT.surplus`, `sim/surplus.ts`):
-  - Wholesale trader: when a counter has 150+ spare (beyond the line's needs; factory trays count while the
-    café counter is full), a pickup backs in now and then (every ~150 s, its own jitter so the world's random
-    sequence is untouched) for 35% of it (100-4000 items) at 40% of the sale price; the player stands at the
+  - Wholesale trader: a pickup backs in now and then (every ~150 s, its own jitter so the world's random
+    sequence is untouched) when a counter has 150+ spare (beyond the line's needs): it takes 35% of it
+    (100-4000 items); a factory tray (only while the café counter is full) qualifies at 8+ and goes whole. He
+    pays 40% of the sale price (golden hens' bonus included); the player stands at the
     load spot (the lot loads in 3 s). `trader.deal` (6k): he loads by himself. Never during time away.
   - Incubator (`eggs.incubator`, 3k then 9k): takes 50 spare eggs per tray (x level) every 15 s, leaving 120
     spare for the kitchen, factory and dock, and hatches chicks into a crate (40 max) that sells for 30 each
     (x price growth, ~1.5x the eggs). Every 30 chicks a golden hen (max 3) struts in the coop: eggs sell for
     15% more each. Hatches during time away too (the crate caps it).
   - Records: 2,000 spare eggs / 1,000 milk / 800 corn (x1.5 each time after) can be turned into "the biggest
-    omelette / rice pudding / popcorn tray in Egypt" by holding still at the record stand: pays 2.5x their sale
+    omelette / rice pudding / popcorn tray in Egypt" by staying at the record stand for 2 s: pays 2.5x their sale
     value, a giant dish grows on the stand. `npm run surpluscheck` covers all three.
 - Fish has buyers (playtest: "fish needs a place to sell, trucks like Bahary or Samakmak, and the café should
   become a restaurant"). The fish stall, the grill and grilled fish on the café menu were already there; now
   seafood companies' refrigerated trucks (أسماك بحري، سمكمك، مطعم سي جل) drive along the river bank when the fish
   pile has 12+ crates (with river workers: any time, and the workers hold the pile for the truck) and take up to
-  30 fish at 1.4x the stall price: the player loads at the truck, river workers load it themselves. Own timing
+  30 fish at 1.4x the stall price: the player loads at the truck, river workers load it themselves (and only
+  while it's being loaded does the pile wait for it rather than go to the stall or the grill). The trader and
+  the seafood trucks share one visit state machine (`sim/visit.ts`). Own timing
   jitter (world random sequence untouched); never during time away. Once the grill is built the café's name
   board reads "مطعم وكافيه المزرعة". Covered in `npm run surpluscheck`.
