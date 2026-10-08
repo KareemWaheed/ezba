@@ -122,6 +122,10 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 1.2, z: -11.1 }, requires: [{ id: 'field.unlock', level: 1 }],
   },
   {
+    id: 'field.handSkill', icon: '💪', label: 'درّب عمال الحصاد', msg: 'عمال الحصاد بقوا أسرع وبيشيلوا أكتر 💪',
+    pos: { x: 17.4, z: -11.1 }, requires: [{ id: 'field.hand', level: 1 }],
+  },
+  {
     id: 'field.tool', icon: '🔪', label: 'منجل أعرض', msg: 'المنجل بقى بيحصد أوسع 🔪',
     pos: { x: 3.4, z: -11.1 }, requires: [{ id: 'field.unlock', level: 1 }],
   },

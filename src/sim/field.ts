@@ -151,10 +151,17 @@ export class FieldSystem {
     return out;
   }
 
+  /** Field hands' pace with their training (field.handSkill): seconds per stalk, walking speed, bundles carried. */
+  handStats(): { cutEvery: number; speed: number; hopper: number } {
+    const H = ECONOMY.field.hand, S = ECONOMY.field.handSkill, lv = this.w.upgrades.level('field.handSkill');
+    return { cutEvery: H.cutEvery / (1 + S.cut * lv), speed: H.speed * (1 + S.speed * lv), hopper: H.hopper + S.hopper * lv };
+  }
+
   /** Tractor drivers, or field hands (on foot: no engine, one stalk at a time). */
   private updateDrivers(dt: number, hands: boolean): void {
-    const cfg = hands ? ECONOMY.field.hand : ECONOMY.field.driver, w = this.w, list = hands ? this.hands : this.drivers;
-    const speed = cfg.speed * (hands ? 1 : 1 + w.upgrades.level('field.engine') * ECONOMY.upgrades['field.engine'].step);
+    const w = this.w, list = hands ? this.hands : this.drivers, hs = hands ? this.handStats() : null;
+    const cfg = hands ? { ...ECONOMY.field.hand, hopper: hs!.hopper } : ECONOMY.field.driver;
+    const speed = hands ? hs!.speed : cfg.speed * (1 + w.upgrades.level('field.engine') * ECONOMY.upgrades['field.engine'].step);
     const reach = cfg.reach + w.upgrades.level('field.tool') * ECONOMY.upgrades['field.tool'].step * 0.5;
     const paths = hands ? this.handPaths : this.paths;
     for (let i = 0; i < list.length; i++) {
@@ -185,7 +192,7 @@ export class FieldSystem {
           const ready = !hands || ((d.cutT = (d.cutT ?? 0) - dt) <= 0 && dist(d.x, d.z, w.player.x, w.player.z) > ECONOMY.field.hand.giveWay);
           if (p.grown > 0 && ready) {
             const made = this.cutAround(p, d.x, d.z, reach, cfg.hopper - d.hopper, hands ? 1 : Infinity);
-            if (hands && this.lastCut > 0) d.cutT = ECONOMY.field.hand.cutEvery;
+            if (hands && this.lastCut > 0) d.cutT = hs!.cutEvery;
             if (made > 0) { d.hopper += made; d.crop = p.crop; }
             if (this.lastCut > 0) d.cutting = 1;
           }

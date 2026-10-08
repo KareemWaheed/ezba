@@ -8,6 +8,7 @@ import { SimWorld } from '../src/sim/world';
 import { serialize, restore, migrate } from '../src/sim/save';
 import { Bot } from '../src/sim/bot';
 import { FIELDS } from '../src/config/fields';
+import { ECONOMY } from '../src/config/economy';
 
 const DT = 1 / 30;
 let fails = 0;
@@ -73,8 +74,8 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   const crops0 = h.stats.crops, stalks0 = h.stats.stalks;
   tick(h, 180);
   const bundles = h.stats.crops - crops0, stalks = h.stats.stalks - stalks0;
-  // (two hands, 3 min: a few bundles a minute each; a tractor driver brings far more)
-  ok(bundles >= 15 && bundles <= 70, `two hands harvest and hand in on their own, slowly (${bundles} bundles, ${stalks} stalks in 3 min)`);
+  // (two hands, 3 min: ~18 bundles a minute each; a tractor driver still brings more)
+  ok(bundles >= 60 && bundles <= 150, `two hands harvest and hand in on their own (${bundles} bundles, ${stalks} stalks in 3 min)`);
   const d2 = new SimWorld(3);
   d2.upgrades.levels['field.unlock'] = 1;
   d2.upgrades.levels['field.tractor'] = 1;
@@ -83,10 +84,22 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   d2.player.x = 8; d2.player.z = 8;
   const dc0 = d2.stats.crops;
   tick(d2, 180);
-  ok(d2.stats.crops - dc0 > bundles * 3, `one tractor driver out-harvests two hands several times over (${d2.stats.crops - dc0} vs ${bundles})`);
+  ok(d2.stats.crops - dc0 > bundles * 1.4, `one tractor driver out-harvests two untrained hands (${d2.stats.crops - dc0} vs ${bundles})`);
   const h2 = new SimWorld(1);
   restore(h2, migrate(JSON.parse(JSON.stringify(serialize(h, Date.now()))))!);
   ok(h2.field.hands.length === 2, 'the hands come back after a reload');
+  // training (field.handSkill): faster sickles and legs, bigger sacks
+  const t = new SimWorld(3);
+  t.upgrades.levels['field.unlock'] = 1;
+  t.upgrades.levels['field.hand'] = 2;
+  t.upgrades.levels['field.handSkill'] = ECONOMY.upgrades['field.handSkill'].max;
+  t.upgrades.apply();
+  t.player.x = 8; t.player.z = 8;
+  const tc0 = t.stats.crops;
+  tick(t, 180);
+  const trained = t.stats.crops - tc0;
+  ok(trained >= bundles * 2, `fully trained hands bring at least twice as much (${trained} vs ${bundles} bundles in 3 min)`);
+  ok(t.field.handStats().hopper > ECONOMY.field.hand.hopper, `...and carry more (${t.field.handStats().hopper} bundles)`);
 }
 
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }

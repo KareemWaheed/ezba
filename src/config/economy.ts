@@ -184,7 +184,9 @@ export const ECONOMY = {
      * on their back, then to the stall (west of the drivers' spots). Corn only; they leave stalks within
      * `giveWay` of the player to the player.
      */
-    hand: { speed: 1.5, reach: 0.9, hopper: 4, cutEvery: 1.2, unloadInterval: 0.3, giveWay: 3 },
+    hand: { speed: 1.8, reach: 0.9, hopper: 6, cutEvery: 0.8, unloadInterval: 0.2, giveWay: 3 },
+    /** field.handSkill per level: cutting this much faster, walking this much faster, this many more bundles carried. */
+    handSkill: { cut: 0.5, speed: 0.15, hopper: 3 },
   },
 
   /**
@@ -527,6 +529,8 @@ export const ECONOMY = {
     'field.combine': { base: 300000, growth: 1, max: 1, step: 1 },
     /** Field hands (+1 per level): harvest the corn on foot with a sickle, slowly, also during time away. */
     'field.hand': { base: 10000, growth: 2.5, max: 2, step: 1 },
+    /** Training for the field hands: faster sickles and legs, bigger sacks (see field.handSkill). */
+    'field.handSkill': { base: 8000, growth: 2.2, max: 4, step: 1 },
     /** Hired tractor drivers (+1 per level): they harvest on their own, also during time away. */
     'field.driver': { base: 100000, growth: 2, max: 3, step: 1 },
     /** Bigger engine: vehicles drive faster, x (1 + step x level). */
