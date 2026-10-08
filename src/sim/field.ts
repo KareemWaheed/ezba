@@ -164,6 +164,8 @@ export class FieldSystem {
     const speed = hands ? hs!.speed : cfg.speed * (1 + w.upgrades.level('field.engine') * ECONOMY.upgrades['field.engine'].step);
     const reach = cfg.reach + w.upgrades.level('field.tool') * ECONOMY.upgrades['field.tool'].step * 0.5;
     const paths = hands ? this.handPaths : this.paths;
+    const bakery = w.factory.machines.find((m) => m.def.id === 'bakery');
+    const wheatLow = !!bakery && bakery.open && w.factory.silo + (bakery.conv.input.wheat ?? 0) < ECONOMY.factory.inputMax;
     for (let i = 0; i < list.length; i++) {
       const d = list[i];
       d.cutting = Math.max(0, d.cutting - dt * 3);
@@ -175,7 +177,8 @@ export class FieldSystem {
             const p = this.plots[k];
             // (hands only work the corn: wheat is for the tractors)
             if (!p.open || (hands && p.crop !== 'corn')) continue;
-            const n = p.grown + (k === i % this.plots.length ? 10 : 0);
+            // (a hungry bakery: its wheat and the silo running low send the tractors to the wheat first)
+            const n = p.grown + (k === i % this.plots.length ? 10 : 0) + (!hands && p.crop === 'wheat' && wheatLow ? 60 : 0);
             if (n > bestN) { best = k; bestN = n; }
           }
           if (best < 0) { d.speed = 0; break; }

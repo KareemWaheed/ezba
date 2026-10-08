@@ -142,6 +142,20 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   ok(!belt.broken && Math.hypot(k.player.x - fix.x, k.player.z - fix.z) < 0.5, 'the player reaches the fix spot and fixes it');
 }
 
+// a hungry bakery sends the tractor drivers to the wheat (its silo was stuck at 0 with the drivers on the corn)
+{
+  const b = new SimWorld(3);
+  for (const k of ['cafe.unlock', 'field.unlock', 'field.wheat', 'factory.unlock', 'field.tractor', 'field.driver'] as const) b.upgrades.levels[k] = 1;
+  b.upgrades.apply();
+  const wheatIx = b.field.plots.findIndex((p) => p.crop === 'wheat');
+  tick(b, 2, () => { b.player.x = 8; b.player.z = 8; b.input.x = b.input.z = 0; });
+  ok(b.field.drivers[0].plot === wheatIx, `with the bakery short of wheat the driver works the wheat (plot ${b.field.drivers[0].plot})`);
+  b.factory.silo = ECONOMY.factory.siloMax;
+  b.field.drivers[0].state = 'back';
+  tick(b, 2, () => { b.player.x = 8; b.player.z = 8; b.input.x = b.input.z = 0; });
+  ok(b.field.drivers[0].plot !== wheatIx, 'with the silo full it goes back to its own plot');
+}
+
 // more land (field.expand): a second corn plot, then a second wheat plot, east of the wheat
 {
   const x = new SimWorld(3);

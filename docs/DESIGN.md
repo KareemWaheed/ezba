@@ -90,7 +90,7 @@ This file records the decisions made on top of it.
   pile by the grain stall where drivers/combine unload; `corn.worker` carries pile -> counter). Staff crossing
   between yard and farmland walk through the gap between the pens (farmRoute). Barn/stall/tile positions
   adjusted (player capacity/speed tiles moved off the longer counter).
-- M11 factories (east of the café): bakery (2 eggs + 2 wheat -> cake), dairy (3 milk -> cheese), generic
+- M11 factories (east of the café): bakery (2 eggs + 2 wheat -> cake; 1 wheat since the silo playtest below), dairy (3 milk -> cheese), generic
   Converter machines. Wheat handed in at the grain stall fills the bakery silo (80) first. Supplier brings
   eggs/milk from shop surplus; porter carries cake/cheese to the café counter's front row; the player can do
   both. Café customers order cake/cheese only while some is on display.
@@ -278,6 +278,10 @@ This file records the decisions made on top of it.
   pile, cables over the coop to a tower behind the counter's west end, bundles ride up, across and down onto
   the counter (~4.6 s ride, same rate as a belt). Jams are fixed at the counter-end tower (the line's middle is
   over the coop). `npm run fieldcheck` covers both.
+- The wheat silo sat at 0/80 (playtest): with factory.speed the bakery ate up to ~70 wheat a minute, more than
+  a whole wheat field grows (~65 at best), and the drivers mostly mowed the corn. Cake is now 2 eggs + 1 wheat,
+  and while the bakery's wheat plus the silo is under one input-load (30) the tractor drivers go to the wheat
+  first. One driver now keeps a full-speed bakery stocked and the silo starts filling.
 - Playtest round (the café cashier felt out of reach; progress lost after a phone call; events felt
   all-or-nothing and the footballers too hard):
   - `cafe.waiter` 130k -> 55k (PRICE_VERSION 2: earlier buyers get the difference back). Full automation of
