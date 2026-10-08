@@ -248,3 +248,10 @@ This file records the decisions made on top of it.
   board point at whichever of these needs the player. A newly opened shelf row comes with 8 items a shelf (the
   casual bot stalled ~6 min after buying it while saving to stock every empty shelf). None of the store events
   happen during time away, and none are saved. `npm run marketcheck` covers each.
+- Field hands (playtest: no cheap way to automate the corn before a 90k tractor + 100k driver): `field.hand`
+  (10k, then 25k; up to 2) right after the corn field opens. On foot with a sickle: one stalk every 1.2 s,
+  4 bundles on the back, then to the stall (west of the drivers' spots); corn only (wheat feeds the bakery and
+  stays with the player and the tractors); they leave stalks within 3 m of the player alone. Two hands bring
+  ~19 bundles a minute, under a third of one tractor driver; they work during time away like the drivers.
+  `npm run fieldcheck` covers them. (Hands on wheat too pushed automation past the "active earns >= 1.5x"
+  target.)

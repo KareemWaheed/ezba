@@ -15,8 +15,12 @@ export interface Driver {
   crop: FieldCrop;
   /** Seconds until the next bundle unloads. */
   t: number;
-  /** 1..0 while cutting (drives the spinning cutter). */
+  /** 1..0 while cutting (drives the spinning cutter / the sickle swing). */
   cutting: number;
+  /** Field hand (on foot, slow) rather than a tractor driver. */
+  hand?: boolean;
+  /** Field hands: seconds until the next stalk. */
+  cutT?: number;
 }
 
 /** Runtime state of one crop plot: a grid of stalks, each grown (regrow = 0) or regrowing. */
@@ -72,13 +76,15 @@ export class FieldSystem {
   hopperN = 0;
   private sellT = 0;
   readonly drivers: Driver[] = [];
-  /** Mowing path per plot (back-and-forth rows, reach-spaced). */
+  /** Hired field hands (field.hand): walk the rows with a sickle, same jobs as the drivers but slower. */
+  readonly hands: Driver[] = [];
+  /** Mowing path per plot (back-and-forth rows, reach-spaced): the drivers' and the hands' (narrower). */
   private paths: { x: number; z: number }[][];
+  private handPaths: { x: number; z: number }[][];
 
   constructor(private w: SimWorld) {
     this.plots = FIELDS.plots.map((d, i) => new Plot(d, i));
-    const gap = ECONOMY.field.driver.reach * 1.7;
-    this.paths = FIELDS.plots.map((d) => {
+    const rows = (gap: number) => FIELDS.plots.map((d) => {
       const b = d.box, pts: { x: number; z: number }[] = [];
       let left = true;
       for (let z = b.z1 - gap / 2; z > b.z0; z -= gap) {
@@ -87,6 +93,8 @@ export class FieldSystem {
       }
       return pts;
     });
+    this.paths = rows(ECONOMY.field.driver.reach * 1.7);
+    this.handPaths = rows(ECONOMY.field.hand.reach * 1.7);
   }
 
   get open(): boolean { return this.plots[0].open; }
@@ -127,23 +135,30 @@ export class FieldSystem {
       const u = this.unloadSpot(this.drivers.length, { x: 0, z: 0 });
       this.drivers.push({ x: u.x, z: u.z, rot: Math.PI, speed: 0, state: 'back', plot: 0, wp: 0, hopper: 0, crop: 'corn', t: 0, cutting: 0 });
     }
+    while (this.hands.length < this.w.upgrades.level('field.hand')) {
+      // (each starts on a different row so two hands don't walk on top of each other)
+      const i = this.hands.length, u = this.unloadSpot(i, { x: 0, z: 0 }, true);
+      this.hands.push({ x: u.x, z: u.z, rot: Math.PI, speed: 0, state: 'back', plot: 0, wp: (i * 4) % this.handPaths[0].length, hopper: 0, crop: 'corn', t: 0, cutting: 0, hand: true, cutT: 0 });
+    }
   }
 
   private spot = { x: 0, z: 0 };
 
-  /** Unload spot for driver i (side by side east of the stall's sell spot), written into `out`. */
-  unloadSpot(i: number, out: { x: number; z: number }): { x: number; z: number } {
-    out.x = FIELDS.stall.drop.x + 1.7 + i * 1.5;
+  /** Unload spot for driver i (side by side east of the stall's sell spot; hands to the west), written into `out`. */
+  unloadSpot(i: number, out: { x: number; z: number }, hand = false): { x: number; z: number } {
+    out.x = hand ? FIELDS.stall.drop.x - 1.1 - i * 0.8 : FIELDS.stall.drop.x + 1.7 + i * 1.5;
     out.z = FIELDS.stall.drop.z + 0.1;
     return out;
   }
 
-  private updateDrivers(dt: number): void {
-    const cfg = ECONOMY.field.driver, w = this.w;
-    const speed = cfg.speed * (1 + w.upgrades.level('field.engine') * ECONOMY.upgrades['field.engine'].step);
+  /** Tractor drivers, or field hands (on foot: no engine, one stalk at a time). */
+  private updateDrivers(dt: number, hands: boolean): void {
+    const cfg = hands ? ECONOMY.field.hand : ECONOMY.field.driver, w = this.w, list = hands ? this.hands : this.drivers;
+    const speed = cfg.speed * (hands ? 1 : 1 + w.upgrades.level('field.engine') * ECONOMY.upgrades['field.engine'].step);
     const reach = cfg.reach + w.upgrades.level('field.tool') * ECONOMY.upgrades['field.tool'].step * 0.5;
-    for (let i = 0; i < this.drivers.length; i++) {
-      const d = this.drivers[i];
+    const paths = hands ? this.handPaths : this.paths;
+    for (let i = 0; i < list.length; i++) {
+      const d = list[i];
       d.cutting = Math.max(0, d.cutting - dt * 3);
       switch (d.state) {
         case 'back': {
@@ -151,22 +166,26 @@ export class FieldSystem {
           let best = -1, bestN = -1;
           for (let k = 0; k < this.plots.length; k++) {
             const p = this.plots[k];
-            if (!p.open) continue;
+            // (hands only work the corn: wheat is for the tractors)
+            if (!p.open || (hands && p.crop !== 'corn')) continue;
             const n = p.grown + (k === i % this.plots.length ? 10 : 0);
             if (n > bestN) { best = k; bestN = n; }
           }
           if (best < 0) { d.speed = 0; break; }
           if (d.plot !== best) { d.plot = best; d.wp = 0; }
-          const t = this.paths[best][d.wp];
+          const t = paths[best][d.wp];
           if (moveToward(d, t.x, t.z, speed, dt, 0.3)) d.state = 'cut';
           break;
         }
         case 'cut': {
-          const p = this.plots[d.plot], path = this.paths[d.plot];
+          const p = this.plots[d.plot], path = paths[d.plot];
           const t = path[d.wp];
           if (moveToward(d, t.x, t.z, speed * 0.8, dt, 0.3)) d.wp = (d.wp + 1) % path.length;
-          if (p.grown > 0) {
-            const made = this.cutAround(p, d.x, d.z, reach, cfg.hopper - d.hopper);
+          // (a hand cuts one stalk at a time, and never right next to the player)
+          const ready = !hands || ((d.cutT = (d.cutT ?? 0) - dt) <= 0 && dist(d.x, d.z, w.player.x, w.player.z) > ECONOMY.field.hand.giveWay);
+          if (p.grown > 0 && ready) {
+            const made = this.cutAround(p, d.x, d.z, reach, cfg.hopper - d.hopper, hands ? 1 : Infinity);
+            if (hands && this.lastCut > 0) d.cutT = ECONOMY.field.hand.cutEvery;
             if (made > 0) { d.hopper += made; d.crop = p.crop; }
             if (this.lastCut > 0) d.cutting = 1;
           }
@@ -174,7 +193,7 @@ export class FieldSystem {
           break;
         }
         case 'toStall': {
-          const u = this.unloadSpot(i, this.spot);
+          const u = this.unloadSpot(i, this.spot, hands);
           if (moveToward(d, u.x, u.z, speed, dt, 0.2)) { d.state = 'unload'; d.t = 0; }
           break;
         }
@@ -197,18 +216,18 @@ export class FieldSystem {
   private lastCut = 0;
 
   /**
-   * Cut grown stalks within r of (x, z) until `maxBundles` bundles are made; returns the bundles made
+   * Cut grown stalks within r of (x, z) until `maxBundles` bundles (or `maxStalks` stalks) are made; returns the bundles made
    * (stalks cut -> lastCut). Golden stalks only pay out for the player.
    */
-  private cutAround(p: Plot, x: number, z: number, r: number, maxBundles: number): number {
+  private cutAround(p: Plot, x: number, z: number, r: number, maxBundles: number, maxStalks = Infinity): number {
     const cfg = ECONOMY.field, s = cfg.spacing, b = p.def.box, w = this.w;
     const c0 = Math.max(0, Math.floor((x - r - b.x0) / s)), c1 = Math.min(p.cols - 1, Math.floor((x + r - b.x0) / s));
     const r0 = Math.max(0, Math.floor((z - r - b.z0) / s)), r1 = Math.min(p.rows - 1, Math.floor((z + r - b.z0) / s));
     const regrow = this.regrowTime(p);
     let made = 0;
     this.lastCut = 0;
-    for (let row = r0; row <= r1 && made < maxBundles; row++) {
-      for (let col = c0; col <= c1 && made < maxBundles; col++) {
+    for (let row = r0; row <= r1 && made < maxBundles && this.lastCut < maxStalks; row++) {
+      for (let col = c0; col <= c1 && made < maxBundles && this.lastCut < maxStalks; col++) {
         const i = row * p.cols + col;
         if (p.regrow[i] > 0) continue;
         const sx = p.x(i), sz = p.z(i);
@@ -291,7 +310,8 @@ export class FieldSystem {
       }
     }
     this.cutting = Math.max(0, this.cutting - dt);
-    this.updateDrivers(dt);
+    this.updateDrivers(dt, false);
+    this.updateDrivers(dt, true);
   }
 
   /** Player in a field: cut what's in reach; at the stall: sell bundles; at the stall cash: collect. */

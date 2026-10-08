@@ -14,7 +14,7 @@ import { DustFx } from './render/dust';
 import { buildWorld } from './render/worldView';
 import { FarmView } from './render/farmView';
 import { CarrierView } from './render/stacks';
-import { PRIM, merge, part } from './render/geo';
+import { SICKLE_GEO } from './render/vehicles';
 import { Input } from './ui/input';
 import { Hud } from './ui/hud';
 import { music, sfx, unlockAudio } from './audio';
@@ -62,11 +62,7 @@ let stepSide = 1;
 player.onStep = (c) => { stepSide = -stepSide; dust.emit(c.root.position.x, c.root.position.z, c.root.rotation.y, stepSide * 0.6); };
 view.scene.add(player.root);
 // sickle in the right hand while standing in an open field; swings while cutting
-const sickle = player.attach(merge([
-  part(PRIM.box, 0x8a5a32, 0, -0.12, 0.08, 0.3, 0, 0, 0.06, 0.06, 0.32),
-  part(PRIM.box, 0xd9dde3, 0, -0.1, 0.32, 0, 0.5, 0, 0.04, 0.03, 0.3),
-  part(PRIM.box, 0xd9dde3, 0.12, -0.1, 0.42, 0, 1.3, 0, 0.04, 0.03, 0.22),
-]), 'hand');
+const sickle = player.attach(SICKLE_GEO, 'hand');
 sickle.visible = false;
 let swishT = 0;
 

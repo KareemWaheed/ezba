@@ -118,6 +118,10 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 1.5, z: -7.5 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
   },
   {
+    id: 'field.hand', icon: '👨‍🌾', label: 'وظّف عامل حصاد', msg: 'عامل حصاد بالمنجل بيحصد ويودّي للكشك 👨‍🌾',
+    pos: { x: 1.2, z: -11.1 }, requires: [{ id: 'field.unlock', level: 1 }],
+  },
+  {
     id: 'field.tool', icon: '🔪', label: 'منجل أعرض', msg: 'المنجل بقى بيحصد أوسع 🔪',
     pos: { x: 3.4, z: -11.1 }, requires: [{ id: 'field.unlock', level: 1 }],
   },

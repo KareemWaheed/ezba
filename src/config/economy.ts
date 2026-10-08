@@ -165,6 +165,12 @@ export const ECONOMY = {
     mountRadius: 2.2,
     /** Hired drivers: NPC tractors mowing a plot back and forth, unloading at the stall. */
     driver: { speed: 3.2, reach: 1.5, hopper: 24, unloadInterval: 0.12 },
+    /**
+     * Hired field hands (field.hand): on foot with a sickle, slow; one stalk every `cutEvery` s, `hopper` bundles
+     * on their back, then to the stall (west of the drivers' spots). Corn only; they leave stalks within
+     * `giveWay` of the player to the player.
+     */
+    hand: { speed: 1.5, reach: 0.9, hopper: 4, cutEvery: 1.2, unloadInterval: 0.3, giveWay: 3 },
   },
 
   /**
@@ -502,6 +508,8 @@ export const ECONOMY = {
     /** Combine harvester: very wide path, bundles go into its hopper (unloads at the stall). */
     'field.combine': { base: 300000, growth: 1, max: 1, step: 1 },
     /** Hired tractor drivers (+1 per level): they harvest on their own, also during time away. */
+    /** Field hands (+1 per level): harvest the corn on foot with a sickle, slowly, also during time away. */
+    'field.hand': { base: 10000, growth: 2.5, max: 2, step: 1 },
     'field.driver': { base: 100000, growth: 2, max: 3, step: 1 },
     /** Bigger engine: vehicles drive faster, x (1 + step x level). */
     'field.engine': { base: 20000, growth: 2.3, max: 3, step: 0.12 },
