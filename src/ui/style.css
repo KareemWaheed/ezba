@@ -226,6 +226,8 @@ html, body {
 #sc-banner .sc-order { display: flex; justify-content: center; gap: 10px; margin-top: 4px; font-size: 15px; font-weight: 800; }
 #sc-banner .sc-order span { background: rgba(0, 0, 0, 0.25); border-radius: 10px; padding: 1px 8px; }
 #sc-banner .sc-order span.ok { background: rgba(61, 220, 132, 0.45); }
+#sc-banner .sc-note { flex-basis: 100%; text-align: center; font-size: 15px; font-weight: 800; margin-top: 2px; }
+#sc-banner .sc-goals span.sc-bonus { opacity: 0.7; font-size: 12px; }
 
 #sc-banner .sc-tug { display: flex; align-items: center; gap: 6px; margin-top: 5px; direction: ltr; }
 #sc-banner .sc-tug-track { flex: 1; height: 10px; border-radius: 6px; position: relative;

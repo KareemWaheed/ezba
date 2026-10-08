@@ -11,6 +11,9 @@ import { Bot } from '../src/sim/bot';
 import type { StormMechanic } from '../src/sim/scenarios/storm';
 import type { InspectorMechanic } from '../src/sim/scenarios/inspector';
 import { FOOTBALL, type FootballMechanic } from '../src/sim/scenarios/football';
+import type { MoneyRainMechanic } from '../src/sim/scenarios/moneyrain';
+import { RACE_GATES } from '../src/sim/scenarios/race';
+import { openGround } from '../src/sim/scenarios/plaza';
 import type { CommentsMechanic } from '../src/sim/scenarios/comments';
 import type { StageMechanic } from '../src/sim/scenarios/stage';
 import type { ProcessionMechanic } from '../src/sim/scenarios/procession';
@@ -76,8 +79,10 @@ for (const def of SCENARIOS) {
   {
     const w = fresh();
     w.scenario.trigger(def.id);
-    runUntilIdle(w);
+    let reward = -1;
+    for (let i = 0; i < 400 / DT && w.scenario.phase !== 'idle'; i++) { w.tick(DT); w.events.drain((e) => { if (e.type === 'scenarioEnd') reward = e.value; }); }
     ok(w.scenario.phase === 'idle' && w.scenario.lastGoals.length === def.goals.length, `${def.id}: ends and evaluates every goal`);
+    ok(reward > 0, `${def.id}: pays something even with no goal met (${reward})`);
   }
   {
     const w = fresh();
@@ -212,7 +217,7 @@ for (const id of ['salah', 'messi'] as const) {
       dribbleTo(w, m.nextAim(w));
     });
     w.input.x = w.input.z = 0;
-    ok(scored >= 3, `${id}: a player following the aim scores 3 (${scored})`);
+    ok(scored >= 1 && goalOk(w, 'goals') === true, `${id}: a player following the aim scores (${scored}; one goal is the bonus)`);
   }
 }
 if (!only || only === 'salah' || only === 'messi') {
@@ -240,7 +245,7 @@ if (!only || only === 'salah' || only === 'messi') {
   }
 }
 if (!only || only === 'messi') {
-  // straight at the goal, skipping the cones: nothing counts
+  // Messi's goal is open: straight at it counts; round every cone first is a golazo worth two
   const w = fresh();
   w.scenario.trigger('messi');
   let scored = 0;
@@ -251,7 +256,68 @@ if (!only || only === 'messi') {
     dribbleTo(w, FOOTBALL.goal);
   });
   w.input.x = w.input.z = 0;
-  ok(scored === 0, `messi: skipping the cones scores nothing (${scored})`);
+  ok(scored >= 1, `messi: straight at the open goal counts (${scored})`);
+  const g = fresh();
+  g.scenario.trigger('messi');
+  let golazo = 0;
+  g.events.drain(() => {});
+  for (let i = 0; i < 400 / DT && g.scenario.phase !== 'idle'; i++) {
+    const m = g.scenario.mech as FootballMechanic;
+    if (m.ball) { const c = m.cones.indexOf(false); dribbleTo(g, c >= 0 ? FOOTBALL.cones[c] : FOOTBALL.goal); }
+    g.tick(DT);
+    g.events.drain((e) => { if (e.type === 'scenarioCue' && e.n === 5) golazo++; });
+  }
+  g.input.x = g.input.z = 0;
+  ok(golazo >= 1, `messi: round every cone first is a golazo (${golazo})`);
+}
+
+// ---- fun events: money rain, hide and seek, the race ----
+/** Run at the target like a player would (stick input, no teleporting). */
+function steer(w: SimWorld, t: { x: number; z: number } | null): void {
+  if (!t) { w.input.x = w.input.z = 0; return; }
+  const dx = t.x - w.player.x, dz = t.z - w.player.z, d = Math.hypot(dx, dz);
+  if (d < 0.05) { w.input.x = w.input.z = 0; return; }
+  const k = Math.min(1, d * 2);
+  w.input.x = (dx / d) * k; w.input.z = (dz / d) * k;
+}
+const FUN: [string, string][] = [['number1', 'cashCatch'], ['bean', 'found'], ['bolt', 'race']];
+for (const [id, goal] of FUN) {
+  if (only && only !== id) continue;
+  {
+    const w = fresh();
+    w.scenario.trigger(id);
+    let reward = -1;
+    for (let i = 0; i < 400 / DT && w.scenario.phase !== 'idle'; i++) { w.tick(DT); w.events.drain((e) => { if (e.type === 'scenarioEnd') reward = e.value; }); }
+    ok(goalOk(w, goal) === false && reward > 0, `${id} unattended: the bonus fails, the event still pays (${reward})`);
+  }
+  {
+    // (a player who has walked over to the event square; to the start line during the warning, as the race asks)
+    const w = fresh();
+    w.player.x = 0; w.player.z = 20;
+    w.scenario.trigger(id);
+    runUntilIdle(w, (w) => steer(w, w.scenario.phase === 'warn' ? (id === 'bolt' ? RACE_GATES[0] : null) : w.scenario.mech.botTarget?.(w) ?? null));
+    w.input.x = w.input.z = 0;
+    ok(goalOk(w, goal) === true, `${id}: a player going for it gets the bonus`);
+  }
+}
+if (!only || only === 'bolt') {
+  const w = fresh();
+  ok(RACE_GATES.every((g) => openGround(w, g.x, g.z)), 'bolt: every gate stands on open ground');
+  // standing still at the start: he wins
+  w.player.x = RACE_GATES[0].x; w.player.z = RACE_GATES[0].z;
+  w.scenario.trigger('bolt');
+  runUntilIdle(w);
+  ok(goalOk(w, 'race') === false, 'bolt: he wins if you just stand there');
+}
+if (!only || only === 'number1') {
+  const w = fresh();
+  w.scenario.trigger('number1');
+  let inside = 0, drops = 0;
+  runUntilIdle(w, (w) => {
+    const m = w.scenario.mech as MoneyRainMechanic;
+    for (const d of m.drops ?? []) { drops++; if (!openGround(w, d.x, d.z)) inside++; }
+  });
+  ok(drops > 0 && inside === 0, `number1: money only falls on open ground (${inside} of ${drops} not)`);
 }
 
 // ---- influencer: live comment requests ----

@@ -15,7 +15,7 @@ export interface PriceChange {
   costMult?: Partial<Record<GameMode, Partial<Record<UpgradeId, number>>>>;
 }
 
-export const PRICE_VERSION = 1;
+export const PRICE_VERSION = 2;
 
 export const PRICE_CHANGES: readonly PriceChange[] = [
   {
@@ -33,5 +33,10 @@ export const PRICE_CHANGES: readonly PriceChange[] = [
       'field.driver': { base: 60000, growth: 2.2 },
     },
     costMult: { market: { 'eggs.expand': 1 } },
+  },
+  {
+    // playtest: the café cashier was too dear
+    version: 2,
+    tracks: { 'cafe.waiter': { base: 130000, growth: 1 } },
   },
 ];

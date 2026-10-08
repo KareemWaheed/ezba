@@ -23,7 +23,10 @@ export interface Twist {
   kind: 'reorder' | 'extend' | 'rush';
 }
 
-/** Goals checked when the scenario ends. All must pass for the big reward. */
+/**
+ * Goals checked when the scenario ends: bonus targets. Every event pays something; each goal met adds to it,
+ * and all of them pay the full reward x the stars (ScenarioSystem.finish).
+ */
 export type ScenarioGoal =
   | 'noAngry'        // nobody leaves angry during the event
   | 'serveGuest'     // the special guest gets served
@@ -43,7 +46,10 @@ export type ScenarioGoal =
   | 'catch'          // caught the thief
   | 'recipes'        // cook-off recipe cards done
   | 'plates'         // every iftar plate filled before Maghrib
-  | 'covered';       // every pile covered in the sandstorm
+  | 'covered'        // every pile covered in the sandstorm
+  | 'cashCatch'      // caught the money falling from the helicopter
+  | 'found'          // found the prankster in the boxes
+  | 'race';          // beat the sprinter round the square
 
 /** The special guest (served only by the player, like a VIP). */
 export interface GuestDef {
@@ -146,7 +152,7 @@ const CLASSIC_EVENTS: ScenarioDef[] = [
     twists: [{ at: 20, kind: 'reorder', text: 'ترامب غيّر رأيه! طلب جديد 😅' }, { at: 40, kind: 'reorder', text: 'ترامب غيّر رأيه تاني!! 🙄' }],
   },
   {
-    id: 'salah', icon: '⚽', title: 'محمد صلاح جاي المزرعة!', hint: 'ضربات جزاء! جوّن في الحارس وكل جون الفانز يدفعوا أكتر',
+    id: 'salah', icon: '⚽', title: 'محمد صلاح جاي المزرعة!', hint: 'ضربة جزاء! جوّن في الحارس، وكل جون الفانز يدفعوا أكتر ⚽',
     color: '#c8102e', weight: 3, warning: 8, duration: 60, arrivalMult: 2.6, crowdShare: 0.85, crowd: 'fanRed', featured: null,
     patienceMult: 0.9, qtyMult: 1, tipMult: 3,
     guest: { name: 'محمد صلاح', look: 'salah', qtyMult: 2, payMult: 12, patience: 70, entourage: 2 },
@@ -156,7 +162,7 @@ const CLASSIC_EVENTS: ScenarioDef[] = [
     twists: [{ at: 30, kind: 'rush', text: 'فانز زيادة جايين! 🏃' }],
   },
   {
-    id: 'messi', icon: '🐐', title: 'ميسي في المزرعة!', hint: 'لف الكورة حوالين الأقماع وبعدين جوّن!',
+    id: 'messi', icon: '🐐', title: 'ميسي في المزرعة!', hint: 'جوّن في المرمى! ولو لفّيت بالكورة على الأقماع الأول الجون بـ٢ 🐐',
     color: '#4a90d9', weight: 2, warning: 8, duration: 60, arrivalMult: 2.6, crowdShare: 0.85, crowd: 'fanBlue', featured: null,
     patienceMult: 0.9, qtyMult: 1, tipMult: 3,
     guest: { name: 'ميسي', look: 'messi', qtyMult: 2, payMult: 12, patience: 70, entourage: 2 },
@@ -284,7 +290,44 @@ const NEW_EVENTS: ScenarioDef[] = [
   },
 ];
 
-export const SCENARIOS: readonly ScenarioDef[] = [...CLASSIC_EVENTS, ...NEW_EVENTS];
+/** Fun visits with play unlike the others: catching, seeking, racing (plus a mahraganat night on the dance pads). */
+const FUN_EVENTS: ScenarioDef[] = [
+  {
+    id: 'number1', icon: '🚁', title: 'محمد رمضان بيرمي فلوس من الهليكوبتر!', hint: 'الفلوس بتنزل مكان الضل! اقف تحته وامسكها 💵',
+    color: '#1f7a3a', weight: 2, warning: 8, duration: 45, arrivalMult: 0.8, crowdShare: 0,
+    patienceMult: 1.3, qtyMult: 1, tipMult: 1,
+    goals: ['cashCatch'], rewardSeconds: 40, rewardShare: 0, ratingWin: 0.3, ratingLose: 0, mechanic: 'moneyrain',
+    props: ['confetti'], music: 'pop', minUpgrades: 20,
+    tint: 'rgba(40,160,70,0.25)', intro: 'نمبر وان! 💵🚁',
+  },
+  {
+    id: 'bean', icon: '📦', title: 'مستر بين بيستخبى في المزرعة!', hint: 'مستخبي في كرتونة! افتح الكراتين وشوف سخن ولا ساقع 🔥❄️',
+    color: '#7a5a3a', weight: 2, warning: 6, duration: 60, arrivalMult: 0.8, crowdShare: 0,
+    patienceMult: 1.3, qtyMult: 1, tipMult: 1,
+    goals: ['found'], rewardSeconds: 40, rewardShare: 0, ratingWin: 0.3, ratingLose: 0, mechanic: 'hideseek',
+    props: [], music: 'pop', minUpgrades: 18,
+    tint: 'rgba(122,90,58,0.25)', intro: 'مستر بين؟ إنت فين؟ 📦😂',
+  },
+  {
+    id: 'bolt', icon: '⚡', title: 'يوسين بولت عايز يسابقك!', hint: 'روح خط البداية 🏁 وعدّي على البوابات بالترتيب قبله',
+    color: '#c98a00', weight: 2, warning: 10, duration: 40, arrivalMult: 0.8, crowdShare: 0,
+    patienceMult: 1.3, qtyMult: 1, tipMult: 1,
+    goals: ['race'], rewardSeconds: 50, rewardShare: 0, ratingWin: 0.4, ratingLose: 0, mechanic: 'race',
+    props: ['confetti'], music: 'drums', minUpgrades: 22,
+    tint: 'rgba(240,190,40,0.25)', intro: 'Ready… Set… GO! ⚡',
+  },
+  {
+    id: 'mahraganat', icon: '🔊', title: 'حمو بيكا عامل مهرجان في المزرعة!', hint: 'ارقص على المهرجان! اقف على المربع اللي بينوّر',
+    color: '#ff7a00', weight: 2, warning: 8, duration: 55, arrivalMult: 2.2, crowdShare: 0.8, crowd: 'concert', featured: null,
+    patienceMult: 0.9, qtyMult: 1, tipMult: 3,
+    guest: { name: 'حمو بيكا', look: 'hamobika', qtyMult: 2, payMult: 10, patience: 75, entourage: 2 },
+    goals: ['serveGuest', 'beatCombo'], rewardSeconds: 70, rewardShare: 0.7, ratingWin: 0.5, ratingLose: -0.2, mechanic: 'stage',
+    props: ['confetti'], music: 'drums', minUpgrades: 24,
+    tint: 'rgba(255,122,0,0.28)', intro: 'المهرجان بدأ! 🔊🔥',
+  },
+];
+
+export const SCENARIOS: readonly ScenarioDef[] = [...CLASSIC_EVENTS, ...NEW_EVENTS, ...FUN_EVENTS];
 
 export const SCENARIO_GOAL_LABEL: Record<ScenarioGoal, string> = {
   noAngry: 'محدش يزعل',
@@ -294,7 +337,7 @@ export const SCENARIO_GOAL_LABEL: Record<ScenarioGoal, string> = {
   likes: 'كمّل اللايكات',
   herd: 'رجّع الحيوانات',
   checkpoints: 'كل نقط التفتيش سليمة',
-  goals: 'جوّن ٣ أهداف',
+  goals: 'جوّن جون',
   beatCombo: 'كومبو ٨ على الإيقاع',
   inTime: 'وصّل قبل الوقت',
   photo: 'اتصوّر مع الضيف',
@@ -306,6 +349,9 @@ export const SCENARIO_GOAL_LABEL: Record<ScenarioGoal, string> = {
   recipes: 'خلّص ٣ وصفات',
   plates: 'جهّز كل الأطباق قبل المغرب',
   covered: 'غطّي كل الأكوام',
+  cashCatch: 'امسك ٨ رزم فلوس',
+  found: 'الاقيه مرتين',
+  race: 'اسبق بولت',
 };
 
 /** How often scenarios happen (seconds of active play between them). */

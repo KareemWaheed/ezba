@@ -82,7 +82,8 @@ export function checkTargets(eff: RunResult, casual: RunResult): TargetResult[] 
   span('corn field', 'field.unlock', 110, 400);
 
   const ea = automated(eff), ca = automated(casual);
-  add('stages 1-3 automated: efficient from day 4, casual by day 7', !!ea && ea.day >= 4 && !!ca && ca.day <= 7, `efficient ${fmt(ea)}${ea ? ' last ' + ea.id : ''}, casual ${fmt(ca)}${ca ? ' last ' + ca.id : ''}`);
+  // (day 3 since the café cashier got cheaper: the user's call, the 130k cashier felt out of reach)
+  add('stages 1-3 automated: efficient from day 3, casual by day 7', !!ea && ea.day >= 3 && !!ca && ca.day <= 7, `efficient ${fmt(ea)}${ea ? ' last ' + ea.id : ''}, casual ${fmt(ca)}${ca ? ' last ' + ca.id : ''}`);
 
   // active play must beat automation alone in the early game (stages 1-3, days 1-4); later stages are
   // allowed to be overpowered (the user's call)

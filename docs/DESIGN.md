@@ -255,3 +255,21 @@ This file records the decisions made on top of it.
   ~19 bundles a minute, under a third of one tractor driver; they work during time away like the drivers.
   `npm run fieldcheck` covers them. (Hands on wheat too pushed automation past the "active earns >= 1.5x"
   target.)
+- Playtest round (the café cashier felt out of reach; progress lost after a phone call; events felt
+  all-or-nothing and the footballers too hard):
+  - `cafe.waiter` 130k -> 55k (PRICE_VERSION 2: earlier buyers get the difference back). Full automation of
+    stages 1-3 now lands on day 3 for an efficient player (pacing target moved from day 4, the user's call).
+  - Saves: already every 3 s, on every purchase and on tab hide. The lost café was most likely a second copy
+    of the game (an old tab, the installed app plus the browser) saving its older state over the newer one.
+    A page now remembers the save it last loaded or wrote; once another copy saves something newer (storage
+    event, or a newer `t` found on the next write / on coming back), it stops saving and offers to reload.
+  - Events always pay: 40% of the full reward for taking part, up to +40% for the goals met, and the full
+    reward x the stars when every goal is met. Goals show as bonus targets (☆/⭐); rating only drops when a
+    guest left unserved.
+  - Salah and Messi: one goal is the bonus (was three). Messi's goal is open now; dribbling round every cone
+    first makes it a golazo that counts twice.
+  - New events with play unlike the others: Mohamed Ramadan throws money from a helicopter (stand where the
+    shadow grows to catch a bundle, paid at once); Mr. Bean hides in one of five boxes on the square (hot/cold
+    on the banner, found = a reward, then he hides again); Usain Bolt races the player round a lap of gates
+    (he runs 86% of the player's top speed and stops to pose halfway). Plus a Hamo Bika mahraganat night on
+    the dance pads. Spots are random open ground on the square (`scenarios/plaza.ts`).

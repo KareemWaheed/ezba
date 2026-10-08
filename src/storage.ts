@@ -37,6 +37,7 @@ export function loadSave(): SaveData | null {
     raw = text ? JSON.parse(text) : null;
   } catch { return null; }
   if (!raw) return null;
+  lastT = Number((raw as { t?: number }).t) || 0;
   const v = (raw as { v?: number }).v ?? 0;
   if (v < SAVE_VERSION && text) {
     try { localStorage.setItem(`${KEY}-backup-v${v}`, text); } catch { /* storage full: still try to load */ }
@@ -46,9 +47,44 @@ export function loadSave(): SaveData | null {
 
 let blocked = false;
 
+/**
+ * Two copies of the game on one phone (an old tab and the installed app, two tabs...) would each autosave their
+ * own state over the other's, and coming back to the older copy wiped what was bought in the newer one. So a
+ * page remembers the save it last loaded or wrote (its `t`); once another copy has written a newer save this
+ * page stops saving and asks to reload (`onStale`).
+ */
+let lastT = 0;
+let stale = false;
+let staleCb: (() => void) | null = null;
+
+function goStale(): void {
+  if (stale) return;
+  stale = true;
+  staleCb?.();
+}
+
+/** Has another copy of the game saved since this page last loaded or saved? (Also flags this page stale.) */
+export function checkStale(): boolean {
+  if (stale || blocked) return stale;
+  try {
+    const text = localStorage.getItem(KEY);
+    const t = text ? Number((JSON.parse(text) as { t?: number }).t) || 0 : 0;
+    if (t > lastT) goStale();
+  } catch { /* storage blocked: nothing to compare */ }
+  return stale;
+}
+
+/** Called once when this page finds it is no longer the newest copy of the game. */
+export function onStale(cb: () => void): void {
+  staleCb = cb;
+  if (stale) cb();
+}
+
+try { addEventListener('storage', (e) => { if (e.key === KEY && e.newValue && !blocked) goStale(); }); } catch { /* no window (tools) */ }
+
 export function writeSave(s: SaveData): void {
-  if (blocked) return;
-  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* quota / private mode */ }
+  if (blocked || checkStale()) return;
+  try { localStorage.setItem(KEY, JSON.stringify(s)); lastT = s.t; } catch { /* quota / private mode */ }
 }
 
 /** Replace the save for good (selling the farm): later writes from this page are blocked until reload. */

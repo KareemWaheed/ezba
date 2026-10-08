@@ -64,10 +64,11 @@ export class ScenarioHud {
 
   showResult(sim: SimWorld, won: boolean, reward: number, stars: number): void {
     const sc = sim.scenario;
-    const rows = sc.lastGoals.map((g) => `<div>${g.ok ? '✅' : '❌'} ${SCENARIO_GOAL_LABEL[g.goal]}</div>`).join('');
+    const rows = sc.lastGoals.map((g) => `<div>${g.ok ? '⭐' : '☆'} ${SCENARIO_GOAL_LABEL[g.goal]}</div>`).join('');
     const starRow = won ? `<div class="r-stars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}" style="animation-delay:${0.25 + i * 0.25}s">★</span>`).join('')}</div>` : '';
-    const title = !won ? 'معلش، المرة الجاية 😅' : stars >= 3 ? 'تحفة! 🤩' : stars === 2 ? 'برافو! 🎉' : 'نجحت! 👍';
-    this.result.innerHTML = `<div class="r-icon">${sc.def.icon}</div><div class="r-title">${title}</div>${starRow}${rows}${won ? `<div class="r-reward">+${reward.toLocaleString('en-US')}</div>` : ''}`;
+    // (every event pays; the goals are the bonus on top)
+    const title = !won ? (sc.lastGoals.some((g) => g.ok) ? 'حلو! جبت جزء من البونص 👍' : 'خلصت! البونص فاتك المرة دي 😅') : stars >= 3 ? 'تحفة! 🤩' : stars === 2 ? 'برافو! 🎉' : 'نجحت! 👍';
+    this.result.innerHTML = `<div class="r-icon">${sc.def.icon}</div><div class="r-title">${title}</div>${starRow}${rows}${reward > 0 ? `<div class="r-reward">+${reward.toLocaleString('en-US')}</div>` : ''}`;
     this.result.style.borderColor = sc.def.color;
     this.result.hidden = false;
     this.result.classList.remove('show');
@@ -103,7 +104,8 @@ export class ScenarioHud {
     if (!on) return;
     const secs = sc.phase === 'warn' ? Math.ceil(sc.t) : sc.phase === 'active' ? Math.ceil(sc.t) : 0;
     const extra = sc.mech.hudText?.(sim) ?? '';
-    let key = `${sc.phase}|${secs}|${sc.likes}|${extra}`;
+    const note = sc.mech.hudNote?.(sim) ?? '';
+    let key = `${sc.phase}|${secs}|${sc.likes}|${extra}|${note}`;
     const states = sc.checkGoals().map((g) => g.ok);
     key += states.join(',');
     if (key === this.key) return;
@@ -111,7 +113,9 @@ export class ScenarioHud {
     const timer = sc.phase === 'warn' ? `يبدأ بعد ${secs}` : sc.phase === 'active' ? `⏱ ${secs}` : '…';
     // "egg:12 milk:4" -> 🥚12 🥛4
     const order = extra ? `<div class="sc-order" dir="ltr">${extra.split(' ').map((p) => { const [id, n] = p.split(':'); return `<span class="${n === '0' ? 'ok' : ''}">${ITEM_ICON[id as ItemId] ?? id}${n === '0' ? '✓' : n}</span>`; }).join('')}</div>` : '';
-    this.goals.innerHTML = `<span class="sc-timer">${timer}</span>` + d.goals.map((g, i) => `<span class="${states[i] ? 'ok' : ''}">${states[i] ? '✓' : '•'} ${SCENARIO_GOAL_LABEL[g]}</span>`).join('') + order;
+    // (goals are bonus targets: the event pays something either way)
+    const noteRow = note ? `<div class="sc-note">${note}</div>` : '';
+    this.goals.innerHTML = `<span class="sc-timer">${timer}</span><span class="sc-bonus">بونص:</span>` + d.goals.map((g, i) => `<span class="${states[i] ? 'ok' : ''}">${states[i] ? '⭐' : '☆'} ${SCENARIO_GOAL_LABEL[g]}</span>`).join('') + order + noteRow;
     if (d.likesTarget) this.likesBar.style.width = `${Math.min(100, (sc.likes / d.likesTarget) * 100)}%`;
   }
 }

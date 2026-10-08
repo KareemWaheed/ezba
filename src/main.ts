@@ -21,7 +21,7 @@ import { music, sfx, unlockAudio } from './audio';
 import { guideTarget, nextGoal } from './sim/guide';
 import { restore, serialize } from './sim/save';
 import { UPGRADES, UPGRADE_BY_ID } from './config/upgrades';
-import { MODE, chosenMode, clearSave, loadSave, requestPersistence, writeSave } from './storage';
+import { MODE, checkStale, chosenMode, clearSave, loadSave, onStale, requestPersistence, writeSave } from './storage';
 import { TitleScreen } from './ui/titleScreen';
 import { FEATURES } from './config/features';
 import { GoalCard, Toast } from './ui/panels';
@@ -139,9 +139,20 @@ function showRefund(): void {
     <button class="m-btn" data-close>شكراً! 🎉</button>`);
   save();
 }
+// the game was saved from another copy (a second tab, the app and the browser): this one stops saving; reload
+// into the newest progress rather than play on and lose it
+onStale(() => {
+  const card = modal.open(`
+    <div class="m-icon">📱</div>
+    <div class="m-title">اللعبة مفتوحة في مكان تاني</div>
+    <div>اتحفظ تقدّم أحدث من نسخة تانية للعبة (تاب تاني أو التطبيق). علشان ما يضيعش، كمّل من آخر حفظ.</div>
+    <button class="m-btn" data-reload>🔄 كمّل من آخر حفظ</button>`);
+  card.querySelector('[data-reload]')?.addEventListener('click', () => location.reload());
+});
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = Date.now(); return; }
+  if (checkStale()) return;
   if (hiddenAt) welcomeBack((Date.now() - hiddenAt) / 1000);
   hiddenAt = 0;
 });
@@ -209,8 +220,26 @@ function cueSound(mech: string | undefined, n: number, v = 0): void {
   if (mech === 'stage') { if (n === 1) sfx.tip(); else sfx.angry(); }
   if (mech === 'comments') { if (n === 1) sfx.sell(); else sfx.tip(); }
   if (mech === 'inspector') { if (n === 1) sfx.fixed(); else sfx.clunk(); }
-  // football: 1 goal, 2 saved, 3 cone passed, 4 shot without the cones
-  if (mech === 'football') { if (n === 1) { sfx.fanfare(); toast.show('جووون! ⚽🔥 الفانز هيدفعوا أكتر'); } else if (n === 2) sfx.clunk(); else if (n === 3) sfx.coin(); else toast.show('لازم تلف على كل الأقماع الأول! 🔶'); }
+  // football: 1 goal, 2 saved, 3 cone passed, 5 golazo (round every cone first: counts twice)
+  if (mech === 'football') {
+    if (n === 1) { sfx.fanfare(); toast.show('جووون! ⚽🔥 الفانز هيدفعوا أكتر'); }
+    else if (n === 5) { sfx.fanfare(); sfx.sparkle(); toast.show('جون عالمي! 🐐🔥 اتحسب بـ٢'); }
+    else if (n === 2) sfx.clunk(); else if (n === 3) sfx.coin();
+  }
+  // money rain: 1 caught (value), 2 missed
+  if (mech === 'moneyrain') { if (n === 1) sfx.kaching(); else sfx.swish(); }
+  // hide and seek: 1 found him (value), 2 an empty box
+  if (mech === 'hideseek') {
+    if (n === 1) { sfx.fanfare(); toast.show(`لقيته! 😂📦 ${ltr(`+${v}`)} وهيستخبى تاني...`); }
+    else { sfx.clunk(); toast.show('الكرتونة فاضية! 📦😅'); }
+  }
+  // race: 1 gate passed, 2 the player finished (value 1 = first), 3 the sprinter finished, 4 his pose
+  if (mech === 'race') {
+    if (n === 1) sfx.coin();
+    else if (n === 2) { if (v) { sfx.fanfare(); toast.show('سبقت بولت! 🏆⚡'); } else toast.show('وصلت! بس بولت كان أسرع 😅'); }
+    else if (n === 3) { sfx.alarm(); toast.show('بولت وصل خط النهاية! ⚡'); }
+    else if (n === 4) toast.show('بولت وقف يتصوّر! ⚡📸 الحق سبقه');
+  }
 }
 
 function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void {
