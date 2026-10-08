@@ -32,6 +32,9 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
   const g = w.golden.animal;
   if (g) { out.x = g.x; out.z = g.z; return true; }
   if (storeAlert(w, out)) return true;
+  // the wholesale trader is only here for a while (with a deal he loads by himself)
+  const tv = w.surplus.visit;
+  if (tv && tv.state === 'parked' && tv.left > 0 && w.upgrades.level('trader.deal') === 0) { out.x = LAYOUT.surplus.load.x; out.z = LAYOUT.surplus.load.z; return true; }
   // the cheapest upgrade the player can afford right now
   const up = w.upgrades;
   let best: UpgradeDef | null = null, bestR = Infinity;
@@ -42,6 +45,9 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
     if (r <= w.money && r < bestR) { best = t.def; bestR = r; }
   }
   if (best) { out.x = best.pos.x; out.z = best.pos.z; return true; }
+  // a record ready to set, a crate of chicks to sell
+  if (w.surplus.ready) { out.x = LAYOUT.surplus.record.x; out.z = LAYOUT.surplus.record.z; return true; }
+  if (w.surplus.crate >= ECONOMY.surplus.incubator.crateMax / 2) { out.x = LAYOUT.surplus.incubator.crate.x; out.z = LAYOUT.surplus.incubator.crate.z; return true; }
   if (marketAction(w, out)) return true;
   if (cafeAction(w, out)) return true;
   if (fieldAction(w, out)) return true;

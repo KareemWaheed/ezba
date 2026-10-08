@@ -249,6 +249,15 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 23.4, z: 30.6 }, requires: [{ id: 'market.shelves', level: 1 }],
   },
   // Loading dock: company contracts with trucks
+  // what a big surplus is good for (bottom left of the yard)
+  {
+    id: 'eggs.incubator', icon: '🐣', label: 'حضّانة', msg: 'الحضّانة شغالة! البيض الزيادة بيطلع كتاكيت 🐣',
+    pos: { x: -5.3, z: 8.4 }, requires: [{ id: 'eggs.worker', level: 1 }],
+  },
+  {
+    id: 'trader.deal', icon: '🤝', label: 'اتفاق مع تاجر الجملة', msg: 'تاجر الجملة هيحمّل لوحده من النهارده 🤝',
+    pos: { x: -3.2, z: 10.2 }, requires: [{ id: 'eggs.worker', level: 1 }],
+  },
   {
     id: 'dock.unlock', icon: '🚚', label: 'رصيف التحميل', msg: 'الشركات هتبعت عربيات تاخد منك بالجملة 🚚',
     pos: { x: 6.2, z: 9.0 }, requires: [{ id: 'milk.unlock', level: 1 }, { id: 'cashier', level: 1 }], milestone: true,

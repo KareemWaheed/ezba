@@ -88,6 +88,17 @@ export const LAYOUT = {
   army: { drop: { x: -7.4, z: 16.9 }, truck: { x: -10.0, z: 16.9 } },
   /** Where the health inspector walks in from (the yard's west side). */
   inspectorEntry: { x: -8.3, z: 13.0 },
+  /**
+   * The surplus corner (bottom left of the yard): the wholesale trader's truck parks west of `load`, the
+   * incubator stands at `incubator.box` (chicks are sold at `incubator.crate`), and records are set at `record`.
+   */
+  surplus: {
+    load: { x: -6.8, z: 11.8 },
+    park: { x: -9.4, z: 12.2 },
+    road: { x: -26, z: 12.2 },
+    incubator: { box: { x0: -7.9, x1: -6.5, z0: 7.95, z1: 8.85 } as Box, crate: { x: -7.2, z: 9.75 } },
+    record: { x: -4.2, z: 12.2 },
+  },
   /** Loading dock for company trucks (bottom right). The player loads at `load`; trucks park at `bay`. */
   dock: {
     load: { x: 8.4, z: 10.4 },

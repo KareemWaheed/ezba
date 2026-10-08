@@ -6,6 +6,7 @@ import type { GameMode } from '../config/paths';
 import { FEATURES } from '../config/features';
 import { PRICE_VERSION } from '../config/priceHistory';
 import { refundPriceDrops } from './refund';
+import { RECORD_PRODUCTS } from './surplus';
 
 /**
  * Versioned save format. Bump SAVE_VERSION when the shape changes and add a migration from the
@@ -45,6 +46,8 @@ export interface SaveData {
   };
   album?: { seen: string[]; paid: string[] };
   river?: { pile: number; cash: number; bills: number; untied: number };
+  /** Incubator (chicks in the crate / hatching, chicks hatched so far, golden hens) and records set per product. */
+  surplus?: { crate: number; hatching: number; hatchT: number; hatched: number; golden: number; records: Record<string, number> };
   /** Factory machine buffers and the wheat silo. */
   factory?: { silo: number; machines: Record<string, { in: Record<string, number>; out: Record<string, number> }> };
   daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
@@ -107,6 +110,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     },
     field: { cash: w.field.cash.value, bills: w.field.cash.bills, hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
+    surplus: { crate: w.surplus.crate, hatching: w.surplus.hatching, hatchT: w.surplus.hatchT, hatched: w.surplus.hatched, golden: w.surplus.golden, records: { ...w.surplus.records } },
     river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },
     factory: { silo: w.factory.silo, machines: Object.fromEntries(w.factory.machines.map((m) => [m.def.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])) },
     daily: { day: w.daily.day, tasks: w.daily.tasks.map((t) => ({ ...t })) },
@@ -179,6 +183,13 @@ export function restore(w: SimWorld, s: SaveData): void {
   for (const k of Object.keys(w.market.price) as ItemId[]) if (s.market?.price?.[k] !== undefined) w.market.setPrice(k, num(s.market.price[k], 1));
   w.market.cash.value = num(s.market?.cash);
   w.market.cash.bills = Math.floor(num(s.market?.bills));
+  const sp = w.surplus, ic = ECONOMY.surplus.incubator;
+  sp.crate = Math.min(ic.crateMax, Math.max(0, Math.floor(num(s.surplus?.crate))));
+  sp.hatching = Math.max(0, Math.floor(num(s.surplus?.hatching)));
+  sp.hatchT = Math.max(0, num(s.surplus?.hatchT));
+  sp.hatched = Math.max(0, Math.floor(num(s.surplus?.hatched)));
+  sp.golden = Math.min(ic.goldenMax, Math.max(0, Math.floor(num(s.surplus?.golden))));
+  for (const p of RECORD_PRODUCTS) sp.records[p] = Math.max(0, Math.floor(num(s.surplus?.records?.[p])));
   w.river.pile = Math.max(0, Math.floor(num(s.river?.pile)));
   w.river.cash.value = num(s.river?.cash);
   w.river.cash.bills = Math.floor(num(s.river?.bills));

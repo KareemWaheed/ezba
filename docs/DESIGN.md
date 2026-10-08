@@ -280,3 +280,16 @@ This file records the decisions made on top of it.
   are up right now shows as a faded, locked tile at its spot: icon, name and "محتاج:" with what to buy
   (`UpgradeSystem.teasers()`, drawn in render/tiles.ts). Not payable; it turns into the real tile once the
   needs are bought. Usually one or two at a time.
+- Surplus has a use (playtest: 15,000 egg crates on the counter with nothing to do with them). In the yard's
+  bottom-left corner (`LAYOUT.surplus`, `sim/surplus.ts`):
+  - Wholesale trader: when a counter has 150+ spare (beyond the line's needs; factory trays count while the
+    café counter is full), a pickup backs in now and then (every ~150 s, its own jitter so the world's random
+    sequence is untouched) for 35% of it (100-4000 items) at 40% of the sale price; the player stands at the
+    load spot (the lot loads in 3 s). `trader.deal` (6k): he loads by himself. Never during time away.
+  - Incubator (`eggs.incubator`, 3k then 9k): takes 50 spare eggs per tray (x level) every 15 s, leaving 120
+    spare for the kitchen, factory and dock, and hatches chicks into a crate (40 max) that sells for 30 each
+    (x price growth, ~1.5x the eggs). Every 30 chicks a golden hen (max 3) struts in the coop: eggs sell for
+    15% more each. Hatches during time away too (the crate caps it).
+  - Records: 2,000 spare eggs / 1,000 milk / 800 corn (x1.5 each time after) can be turned into "the biggest
+    omelette / rice pudding / popcorn tray in Egypt" by holding still at the record stand: pays 2.5x their sale
+    value, a giant dish grows on the stand. `npm run surpluscheck` covers all three.

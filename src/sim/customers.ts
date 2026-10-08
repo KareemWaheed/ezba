@@ -192,7 +192,8 @@ export class CustomerSystem {
     w.stats.served++;
     if (c.kind === 'vip') w.stats.vips++;
     let value = 0;
-    for (const l of c.lines) value += l.qty * ECONOMY.products[l.product].price * w.priceMult;
+    // (golden hens from the incubator make eggs sell for more)
+    for (const l of c.lines) value += l.qty * ECONOMY.products[l.product].price * w.priceMult * w.surplus.productMult(l.product);
     value = Math.round(value);
     // the VIP bonus is for the items served in person (whatever a cashier took over sells at the normal price)
     if (c.kind === 'vip') value = Math.round(value * (1 + (ECONOMY.vip.payMult - 1) * Math.min(1, c.playerItems / c.qty)));
