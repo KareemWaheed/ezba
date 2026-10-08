@@ -261,6 +261,11 @@ This file records the decisions made on top of it.
   tractor driver (which costs 190k with its tractor). A stalk every 0.6 s pushed automation under the
   "active earns >= 1.5x" target (1.47x); 0.8 s keeps it (1.55x). Hands on wheat too pushed automation past it
   as well. `npm run fieldcheck` covers them.
+- More land (playtest: "the fields need a size upgrade too"): the river bank stops the fields growing north, so
+  `field.expand` (250k, then 600k; after the wheat field and the tractor) opens new plots east of the wheat: a
+  second corn plot (x 15.5-21.5), then a second wheat plot (22.5-28.5), shown locked until bought; the walkable
+  area reaches them. Drivers, hands and the combine work them like the others (they still sell at the one
+  stall). At 150k right after the wheat it pushed automation under the "active >= 1.5x" pacing target (1.47x).
 - Playtest round (the café cashier felt out of reach; progress lost after a phone call; events felt
   all-or-nothing and the footballers too hard):
   - `cafe.waiter` 130k -> 55k (PRICE_VERSION 2: earlier buyers get the difference back). Full automation of

@@ -523,6 +523,8 @@ export const ECONOMY = {
     'field.tool': { base: 4000, growth: 2.2, max: 5, step: 0.3 },
     /** Open the wheat field next to the corn (pricier crop). */
     'field.wheat': { base: 60000, growth: 1, max: 1, step: 1 },
+    /** More land (+1 plot per level, east of the wheat): a second corn plot, then a second wheat plot. */
+    'field.expand': { base: 250000, growth: 2.4, max: 2, step: 1 },
     /** Tractor with a cutter: you drive it in the fields (faster, wider path). */
     'field.tractor': { base: 90000, growth: 1, max: 1, step: 1 },
     /** Combine harvester: very wide path, bundles go into its hopper (unloads at the stall). */

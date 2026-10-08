@@ -102,5 +102,26 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   ok(t.field.handStats().hopper > ECONOMY.field.hand.hopper, `...and carry more (${t.field.handStats().hopper} bundles)`);
 }
 
+// more land (field.expand): a second corn plot, then a second wheat plot, east of the wheat
+{
+  const x = new SimWorld(3);
+  x.upgrades.levels['field.unlock'] = 1; x.upgrades.levels['field.wheat'] = 1;
+  x.upgrades.apply();
+  const n0 = x.field.plots.filter((p) => p.open).length, x1 = x.bounds.x1;
+  x.upgrades.levels['field.expand'] = 1; x.upgrades.apply();
+  const corn2 = x.field.plots.find((p) => p.def.id === 'corn2')!, wheat2 = x.field.plots.find((p) => p.def.id === 'wheat2')!;
+  ok(corn2.open && !wheat2.open && x.bounds.x1 >= corn2.def.box.x1, `level 1 opens a second corn plot (${n0} -> ${x.field.plots.filter((p) => p.open).length} plots, reach x ${x1} -> ${x.bounds.x1})`);
+  x.upgrades.levels['field.expand'] = 2; x.upgrades.apply();
+  ok(wheat2.open && x.bounds.x1 >= wheat2.def.box.x1, 'level 2 opens a second wheat plot');
+  // cutting the new corn works like the old
+  const c0 = x.stats.stalks;
+  x.player.x = (corn2.def.box.x0 + corn2.def.box.x1) / 2; x.player.z = -15;
+  tick(x, 1);
+  ok(x.stats.stalks > c0, `the player harvests the new plot (${x.stats.stalks - c0} stalks)`);
+  const x2 = new SimWorld(1);
+  restore(x2, migrate(JSON.parse(JSON.stringify(serialize(x, Date.now()))))!);
+  ok(x2.field.plots.find((p) => p.def.id === 'wheat2')!.open, 'the new land stays after a reload');
+}
+
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }
 console.log('\nall field checks passed');

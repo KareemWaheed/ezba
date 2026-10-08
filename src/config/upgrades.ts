@@ -138,6 +138,10 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 8.6, z: -11.1 }, requires: [{ id: 'field.tool', level: 2 }], milestone: true,
   },
   {
+    id: 'field.expand', icon: '🗺️', label: 'وسّع الغيط', msg: 'الغيط كبر! أرض جديدة جنب القمح 🌽🌾',
+    pos: { x: 19.6, z: -11.1 }, requires: [{ id: 'field.wheat', level: 1 }, { id: 'field.tractor', level: 1 }],
+  },
+  {
     id: 'field.tractor', icon: '🚜', label: 'جرار', msg: 'اشتريت جرار! ادخل الغيط وسوق 🚜',
     pos: { x: 10.8, z: -11.1 }, requires: [{ id: 'field.tool', level: 3 }], milestone: true,
   },

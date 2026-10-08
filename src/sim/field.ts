@@ -130,7 +130,7 @@ export class FieldSystem {
 
   /** Reconcile from upgrade levels (called from UpgradeSystem.apply). */
   sync(): void {
-    for (const p of this.plots) p.open = this.w.upgrades.level(p.def.unlockTrack) > 0;
+    for (const p of this.plots) p.open = this.w.upgrades.level(p.def.unlockTrack) >= (p.def.unlockLevel ?? 1);
     while (this.drivers.length < this.w.upgrades.level('field.driver')) {
       const u = this.unloadSpot(this.drivers.length, { x: 0, z: 0 });
       this.drivers.push({ x: u.x, z: u.z, rot: Math.PI, speed: 0, state: 'back', plot: 0, wp: 0, hopper: 0, crop: 'corn', t: 0, cutting: 0 });

@@ -10,8 +10,9 @@ export interface PlotDef {
   id: string;
   crop: FieldCrop;
   box: Box;
-  /** Upgrade that opens the plot. */
+  /** Upgrade that opens the plot, and the level it takes (default 1). */
   unlockTrack: UpgradeId;
+  unlockLevel?: number;
 }
 
 /**
@@ -22,8 +23,13 @@ export const FIELDS = {
   plots: [
     { id: 'corn', crop: 'corn', box: { x0: -3.5, x1: 5.5, z0: -18.6, z1: -12.4 }, unlockTrack: 'field.unlock' },
     { id: 'wheat', crop: 'wheat', box: { x0: 6.5, x1: 14.5, z0: -18.6, z1: -12.4 }, unlockTrack: 'field.wheat' },
+    // field.expand: more land east of the wheat (the river bank stops the fields growing north)
+    { id: 'corn2', crop: 'corn', box: { x0: 15.5, x1: 21.5, z0: -18.6, z1: -12.4 }, unlockTrack: 'field.expand' },
+    { id: 'wheat2', crop: 'wheat', box: { x0: 22.5, x1: 28.5, z0: -18.6, z1: -12.4 }, unlockTrack: 'field.expand', unlockLevel: 2 },
   ] as readonly PlotDef[],
   unlockedZ0: -19.0,
+  /** East edge of the walkable area with each field.expand level (its plots reach that far). */
+  expandX1: [21.9, 28.9],
   /** Vehicles only carry the player east of this (over the fields); the river dock is walked. */
   driveX0: -4.6,
   /**
