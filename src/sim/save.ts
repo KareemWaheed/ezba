@@ -1,4 +1,4 @@
-import { ECONOMY, ITEM_IDS, type ItemId, type UpgradeId } from '../config/economy';
+import { ECONOMY, ITEM_IDS, priceOf, type ItemId, type UpgradeId } from '../config/economy';
 import { SimWorld } from './world';
 import { LEGACY } from '../config/legacy';
 import { FIELDS } from '../config/fields';
@@ -112,7 +112,8 @@ export function serialize(w: SimWorld, now: number): SaveData {
       tables: w.cafe.tables.map((t) => ({ dirty: t.dirty, cash: t.cash, bills: t.bills })),
       cash: { value: w.cafe.uncollected - w.cafe.tables.reduce((a, t) => a + t.cash, 0), bills: w.cafe.cash.bills },
     },
-    field: { cash: w.field.cash.value, bills: w.field.cash.bills, hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
+    // (wheat kept for a truck counts as sold: the truck isn't saved)
+    field: { cash: w.field.cash.value + Math.round(w.field.dockWheat * priceOf('wheat') * w.priceMult), bills: w.field.cash.bills, hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
     surplus: { crate: w.surplus.crate, hatching: w.surplus.hatching, hatchT: w.surplus.hatchT, hatched: w.surplus.hatched, golden: w.surplus.golden, records: { ...w.surplus.records } },
     river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },

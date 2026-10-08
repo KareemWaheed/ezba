@@ -9,6 +9,7 @@ import { serialize, restore, migrate } from '../src/sim/save';
 import { Bot } from '../src/sim/bot';
 import { FIELDS } from '../src/config/fields';
 import { ECONOMY } from '../src/config/economy';
+import { COMPANIES } from '../src/config/contracts';
 
 const DT = 1 / 30;
 let fails = 0;
@@ -154,6 +155,31 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   b.field.drivers[0].state = 'back';
   tick(b, 2, () => { b.player.x = 8; b.player.z = 8; b.input.x = b.input.z = 0; });
   ok(b.field.drivers[0].plot !== wheatIx, 'with the silo full it goes back to its own plot');
+}
+
+// dock workers fetch whatever the truck ordered: wheat (kept at the stall, or from the silo) and corn (the
+// pile by the stall too, not only the shop counter's surplus) for the mills truck (playtest: 0/28 wheat, slow corn)
+{
+  const d = new SimWorld(3);
+  for (const k of ['cafe.unlock', 'field.unlock', 'field.wheat', 'factory.unlock', 'dock.unlock'] as const) d.upgrades.levels[k] = 1;
+  d.upgrades.levels['dock.worker'] = 2;
+  d.upgrades.apply();
+  const mills = COMPANIES.find((c) => c.id === 'mills')!;
+  d.contracts.truck = { state: 'loading', t: 600, company: mills, kind: 'standing', lines: [{ product: 'wheat', want: 20, loaded: 0 }, { product: 'corn', want: 20, loaded: 0 }], price: { wheat: 10, corn: 10 }, drive: 1 };
+  d.factory.silo = 12;
+  d.stations.find((s) => s.def.product === 'corn')!.pile = 60;
+  tick(d, 5, () => { d.player.x = 8; d.player.z = 8; d.input.x = d.input.z = 0; });
+  // wheat cut now goes to the stall's keep for the truck
+  const kept0 = d.field.dockWheat;
+  d.player.x = 10; d.player.z = -15;
+  tick(d, 8);
+  const cut = d.field.held;
+  d.player.x = FIELDS.stall.drop.x; d.player.z = FIELDS.stall.drop.z;
+  tick(d, 3);
+  ok(d.field.dockWheat > kept0 || cut === 0, `wheat sold at the stall is kept for the truck (${d.field.dockWheat} kept)`);
+  tick(d, 150, () => { d.player.x = 8; d.player.z = 8; d.input.x = d.input.z = 0; });
+  const l = d.contracts.truck.lines;
+  ok(l[0].loaded >= 12 && l[1].loaded >= 15, `the dock workers load the wheat and the corn (${l[0].loaded}/20 wheat, ${l[1].loaded}/20 corn)`);
 }
 
 // more land (field.expand): a second corn plot, then a second wheat plot, east of the wheat

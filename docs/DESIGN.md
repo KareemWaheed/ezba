@@ -282,6 +282,12 @@ This file records the decisions made on top of it.
   a whole wheat field grows (~65 at best), and the drivers mostly mowed the corn. Cake is now 2 eggs + 1 wheat,
   and while the bakery's wheat plus the silo is under one input-load (30) the tractor drivers go to the wheat
   first. One driver now keeps a full-speed bakery stocked and the silo starts filling.
+- Dock workers only fetched from the shop counters (playtest: a mills truck sat at 0/28 wheat, corn slow):
+  they now fetch whatever the waiting truck ordered, nearest kind first: counter surplus, then the piles (the
+  corn's by the grain stall), factory trays (cake, cheese, grilled fish), wheat, the river's fish pile. Wheat
+  handed in at the stall while a truck still needs some is kept there for it (`field.dockWheat`, sold or put
+  in the silo once the truck has enough or leaves); the silo's auger leaves the truck's share, and the tractor
+  drivers go to the wheat while it's short.
 - Playtest round (the café cashier felt out of reach; progress lost after a phone call; events felt
   all-or-nothing and the footballers too hard):
   - `cafe.waiter` 130k -> 55k (PRICE_VERSION 2: earlier buyers get the difference back). Full automation of

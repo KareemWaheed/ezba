@@ -1,6 +1,9 @@
 import { CONTRACTS, COMPANIES, type CompanyDef } from '../config/contracts';
 import { ECONOMY, priceOf, type ItemId } from '../config/economy';
 import { LAYOUT } from '../config/layout';
+import { FIELDS } from '../config/fields';
+import { FACTORY } from '../config/factories';
+import { RIVER } from '../config/river';
 import { dist } from './math';
 import type { WorkerJob } from './staff';
 import type { SimWorld } from './world';
@@ -23,33 +26,62 @@ export interface Truck {
   drive: number;
 }
 
-/** Dock worker job: shop counter surplus -> the truck being loaded. */
+/** Somewhere a dock worker can fetch an ordered item from. */
+interface DockSource { product: ItemId; x: number; z: number; spare: () => number; take: () => void }
+
+/**
+ * Dock worker job: whatever the waiting truck ordered -> the truck. Sources, nearest kind first: the shop
+ * counters' surplus, then the piles (the corn's by the grain stall), factory trays (cake, cheese, grilled fish),
+ * wheat kept for the truck at the grain stall and the bakery's silo, the river's fish pile.
+ */
 class DockJob implements WorkerJob {
   readonly key = 'dock';
-  private target = -1;
+  readonly repick = true;
+  private src: DockSource | null = null;
   constructor(private sys: ContractSystem) {}
-  loadAt(w: SimWorld, slot: number, out: { x: number; z: number }): void {
-    // the station whose product the truck needs most, with surplus on the counter
-    this.target = -1;
-    let best = 0;
+
+  private sources(w: SimWorld): DockSource[] {
+    const out: DockSource[] = [];
     for (const s of w.stations) {
-      const need = this.sys.stillNeeds(s.def.product);
-      if (s.open && need > best && w.counterSpare(s) > 0) { best = need; this.target = s.index; }
+      if (!s.open) continue;
+      const p = s.def.product;
+      out.push({ product: p, x: s.def.counter.dropX, z: s.def.counter.dropZ - 0.5, spare: () => w.counterSpare(s), take: () => { s.counter--; } });
+      out.push({ product: p, x: s.def.pile.x + 1.2, z: s.def.pile.z + 1.4, spare: () => s.pile, take: () => { s.pile--; } });
     }
-    const st = w.stations[this.target >= 0 ? this.target : 0];
-    out.x = st.def.counter.dropX + (slot - 0.5) * 0.5;
-    out.z = st.def.counter.dropZ - 0.5;
+    for (const m of w.factory.machines) {
+      if (!m.open) continue;
+      const p = m.def.makes;
+      out.push({ product: p, x: m.def.output.x, z: m.def.output.z, spare: () => m.conv.output[p], take: () => { m.conv.output[p]--; } });
+    }
+    const st = FIELDS.stall.drop;
+    out.push({ product: 'wheat', x: st.x - 0.6, z: st.z + 0.3, spare: () => w.field.dockWheat, take: () => { w.field.dockWheat--; } });
+    if (w.factory.open) out.push({ product: 'wheat', x: FACTORY.silo.x - 1.2, z: FACTORY.silo.z + 1.1, spare: () => w.factory.silo, take: () => { w.factory.silo--; } });
+    if (w.river.open) out.push({ product: 'fish', x: RIVER.pile.x + 1.2, z: RIVER.pile.z + 1.4, spare: () => w.river.pile, take: () => { w.river.pile--; } });
+    return out;
   }
-  take(w: SimWorld): ItemId | null {
-    // re-pick each time: the target may be stale (e.g. chosen while no truck was waiting)
-    let s = w.stations[this.target];
-    if (!s || this.sys.stillNeeds(s.def.product) <= 0 || w.counterSpare(s) <= 0) {
-      s = w.stations.find((x) => x.open && this.sys.stillNeeds(x.def.product) > 0 && w.counterSpare(x) > 0)!;
-      if (!s) return null;
-      this.target = s.index;
+
+  /** The source of what the truck needs most (the first, nearest kind, with something to take). */
+  private pick(w: SimWorld): DockSource | null {
+    let best: DockSource | null = null, bestNeed = 0;
+    for (const s of this.sources(w)) {
+      const need = this.sys.stillNeeds(s.product);
+      if (need > bestNeed && s.spare() > 0) { best = s; bestNeed = need; }
     }
-    s.counter--;
-    return s.def.product;
+    return best;
+  }
+
+  loadAt(w: SimWorld, slot: number, out: { x: number; z: number }): void {
+    this.src = this.pick(w);
+    const s = this.src ?? { x: LAYOUT.dock.load.x, z: LAYOUT.dock.load.z - 1 };
+    out.x = s.x + (slot - 0.5) * 0.5;
+    out.z = s.z;
+  }
+  take(_w: SimWorld): ItemId | null {
+    // the source may be stale (chosen before the truck came, or emptied since): only take what's still ordered
+    const s = this.src;
+    if (!s || this.sys.stillNeeds(s.product) <= 0 || s.spare() <= 0) return null;
+    s.take();
+    return s.product;
   }
   unloadAt(_w: SimWorld, slot: number, out: { x: number; z: number }): void {
     out.x = LAYOUT.dock.load.x - 0.6 + slot * 0.6;
@@ -57,14 +89,17 @@ class DockJob implements WorkerJob {
   }
   give(_w: SimWorld, item: ItemId): boolean { return this.sys.load(item as ItemId); }
   /** Only what the waiting truck still needs (nothing while no truck is loading). */
-  room(w: SimWorld): number {
-    let n = 0;
-    for (const s of w.stations) n += Math.max(0, this.sys.stillNeeds(s.def.product));
-    return n;
+  room(_w: SimWorld): number {
+    const s = this.src;
+    return s ? Math.max(0, this.sys.stillNeeds(s.product)) : 0;
   }
   putBack(w: SimWorld, item: ItemId): void {
-    const s = w.stations.find((x) => x.def.product === item);
-    if (s) s.counter++;
+    const st = w.stations.find((x) => x.def.product === item);
+    if (st) { st.counter++; return; }
+    const m = w.factory.machines.find((x) => x.def.makes === item);
+    if (m) { m.conv.output[m.def.makes]++; return; }
+    if (item === 'wheat') { if (w.factory.open) w.factory.silo++; else w.field.dockWheat++; return; }
+    if (item === 'fish') w.river.pile++;
   }
 }
 

@@ -74,6 +74,8 @@ export class FieldSystem {
   /** Combine hopper: bundles per crop waiting to be unloaded at the stall. */
   readonly hopper = { corn: 0, wheat: 0 } as Record<FieldCrop, number>;
   hopperN = 0;
+  /** Wheat kept at the grain stall for a truck at the dock that ordered it (dock workers fetch it). */
+  dockWheat = 0;
   private sellT = 0;
   readonly drivers: Driver[] = [];
   /** Hired field hands (field.hand): walk the rows with a sickle, same jobs as the drivers but slower. */
@@ -165,7 +167,8 @@ export class FieldSystem {
     const reach = cfg.reach + w.upgrades.level('field.tool') * ECONOMY.upgrades['field.tool'].step * 0.5;
     const paths = hands ? this.handPaths : this.paths;
     const bakery = w.factory.machines.find((m) => m.def.id === 'bakery');
-    const wheatLow = !!bakery && bakery.open && w.factory.silo + (bakery.conv.input.wheat ?? 0) < ECONOMY.factory.inputMax;
+    const wheatLow = (!!bakery && bakery.open && w.factory.silo + (bakery.conv.input.wheat ?? 0) < ECONOMY.factory.inputMax)
+      || w.contracts.stillNeeds('wheat') > this.dockWheat + w.factory.silo;
     for (let i = 0; i < list.length; i++) {
       const d = list[i];
       d.cutting = Math.max(0, d.cutting - dt * 3);
@@ -320,6 +323,8 @@ export class FieldSystem {
       }
     }
     this.cutting = Math.max(0, this.cutting - dt);
+    // the truck left (or has enough): the kept wheat goes to the silo, or is sold
+    while (this.dockWheat > 0 && w.contracts.stillNeeds('wheat') < this.dockWheat) { this.dockWheat--; this.deliver('wheat', FIELDS.stall.drop.x, FIELDS.stall.drop.z, 0); w.stats.crops--; }
     this.updateDrivers(dt, false);
     this.updateDrivers(dt, true);
   }
@@ -409,6 +414,8 @@ export class FieldSystem {
   private deliver(crop: FieldCrop, x: number, z: number, n: number): void {
     const w = this.w;
     w.stats.crops++;
+    // a truck at the dock ordered wheat: keep it here for the dock workers (and the player) first
+    if (crop === 'wheat' && w.contracts.stillNeeds('wheat') > this.dockWheat) { this.dockWheat++; if (!w.away) w.events.emit('drop', 'wheat', x, z, 0, n); return; }
     if (crop === 'wheat' && w.factory.store(1)) { if (!w.away) w.events.emit('drop', 'wheat', x, z, 0, n); return; }
     const corn = crop === 'corn' ? w.stations.find((s) => s.def.product === 'corn') : undefined;
     if (corn && corn.open && !corn.pileFull) { corn.pile++; if (!w.away) w.events.emit('drop', 'corn', x, z, 0, n); return; }
