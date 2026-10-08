@@ -14,14 +14,14 @@ import { DustFx } from './render/dust';
 import { buildWorld } from './render/worldView';
 import { FarmView } from './render/farmView';
 import { CarrierView } from './render/stacks';
-import { PRIM, merge, part } from './render/geo';
+import { SICKLE_GEO } from './render/vehicles';
 import { Input } from './ui/input';
 import { Hud } from './ui/hud';
 import { music, sfx, unlockAudio } from './audio';
 import { guideTarget, nextGoal } from './sim/guide';
 import { restore, serialize } from './sim/save';
 import { UPGRADES, UPGRADE_BY_ID } from './config/upgrades';
-import { MODE, chosenMode, clearSave, loadSave, requestPersistence, writeSave } from './storage';
+import { MODE, checkStale, chosenMode, clearSave, loadSave, onStale, requestPersistence, writeSave } from './storage';
 import { TitleScreen } from './ui/titleScreen';
 import { FEATURES } from './config/features';
 import { GoalCard, Toast } from './ui/panels';
@@ -62,11 +62,7 @@ let stepSide = 1;
 player.onStep = (c) => { stepSide = -stepSide; dust.emit(c.root.position.x, c.root.position.z, c.root.rotation.y, stepSide * 0.6); };
 view.scene.add(player.root);
 // sickle in the right hand while standing in an open field; swings while cutting
-const sickle = player.attach(merge([
-  part(PRIM.box, 0x8a5a32, 0, -0.12, 0.08, 0.3, 0, 0, 0.06, 0.06, 0.32),
-  part(PRIM.box, 0xd9dde3, 0, -0.1, 0.32, 0, 0.5, 0, 0.04, 0.03, 0.3),
-  part(PRIM.box, 0xd9dde3, 0.12, -0.1, 0.42, 0, 1.3, 0, 0.04, 0.03, 0.22),
-]), 'hand');
+const sickle = player.attach(SICKLE_GEO, 'hand');
 sickle.visible = false;
 let swishT = 0;
 
@@ -143,9 +139,20 @@ function showRefund(): void {
     <button class="m-btn" data-close>شكراً! 🎉</button>`);
   save();
 }
+// the game was saved from another copy (a second tab, the app and the browser): this one stops saving; reload
+// into the newest progress rather than play on and lose it (closing the card any way reloads too)
+onStale(() => {
+  const card = modal.open(`
+    <div class="m-icon">📱</div>
+    <div class="m-title">اللعبة مفتوحة في مكان تاني</div>
+    <div>اتحفظ تقدّم أحدث من نسخة تانية للعبة (تاب تاني أو التطبيق). علشان ما يضيعش، كمّل من آخر حفظ.</div>
+    <button class="m-btn" data-reload>🔄 كمّل من آخر حفظ</button>`, () => location.reload());
+  card.querySelector('[data-reload]')?.addEventListener('click', () => location.reload());
+});
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = Date.now(); return; }
+  if (checkStale()) return;
   if (hiddenAt) welcomeBack((Date.now() - hiddenAt) / 1000);
   hiddenAt = 0;
 });
@@ -213,8 +220,26 @@ function cueSound(mech: string | undefined, n: number, v = 0): void {
   if (mech === 'stage') { if (n === 1) sfx.tip(); else sfx.angry(); }
   if (mech === 'comments') { if (n === 1) sfx.sell(); else sfx.tip(); }
   if (mech === 'inspector') { if (n === 1) sfx.fixed(); else sfx.clunk(); }
-  // football: 1 goal, 2 saved, 3 cone passed, 4 shot without the cones
-  if (mech === 'football') { if (n === 1) { sfx.fanfare(); toast.show('جووون! ⚽🔥 الفانز هيدفعوا أكتر'); } else if (n === 2) sfx.clunk(); else if (n === 3) sfx.coin(); else toast.show('لازم تلف على كل الأقماع الأول! 🔶'); }
+  // football: 1 goal, 2 saved, 3 cone passed, 5 golazo (round every cone first: counts twice)
+  if (mech === 'football') {
+    if (n === 1) { sfx.fanfare(); toast.show('جووون! ⚽🔥 الفانز هيدفعوا أكتر'); }
+    else if (n === 5) { sfx.fanfare(); sfx.sparkle(); toast.show('جون عالمي! 🐐🔥 اتحسب بـ٢'); }
+    else if (n === 2) sfx.clunk(); else if (n === 3) sfx.coin();
+  }
+  // money rain: 1 caught (value), 2 missed
+  if (mech === 'moneyrain') { if (n === 1) sfx.kaching(); else sfx.swish(); }
+  // hide and seek: 1 found him (value), 2 an empty box
+  if (mech === 'hideseek') {
+    if (n === 1) { sfx.fanfare(); toast.show(`لقيته! 😂📦 ${ltr(`+${v}`)} وهيستخبى تاني...`); }
+    else { sfx.clunk(); toast.show('الكرتونة فاضية! 📦😅'); }
+  }
+  // race: 1 gate passed, 2 the player finished (value 1 = first), 3 the sprinter finished, 4 his pose
+  if (mech === 'race') {
+    if (n === 1) sfx.coin();
+    else if (n === 2) { if (v) { sfx.fanfare(); toast.show('سبقت بولت! 🏆⚡'); } else toast.show('وصلت! بس بولت كان أسرع 😅'); }
+    else if (n === 3) { sfx.alarm(); toast.show('بولت وصل خط النهاية! ⚡'); }
+    else if (n === 4) toast.show('بولت وقف يتصوّر! ⚡📸 الحق سبقه');
+  }
 }
 
 function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void {
@@ -275,6 +300,21 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
     case 'storeRush':
       if (e.n === 1) { sfx.alarm(); toast.show('🔥 زحمة في السوبر ماركت! الزباين جايين كتير'); }
       else toast.show('✅ الزحمة خلصت في السوبر ماركت');
+      break;
+    case 'storeSpill':
+      if (e.n === 1) { sfx.drop(); toast.show('🧃 زبون وقّع حاجة على الأرض! امسحها قبل ما الزباين تتضايق'); }
+      else if (e.value > 0) { sfx.coin(); toast.show(`🧹 نضّفت! ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
+      break;
+    case 'storeThief':
+      if (e.n === 1) { sfx.alarm(); toast.show('🦹 حرامي! بيجري على الباب، الحقه!'); }
+      else if (e.n === 2) { sfx.fanfare(); toast.show(`👮 مسكت الحرامي! الحاجة رجعت ومكافأة ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
+      else if (e.n === 4) { sfx.fixed(); toast.show('👮 الأمن مسك الحرامي على الباب'); }
+      else toast.show(`🏃 الحرامي هرب بحاجات بـ${ltr(fmtMoney(e.value))} 💸`);
+      break;
+    case 'storeOrder':
+      if (e.n === 1) { sfx.sparkle(); toast.show(`📞 طلب تليفون جديد! حمّله في عربية التوصيل 🚚 (${ltr(fmtMoney(e.value))} 💰)`); }
+      else if (e.n === 2) { sfx.kaching(); toast.show(`🚚 الطلب اتوصل! ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
+      else toast.show('📞 الزبون لغى الطلب: اتأخرنا عليه');
       break;
     case 'truck': {
       const t = sim.contracts.truck;

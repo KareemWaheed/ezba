@@ -269,9 +269,11 @@ export class Bot {
     const shelf = m.shelves.find((s) => s.open && c.has(s.def.item) && s.stock < cfg.shelfMax);
     if (shelf) { this.go('stock', shelf.def.front.x, shelf.def.front.z); return true; }
     // the line: serve it while there's no cashier (on the farm path only when nothing else is urgent)
-    const queue = m.shoppers.filter((x) => x.state === 'queue').length;
-    if (!m.cashier && queue > 0 && (marketMode || queue >= 3)) {
-      const s = MARKET.checkout.serve;
+    // (a counter whose line has no cashier; the kiosk serves itself)
+    const lane = m.unservedLane(true);
+    const queue = lane < 0 ? 0 : m.shoppers.filter((x) => x.state === 'queue' && (x.lane ?? 0) === lane).length;
+    if (lane >= 0 && (marketMode || queue >= 3)) {
+      const s = m.laneServe(lane);
       this.go('checkout', s.x, s.z);
       return true;
     }

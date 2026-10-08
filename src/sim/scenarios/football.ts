@@ -30,15 +30,15 @@ const POST_R = 0.07;
 const KEEPER_SPEED = 0.95;
 const KEEPER_R = 0.32;
 const CONE_R = 0.6;
-const GOALS = 3;
-const PERFECT = 5;
+const GOALS = 1;
+const PERFECT = 3;
 
 export type FootballVariant = 'penalty' | 'dribble';
 
 /**
  * A footballer's visit: kick a ball into the little goal in the yard. Each goal makes the fans tip
- * more. Salah ('penalty'): a goalkeeper slides along the line. Messi ('dribble'): the ball has to pass
- * every cone before a goal counts.
+ * more. Salah ('penalty'): a goalkeeper slides along the line. Messi ('dribble'): an open goal; taking the
+ * ball round every cone first makes it a golazo that counts twice.
  */
 export class FootballMechanic implements Mechanic {
   variant: FootballVariant = 'penalty';
@@ -112,9 +112,9 @@ export class FootballMechanic implements Mechanic {
       if (!inMouth) { b.x = P.goal.x - BALL_R; b.vx = -Math.abs(b.vx) * BOUNCE; return; }
       // over the line (its center past the goal line)
       if (b.x < P.goal.x) return;
-      const counts = this.variant === 'penalty' || this.cones.every(Boolean);
-      if (counts) this.scored++;
-      w.events.emit('scenarioCue', '', b.x, b.z, this.scored, counts ? 1 : 4);
+      const golazo = this.variant === 'dribble' && this.cones.every(Boolean);
+      this.scored += golazo ? 2 : 1;
+      w.events.emit('scenarioCue', '', b.x, b.z, this.scored, golazo ? 5 : 1);
       this.resetT = 1;
       b.vx = b.vz = 0;
     }
@@ -164,12 +164,8 @@ export class FootballMechanic implements Mechanic {
     }
   }
 
-  /** Where to send the ball next: the next cone (Messi), else the open side of the goal. */
+  /** Where to send the ball next: the open side of the goal (Messi's goal is open: straight in). */
   nextAim(_w: SimWorld): { x: number; z: number } {
-    if (this.variant === 'dribble') {
-      const i = this.cones.indexOf(false);
-      if (i >= 0) return P.cones[i];
-    }
     const g = P.goal;
     const z = this.variant === 'penalty' ? (this.keeper.z > FOOTBALL.goal.z ? g.z0 + 0.45 : g.z1 - 0.45) : FOOTBALL.goal.z;
     return { x: g.x + 0.5, z };

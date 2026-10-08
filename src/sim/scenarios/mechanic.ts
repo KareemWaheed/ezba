@@ -42,8 +42,10 @@ export interface Mechanic {
   hudMeter?(): number;
   /** A screen mode for the HUD (e.g. 'rec' while the camera rolls). */
   hudMode?(): string;
-  /** Extra line for the event banner (e.g. what's left of an order). */
+  /** Extra line for the event banner (e.g. what's left of an order), as "item:n" pairs. */
   hudText?(w: SimWorld): string;
+  /** A plain line for the event banner (hot/cold, race standings...). */
+  hudNote?(w: SimWorld): string;
   /** Keep the event going past its timer (e.g. a procession still walking). */
   busy?(w: SimWorld): boolean;
   /** Drop all temporary state (event end, time away). Idempotent. */
@@ -51,7 +53,7 @@ export interface Mechanic {
 }
 
 export type MechanicId = 'basic' | 'motorcade' | 'football' | 'stage' | 'storm' | 'inspector' | 'procession' | 'comments' | 'bulk'
-  | 'derby' | 'filming' | 'chase' | 'cookoff' | 'iftar' | 'khamaseen';
+  | 'derby' | 'filming' | 'chase' | 'cookoff' | 'iftar' | 'khamaseen' | 'moneyrain' | 'hideseek' | 'race';
 
 /** No extra rules: the guest, crowd and built-in goals only. */
 export const BASIC: Mechanic = { start() {}, update() {}, goal: () => undefined, teardown() {} };

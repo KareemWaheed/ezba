@@ -12,6 +12,7 @@ import { CharacterView } from './character';
 import { CustomerView, typedCustomerView } from './customers';
 import { ground, lockOverlay } from './worldView';
 import { hatGeo } from './accessories';
+import { StoreExtrasView } from './storeExtrasView';
 
 const { box, cyl } = PRIM;
 const CASHIER = { shirt: 0xd94f45, pants: 0x2e2e2e, skin: 0xd9a074, hair: 0x1d1d1d };
@@ -194,6 +195,7 @@ export class MarketView {
   private cash: InstancedStack;
   private shoppers = new Map<number, CustomerView>();
   private chips = new Map<number, ListChip>();
+  private extras: StoreExtrasView;
   private cashier: CharacterView | null = null;
   private time = 0;
   /** Store sign over the back wall. */
@@ -201,6 +203,7 @@ export class MarketView {
 
   constructor(private scene: THREE.Scene) {
     this.lock = lockOverlay(scene, MARKET.plot);
+    this.extras = new StoreExtrasView(scene);
     const mesh = new THREE.Mesh(storeGeo(), MAT);
     mesh.matrixAutoUpdate = false;
     this.root.add(mesh);
@@ -287,6 +290,7 @@ export class MarketView {
     this.cash.set(m.cash.bills);
     this.cash.update(dt);
     this.syncShoppers(sim, dt);
+    this.extras.sync(sim, dt);
     if (m.cashier && !this.cashier) {
       this.cashier = new CharacterView(CASHIER);
       this.cashier.attach(merge(hatGeo({ kind: 'cap', color: 0xd94f45 })));
@@ -366,6 +370,7 @@ export class MarketView {
 
   invalidate(): void {
     this.drawSign();
+    this.extras.invalidate();
     for (const v of this.shoppers.values()) v.invalidate();
     for (const c of this.chips.values()) c.invalidate();
   }
@@ -392,6 +397,18 @@ class ListChip {
   invalidate(): void { this.key = ''; }
 
   show(c: Shopper, m: MarketSystem): void {
+    if (c.state === 'flee') {
+      // a shoplifter on the run
+      if (this.key === 'flee') return;
+      this.key = 'flee';
+      this.s.draw((ctx, w, h) => {
+        ctx.fillStyle = '#e8554e'; rr(ctx, 4, 4, w - 8, h - 8, 22); ctx.fill();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
+        ctx.font = `800 40px ${FONT}`; ctx.fillStyle = '#fff';
+        ctx.fillText('🦹 حرامي!', w / 2, h / 2 + 3);
+      });
+      return;
+    }
     const shopping = c.state === 'shop';
     let total = 0;
     for (const l of c.lines) total += l.qty;

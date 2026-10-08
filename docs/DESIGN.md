@@ -225,3 +225,58 @@ This file records the decisions made on top of it.
   late game, tolerant of line breaks from chat apps; QR "EZ1:" + base45 so it packs in QR alphanumeric mode
   (version ~27 for a late-game save). The debug panel's older plain codes still read. `npm run transfercheck`;
   checked in a browser across separate contexts, including a fake camera showing the QR.
+- Supermarket-first game, the farm as the store's supplier (playtest: eggs piled up on the farm counter, a full
+  milk pile sat untouched while the store bought milk wholesale, shelves stood half empty). At that point the
+  farm still had no shop of its own in this mode (it supplied the store; see the next entry), but now: every 4 s
+  the farm sends a box of what it makes from the counter to the storeroom when it fits (free; a part box tops
+  up the last of the room), and once the store has stockers an animal pile that has sat full 20 s goes too (`MarketSystem.pileIdle`; earlier the player fetches by hand).
+  Shelf stockers push a trolley: 8 items a trip (was the farm workers' 3). Playtest save over 5 minutes:
+  empty shelves 6.8 -> 0.6 of 15, unhappy shoppers 20 -> 1, items sold 300 -> 517.
+- Supermarket-first game, more to do in the store (playtest: "the supermarket is very boring"; and the farm
+  had no customers of its own). The farm shop now opens with the coop in this mode too: its customers buy at
+  the farm counters first and the store gets what's left (shop rushes and shop events stay off). This replaces
+  the Phase 2 rule above that the supermarket path has no farm shop. New store
+  upgrades (third tile row in the yard south of the store, which becomes walkable once the store is built):
+  `market.lanes` a second checkout with its own line (its cashier is `market.cashier` level 2, capped by the
+  lanes), `market.selfcheck` a kiosk for baskets of <= 5 items (3x slower than the player); shoppers pick the
+  shortest line (an unstaffed lane counts as longer). Spills (once the store has a second shelf row): a shopper
+  drops something every ~55 s (max 3), shoppers wade through slowly and lose patience; the player mops one by
+  standing in it (small tip), `market.cleaner` does it on his own. Shoplifters (2% of shoppers, same gate):
+  once their list is done they run for the door; touching one gets the goods back plus a bounty, the
+  `market.guard` stops them near the door, otherwise the goods are lost. Phone orders (`market.delivery`): a
+  2-4 product order every ~75 s with a 150 s timer, loaded into the van by hand (the storeroom hands order items
+  first) for 1.8x the shelf price; level 2 adds a driver who loads from the storeroom. The guide and the store
+  board point at whichever of these needs the player. A newly opened shelf row comes with 8 items a shelf (the
+  casual bot stalled ~6 min after buying it while saving to stock every empty shelf). None of the store events
+  happen during time away, and none are saved. `npm run marketcheck` covers each.
+- Field hands (playtest: no cheap way to automate the corn before a 90k tractor + 100k driver): `field.hand`
+  (10k, then 25k; up to 2) right after the corn field opens. On foot with a sickle: one stalk every 1.2 s,
+  4 bundles on the back, then to the stall (west of the drivers' spots); corn only (wheat feeds the bakery and
+  stays with the player and the tractors); they leave stalks within 3 m of the player alone. Two hands bring
+  ~19 bundles a minute, under a third of one tractor driver; they work during time away like the drivers.
+  `npm run fieldcheck` covers them. (Hands on wheat too pushed automation past the "active earns >= 1.5x"
+  target.)
+- Playtest round (the café cashier felt out of reach; progress lost after a phone call; events felt
+  all-or-nothing and the footballers too hard):
+  - `cafe.waiter` 130k -> 55k (PRICE_VERSION 2: earlier buyers get the difference back). Full automation of
+    stages 1-3 now lands on day 3 for an efficient player (pacing target moved from day 4, the user's call).
+  - Saves: already every 3 s, on every purchase and on tab hide. The lost café was most likely a second copy
+    of the game (an old tab, the installed app plus the browser) saving its older state over the newer one.
+    A page now remembers the exact save it last loaded or wrote; once the stored save is
+    anything else (another copy saved, an import from another device whatever its date, a wipe), it stops
+    saving and offers to reload.
+  - Events always pay: 40% of the full reward for taking part, up to +40% for the goals met, and the full
+    reward x the stars when every goal is met. Goals show as bonus targets (☆/⭐); rating only drops when a
+    guest left unserved.
+  - Salah and Messi: one goal is the bonus (was three). Messi's goal is open now; dribbling round every cone
+    first makes it a golazo that counts twice.
+  - New events with play unlike the others: Mohamed Ramadan throws money from a helicopter (stand where the
+    shadow grows to catch a bundle, paid at once); Mr. Bean hides in one of five boxes on the square (hot/cold
+    on the banner, found = a reward, then he hides again); Usain Bolt races the player round a lap of gates
+    (he runs 86% of the player's top speed and stops to pose halfway). Plus a Hamo Bika mahraganat night on
+    the dance pads. Spots are random open ground on the square (`sim/scenarios/plaza.ts`).
+- Locked previews (playtest: no way to see what the next stage needs, e.g. the corn field): a new area
+  (`*.unlock`) or a big step (wheat, tractor, combine, dairy, grill) that's only missing upgrades whose tiles
+  are up right now shows as a faded, locked tile at its spot: icon, name and "محتاج:" with what to buy
+  (`UpgradeSystem.teasers()`, drawn in render/tiles.ts). Not payable; it turns into the real tile once the
+  needs are bought. Usually one or two at a time.

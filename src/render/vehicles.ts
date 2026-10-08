@@ -7,6 +7,14 @@ import { CharacterView } from './character';
 
 /** Hired drivers wear the farm-staff outfit. */
 const DRIVER = { shirt: 0xf28c38, pants: 0x3b4a6b, skin: 0xd9a074, hair: 0x1d1d1d };
+const HAND = { shirt: 0x8fae5a, pants: 0x5a4632, skin: 0xb07a50, hair: 0x2a1a10 };
+
+/** Hand sickle (the player's, and the hired field hands'). */
+export const SICKLE_GEO = merge([
+  part(PRIM.box, 0x8a5a32, 0, -0.12, 0.08, 0.3, 0, 0, 0.06, 0.06, 0.32),
+  part(PRIM.box, 0xd9dde3, 0, -0.1, 0.32, 0, 0.5, 0, 0.04, 0.03, 0.3),
+  part(PRIM.box, 0xd9dde3, 0.12, -0.1, 0.42, 0, 1.3, 0, 0.04, 0.03, 0.22),
+]);
 
 const { box, cyl, cylLo } = PRIM;
 
@@ -109,6 +117,7 @@ export class VehicleView {
   private time = 0;
   private bob = 0;
   private hired: { veh: Vehicle; char: CharacterView }[] = [];
+  private hands: { char: CharacterView; sickle: THREE.Mesh; load: THREE.Mesh }[] = [];
 
   constructor(private scene: THREE.Scene, private fx: PhysicsFx) {
     this.v = { tractor: new Vehicle(scene, MODELS.tractor, 'tractor'), combine: new Vehicle(scene, MODELS.combine, 'combine') };
@@ -137,9 +146,29 @@ export class VehicleView {
     }
   }
 
+  /** Field hands: farmhands with a sickle (swinging while cutting) and a bundle on the back when loaded. */
+  private syncHands(sim: SimWorld, dt: number): void {
+    const hs = sim.field.hands;
+    while (this.hands.length < hs.length) {
+      const char = new CharacterView(HAND);
+      const sickle = char.attach(SICKLE_GEO, 'hand');
+      const load = char.attach(merge([part(PRIM.box, 0xe6c35a, 0, 0.95, -0.22, 0.2, 0, 0, 0.32, 0.36, 0.2)]));
+      this.scene.add(char.root);
+      this.hands.push({ char, sickle, load });
+    }
+    for (let i = 0; i < hs.length; i++) {
+      const d = hs[i], h = this.hands[i];
+      h.char.update(d.x, d.z, d.rot, d.speed, dt, false);
+      h.sickle.rotation.x = d.cutting > 0 ? Math.sin(this.time * 18 + i) * 0.9 : 0;
+      h.load.visible = d.hopper > 0;
+      h.load.scale.y = 0.5 + 0.5 * Math.min(1, d.hopper / ECONOMY.field.hand.hopper);
+    }
+  }
+
   sync(sim: SimWorld, dt: number, rand: () => number): void {
     this.time += dt;
     this.syncHired(sim, dt);
+    this.syncHands(sim, dt);
     const f = sim.field, kind = f.vehicle, p = sim.player;
     this.v.tractor.root.visible = kind === 'tractor';
     this.v.combine.root.visible = kind === 'combine';

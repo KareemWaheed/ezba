@@ -33,19 +33,24 @@ export const PATHS: Record<GameMode, PathDef> = {
   /**
    * Supermarket first: a small grocer's with its first shelf row. Everything is bought wholesale at the
    * desk; the farm opens backwards (chickens, then cows, the fields, the factory, the river), and every
-   * part of it makes that product free for the shelves (farm deliveries). No farm shop: the shop counter
-   * is the farm's storeroom, so shop lanes/cashiers, VIPs, rushes and shop events don't exist here.
+   * part of it makes that product free for the shelves (farm deliveries). The farm shop opens with the coop:
+   * its customers buy at the farm counters first, the store gets what's left. Shop rushes and events stay off.
    */
   market: {
     startLevels: { 'market.unlock': 1 },
     startMoney: 300,
-    hidden: ['market.unlock', 'cashier', 'shop.lanes', 'rush.reward', 'rush.warning'],
+    hidden: ['market.unlock', 'rush.reward', 'rush.warning'],
     costMult: {
       'market.ads': 0.006,
       'market.shelves': 0.012,
       'market.cashier': 0.005,
       'market.stocker': 0.015,
       'market.auto': 0.05,
+      'market.lanes': 0.006,
+      'market.selfcheck': 0.008,
+      'market.cleaner': 0.012,
+      'market.guard': 0.012,
+      'market.delivery': 0.01,
       'eggs.unlock': 0.3,
       'eggs.expand': 0.5,
     },

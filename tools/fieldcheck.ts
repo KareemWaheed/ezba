@@ -1,6 +1,6 @@
 /**
  * Headless field checks: hand-harvested corn handed in at the grain stall goes onto the corn pile and
- * the hired corn workers carry it to the shop counter.
+ * the hired corn workers carry it to the shop counter; hired field hands harvest on foot, slower than a driver.
  *
  *   npm run fieldcheck
  */
@@ -50,6 +50,44 @@ ok(!w.carry.has('corn') && corn.pile > 150, `the corn pile has no limit (${corn.
 const w2 = new SimWorld(1);
 restore(w2, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
 ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a save keeps the whole corn pile');
+
+// the corn field shows as a locked preview (what it needs) while the café is on offer, and goes once it's open
+{
+  const t = new SimWorld(4);
+  for (const [id, lv] of [['eggs.animals', 4], ['eggs.worker', 1], ['milk.unlock', 1], ['cashier', 1]] as const) { t.upgrades.levels[id] = lv; t.upgrades.bought += lv; }
+  t.upgrades.apply(); t.upgrades.refresh();
+  const corn = t.upgrades.teasers().find((x) => x.def.id === 'field.unlock');
+  ok(!!corn && corn.needs.length === 1 && corn.needs[0].id === 'cafe.unlock', `the corn field is previewed, needing the café (${corn?.needs.map((n) => n.id).join()})`);
+  t.upgrades.levels['cafe.unlock'] = 1; t.upgrades.apply(); t.upgrades.refresh();
+  ok(!t.upgrades.teasers().some((x) => x.def.id === 'field.unlock') && t.upgrades.tiles.some((x) => x.def.id === 'field.unlock'), 'with the café open the preview turns into the real tile');
+}
+
+// field hands: on foot with a sickle, slow but on their own (before any tractor)
+{
+  const h = new SimWorld(3);
+  h.upgrades.levels['field.unlock'] = 1;
+  h.upgrades.levels['field.hand'] = 2;
+  h.upgrades.apply();
+  ok(h.field.hands.length === 2 && h.field.drivers.length === 0, 'field hands come with the upgrade, no tractor needed');
+  h.player.x = 8; h.player.z = 8;
+  const crops0 = h.stats.crops, stalks0 = h.stats.stalks;
+  tick(h, 180);
+  const bundles = h.stats.crops - crops0, stalks = h.stats.stalks - stalks0;
+  // (two hands, 3 min: a few bundles a minute each; a tractor driver brings far more)
+  ok(bundles >= 15 && bundles <= 70, `two hands harvest and hand in on their own, slowly (${bundles} bundles, ${stalks} stalks in 3 min)`);
+  const d2 = new SimWorld(3);
+  d2.upgrades.levels['field.unlock'] = 1;
+  d2.upgrades.levels['field.tractor'] = 1;
+  d2.upgrades.levels['field.driver'] = 1;
+  d2.upgrades.apply();
+  d2.player.x = 8; d2.player.z = 8;
+  const dc0 = d2.stats.crops;
+  tick(d2, 180);
+  ok(d2.stats.crops - dc0 > bundles * 3, `one tractor driver out-harvests two hands several times over (${d2.stats.crops - dc0} vs ${bundles})`);
+  const h2 = new SimWorld(1);
+  restore(h2, migrate(JSON.parse(JSON.stringify(serialize(h, Date.now()))))!);
+  ok(h2.field.hands.length === 2, 'the hands come back after a reload');
+}
 
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }
 console.log('\nall field checks passed');

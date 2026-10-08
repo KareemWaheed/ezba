@@ -18,6 +18,9 @@ import { ChaseMechanic } from './scenarios/chase';
 import { CookoffMechanic } from './scenarios/cookoff';
 import { IftarMechanic } from './scenarios/iftar';
 import { KhamaseenMechanic } from './scenarios/khamaseen';
+import { MoneyRainMechanic } from './scenarios/moneyrain';
+import { HideSeekMechanic } from './scenarios/hideseek';
+import { RaceMechanic } from './scenarios/race';
 
 /** Mechanic per id; ids without their own module yet fall back to BASIC. */
 const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
@@ -35,6 +38,9 @@ const MECHANICS: Partial<Record<MechanicId, () => Mechanic>> = {
   cookoff: () => new CookoffMechanic(),
   iftar: () => new IftarMechanic(),
   khamaseen: () => new KhamaseenMechanic(),
+  moneyrain: () => new MoneyRainMechanic(),
+  hideseek: () => new HideSeekMechanic(),
+  race: () => new RaceMechanic(),
 };
 
 export interface GoalState { goal: ScenarioGoal; ok: boolean; progress: number }
@@ -66,6 +72,12 @@ export interface Guest {
 
 /** Reward multiplier per star grade. */
 export const STAR_MULT = [0, 1, 1.5, 2] as const;
+/**
+ * An event always pays: this share of the full reward just for being there, plus up to BONUS_PART more
+ * for the goals met (all of them: the full reward x the stars). Goals are a bonus, never all-or-nothing.
+ */
+export const BASE_PART = 0.4;
+export const BONUS_PART = 0.4;
 
 /** Guest timings (s). */
 const POSE_TIME = 5;
@@ -350,16 +362,17 @@ export class ScenarioSystem {
     const won = this.lastGoals.every((g) => g.ok);
     this.stars = this.grade(won);
     const r = w.service;
-    let reward = 0;
+    const full = d.rewardSeconds * w.perSec + this.sales * d.rewardShare;
+    const met = this.lastGoals.filter((g) => g.ok).length / Math.max(1, this.lastGoals.length);
+    const reward = Math.round(won ? full * STAR_MULT[this.stars] : full * (BASE_PART + BONUS_PART * met));
+    if (d.guest && this.guestServed) w.album.see(`g:${d.id}`);
+    w.cash.value += reward;
+    w.cash.bills += won ? 16 : 8;
     if (won) {
-      reward = Math.round((d.rewardSeconds * w.perSec + this.sales * d.rewardShare) * STAR_MULT[this.stars]);
-      if (d.guest) w.album.see(`g:${d.id}`);
-      w.cash.value += reward;
-      w.cash.bills += 16;
       r.rating = Math.min(5, r.rating + d.ratingWin);
       w.stats.scenariosWon++;
       if (d.boostAfter) { this.boostT = d.boostAfter.seconds; this.boostMult = d.boostAfter.mult; }
-    } else r.rating = Math.max(1, r.rating + d.ratingLose);
+    } else if (d.guest && !this.guestServed) r.rating = Math.max(1, r.rating + d.ratingLose);
     w.events.emit('scenarioEnd', '', 0, 0, reward, won ? 1 : 0, this.stars);
     this.debugWin = false;
     this.endMechanic();

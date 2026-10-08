@@ -22,6 +22,7 @@ import { ProcessionView } from './scenarios/procession';
 import { ChaseView } from './scenarios/chase';
 import { IftarView } from './scenarios/iftar';
 import { KhamaseenView } from './scenarios/khamaseen';
+import { HideSeekView, MoneyRainView, RaceView } from './scenarios/funEvents';
 import type { InspectorMechanic } from '../sim/scenarios/inspector';
 
 /** Each mechanic's own visuals (the shared ones — guest, stage, crowd, flags, weather — stay here). */
@@ -35,6 +36,9 @@ const MECHANIC_VIEWS: Partial<Record<MechanicId, MechanicViewFactory>> = {
   chase: (scene) => new ChaseView(scene),
   iftar: (scene) => new IftarView(scene),
   khamaseen: (scene, view) => new KhamaseenView(scene, view),
+  moneyrain: (scene) => new MoneyRainView(scene),
+  hideseek: (scene) => new HideSeekView(scene),
+  race: (scene) => new RaceView(scene),
 };
 
 const { box, cyl, sph } = PRIM;
@@ -439,7 +443,8 @@ export class ScenarioView {
     this.syncGuest(sim, dt);
     this.syncFans(dt);
     // the mechanic's own visuals come in once the event is live
-    if (!this.mview && sc.phase !== 'warn') this.mview = MECHANIC_VIEWS[d.mechanic ?? 'basic']?.(this.scene, this.view) ?? null;
+    // (the race course is up from the warning on, so the player can get to the start line)
+    if (!this.mview && (sc.phase !== 'warn' || d.mechanic === 'race')) this.mview = MECHANIC_VIEWS[d.mechanic ?? 'basic']?.(this.scene, this.view) ?? null;
     this.mview?.sync(sim, dt);
 
     // band bobs, inspector paces

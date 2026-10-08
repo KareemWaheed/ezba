@@ -31,6 +31,7 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
   for (const b of w.staff.machines) if (b.running && b.broken) { out.x = b.mx; out.z = b.mz; return true; }
   const g = w.golden.animal;
   if (g) { out.x = g.x; out.z = g.z; return true; }
+  if (storeAlert(w, out)) return true;
   // the cheapest upgrade the player can afford right now
   const up = w.upgrades;
   let best: UpgradeDef | null = null, bestR = Infinity;
@@ -59,13 +60,33 @@ export function marketAction(w: SimWorld, out: { x: number; z: number }): boolea
   if (!m.open) return false;
   if (w.mode === 'market' ? w.upgrades.bought >= 14 : w.stats.marketServed >= 25) return false;
   // (same order as the store board's hint: waiting shoppers lose patience, so the checkout comes first)
-  if (!m.cashier && m.shoppers.some((x) => x.state === 'queue')) { out.x = MARKET.checkout.serve.x; out.z = MARKET.checkout.serve.z; return true; }
+  const lane = m.unservedLane();
+  if (lane >= 0) { const s = m.laneServe(lane); out.x = s.x; out.z = s.z; return true; }
   const shelf = m.shelves.find((s) => s.open && c.has(s.def.item) && s.stock < ECONOMY.supermarket.shelfMax);
   if (shelf) { out.x = shelf.def.front.x; out.z = shelf.def.front.z; return true; }
   if (c.n === 0 && m.shelves.some((s) => m.low(s) && m.store[s.def.item] > 0)) { out.x = MARKET.store.x; out.z = MARKET.store.z; return true; }
   if (m.shelves.some((s) => m.needsBox(s.def.item) && m.canGetBox(s.def.item))) { out.x = MARKET.desk.x; out.z = MARKET.desk.z; return true; }
   if (m.cash.value > 0 && c.n === 0) { out.x = MARKET.cash.x; out.z = MARKET.cash.z; return true; }
   return false;
+}
+
+/**
+ * Supermarket things only the player can do, any time: catch a running shoplifter (no guard yet), and take
+ * a phone order's items in hand to the van (the store board says where the rest is).
+ */
+function storeAlert(w: SimWorld, out: { x: number; z: number }): boolean {
+  const m = w.market, c = w.carry;
+  if (!m.open) return false;
+  const t = m.thief;
+  if (t && w.upgrades.level('market.guard') === 0) { out.x = t.x; out.z = t.z; return true; }
+  const o = m.extras.order;
+  if (!o || w.upgrades.level('market.delivery') > 1) return false;
+  if (!o.lines.some((l) => l.left > 0 && c.has(l.item))) return false;
+  // (same order as the store board: shoppers waiting at an unserved checkout come before the van)
+  const lane = m.unservedLane();
+  const at = lane >= 0 ? m.laneServe(lane) : MARKET.van;
+  out.x = at.x; out.z = at.z;
+  return true;
 }
 
 /** Early-game hint: the next step of the carry-and-sell loop. */
@@ -237,14 +258,19 @@ export function unservedLane(w: SimWorld): number {
 }
 
 /** What the store needs from the player right now (the store board's hint), most urgent first. */
-export type MarketHint = 'checkout' | 'stock' | 'fetch' | 'order' | 'coming' | 'cash' | 'ok';
+export type MarketHint = 'thief' | 'checkout' | 'van' | 'phone' | 'stock' | 'fetch' | 'spill' | 'order' | 'coming' | 'cash' | 'ok';
 
 export function marketHint(w: SimWorld): MarketHint {
-  const m = w.market, c = w.carry, cfg = ECONOMY.supermarket;
-  if (!m.cashier && m.shoppers.some((x) => x.state === 'queue') && !m.playerAtCheckout()) return 'checkout';
+  const m = w.market, c = w.carry, cfg = ECONOMY.supermarket, x = m.extras;
+  if (m.thief && w.upgrades.level('market.guard') === 0) return 'thief';
+  if (m.unservedLane() >= 0) return 'checkout';
+  // a phone order: what's in hand goes to the van, the rest comes from the storeroom
+  if (x.order && x.order.lines.some((l) => l.left > 0 && c.has(l.item))) return 'van';
+  if (x.order && w.upgrades.level('market.delivery') < 2 && x.order.lines.some((l) => x.orderNeeds(l.item) > 0 && (m.store[l.item] ?? 0) > 0)) return 'phone';
   if (m.shelves.some((s) => s.open && c.has(s.def.item) && s.stock < cfg.shelfMax)) return 'stock';
   const low = m.shelves.filter((s) => m.low(s));
   if (low.some((s) => m.store[s.def.item] > 0)) return 'fetch';
+  if (x.spills.length && w.upgrades.level('market.cleaner') === 0) return 'spill';
   // (a box it can get now; one it can't pay for yet waits for the cash below)
   if (low.some((s) => m.needsBox(s.def.item) && m.canGetBox(s.def.item))) return 'order';
   // (a delivery for one of the low shelves themselves, not just any box on its way)

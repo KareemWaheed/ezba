@@ -24,6 +24,9 @@ export function upgradeCost(id: UpgradeId, level: number): number {
 }
 
 /** Upgrade levels, partial payments and the visible tiles the player pays into. */
+/** Besides the `*.unlock` tracks (new areas), these big steps get a locked preview tile too. */
+const TEASED = new Set<UpgradeId>(['field.wheat', 'field.tractor', 'field.combine', 'factory.dairy', 'river.grill']);
+
 export class UpgradeSystem {
   readonly levels = {} as Record<UpgradeId, number>;
   /** Money already paid toward the next level of each track. */
@@ -86,6 +89,25 @@ export class UpgradeSystem {
     return true;
   }
 
+  /**
+   * Big unlocks one step away (new areas and the big machines): one not yet on offer only because of upgrades the player can buy right
+   * now (each missing one has its tile up). Drawn as a faded, locked tile at its spot with what it needs, so
+   * the player sees what's next without it shouting. Skips spots a live tile already stands on.
+   */
+  teasers(): { def: UpgradeDef; needs: { id: UpgradeId; level: number }[] }[] {
+    const out: { def: UpgradeDef; needs: { id: UpgradeId; level: number }[] }[] = [];
+    for (const def of UPGRADES) {
+      if (!TEASED.has(def.id) && !def.id.endsWith('.unlock')) continue;
+      if (this.level(def.id) > 0 || this.hidden(def.id) || this.available(def)) continue;
+      const needs = this.requires(def).filter((r) => this.level(r.id) < r.level).map((r) => ({ id: r.id, level: r.level }));
+      if (def.requiresMaxed && !this.maxed(def.requiresMaxed)) needs.push({ id: def.requiresMaxed, level: this.maxOf(def.requiresMaxed) });
+      if (!needs.length || !needs.every((n) => this.tiles.some((t) => t.def.id === n.id))) continue;
+      if (this.tiles.some((t) => dist(t.def.pos.x, t.def.pos.z, def.pos.x, def.pos.z) < 1.6)) continue;
+      out.push({ def, needs });
+    }
+    return out;
+  }
+
   /** Rebuild the visible tile list; keeps armed state of tiles that stay. */
   refresh(): void {
     const p = this.w.player, arm = ECONOMY.tiles.armDistance;
@@ -138,10 +160,14 @@ export class UpgradeSystem {
     w.contracts.sync();
     w.factory.sync();
     w.bounds.x1 = w.factory.open || w.mode === 'market' ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
+    // the yard south of a built store is walkable (its upgrade tiles stand there)
+    w.bounds.z1 = w.market.open ? MARKET.yardZ1 : LAYOUT.bounds.z1;
     if (w.market.open) {
       // the store stands on reachable grass: walls, counter, racks and desk turn solid once it's built
       MARKET.walls.forEach((b, i) => w.addSolid(`marketWall${i}`, b));
       w.addSolid('marketCheckout', MARKET.checkout.box);
+      if (this.level('market.lanes') > 0) w.addSolid('marketCheckout2', MARKET.checkout2.box);
+      if (this.level('market.selfcheck') > 0) w.addSolid('marketKiosk', MARKET.kiosk.box);
       w.addSolid('marketRacks', MARKET.store.racks);
       w.addSolid('marketDesk', MARKET.desk.box);
     }

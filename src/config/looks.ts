@@ -73,6 +73,10 @@ export const GUEST_LOOKS = {
     shirt: 0xffffff, pants: 0x2e2e2e, skin: 0xd9a074, hair: 0x1d1d1d, beard: 0x1d1d1d, hat: { kind: 'chef', color: 0xffffff },
     entourage: { shirt: 0xffffff, pants: 0x444444, skin: 0xf1c7a0, hair: 0x3b2414, hat: { kind: 'chef', color: 0xffffff } },
   },
+  hamobika: {
+    shirt: 0xff7a00, pants: 0x111111, skin: 0xb07a50, hair: 0x111111, glasses: 0xffd400, holds: 'phone',
+    entourage: { shirt: 0x111111, pants: 0x111111, skin: 0xb07a50, hair: 0x111111 },
+  },
   influencer: {
     shirt: 0xff6fb5, pants: 0x2e2e2e, skin: 0xf1c7a0, hair: 0xe0b04a, hat: { kind: 'cap', color: 0x111111 }, holds: 'phone',
     entourage: { shirt: 0x444444, pants: 0x222222, skin: 0xd9a074, hair: 0x1d1d1d },
