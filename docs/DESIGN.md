@@ -265,7 +265,8 @@ This file records the decisions made on top of it.
   `field.expand` (250k, then 600k; after the wheat field and the tractor) opens new plots east of the wheat: a
   second corn plot (x 15.5-21.5), then a second wheat plot (22.5-28.5), shown locked until bought; the walkable
   area reaches them. Drivers and the combine work both new plots like the others; hands work the corn only.
-  All crops still sell at the one stall. At 150k right after the wheat it pushed automation under the "active >= 1.5x" pacing target (1.47x).
+  Everything is still handed in at the one grain stall: corn goes onto the corn pile there for the shop counter,
+  wheat to a truck that ordered it, the silo, or is sold. At 150k right after the wheat it pushed automation under the "active >= 1.5x" pacing target (1.47x).
 - Events felt like they'd stopped (playtest): the countdown to the next one restarted at 10-16 min of play on
   every load and was never saved, so short phone sessions rarely reached one. Now it's saved (`eventT`), the
   gap is 6-9 min, and back after 10+ min away the next event comes within 90 s. `npm run eventcheck` covers it.
