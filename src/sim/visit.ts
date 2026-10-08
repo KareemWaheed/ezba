@@ -62,9 +62,10 @@ export function stepVisit(v: Visit, dt: number, s: VisitStep): VisitEvent {
     }
     // paid in whole units as it goes (the rest when the lot is done or it leaves)
     flush(v, s, v.left > 0);
-    if (v.left <= 0) { ev = 'done'; v.t = Math.min(v.t, 1.5); }
+    // (the full lot always gets its short loaded pause, even if the stay ran out this tick)
+    if (v.left <= 0) { ev = 'done'; v.t = 1.5; }
   }
-  if (v.t <= 0) {
+  if (!ev && v.t <= 0) {
     flush(v, s, false);
     v.state = 'leave';
     return 'left';
