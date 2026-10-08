@@ -258,9 +258,9 @@ This file records the decisions made on top of it.
   0.8 s, 6 bundles on the back, faster on foot: two hands ~28 bundles a minute, under half a driver), and
   `field.handSkill` (8k x2.2, 4 levels, after the first hand) trains them: per level +50% cutting rate, +15%
   walking speed, +3 bundles carried. Fully trained, two hands bring ~72 a minute, a little more than one
-  tractor driver (which costs 190k with its tractor). `npm run fieldcheck` covers both.
-  `npm run fieldcheck` covers them. (Hands on wheat too pushed automation past the "active earns >= 1.5x"
-  target.)
+  tractor driver (which costs 190k with its tractor). A stalk every 0.6 s pushed automation under the
+  "active earns >= 1.5x" target (1.47x); 0.8 s keeps it (1.55x). Hands on wheat too pushed automation past it
+  as well. `npm run fieldcheck` covers them.
 - Playtest round (the café cashier felt out of reach; progress lost after a phone call; events felt
   all-or-nothing and the footballers too hard):
   - `cafe.waiter` 130k -> 55k (PRICE_VERSION 2: earlier buyers get the difference back). Full automation of
