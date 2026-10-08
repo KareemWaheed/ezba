@@ -16,7 +16,7 @@ export interface WorkerJob {
   /** Called when heading out to load; writes the loading spot. */
   loadAt(w: SimWorld, slot: number, out: { x: number; z: number }): void;
   /** Take one item at the loading spot, or null if there's nothing to take. */
-  take(w: SimWorld): ItemId | null;
+  take(w: SimWorld, slot: number): ItemId | null;
   unloadAt(w: SimWorld, slot: number, out: { x: number; z: number }): void;
   /** Hand one item over; false if the target can't take it right now. */
   give(w: SimWorld, item: ItemId): boolean;
@@ -121,7 +121,7 @@ export class Worker {
         // never load more than the target can take (no standing around with a full stack)
         const room = this.job.room ? this.job.room(w, this.slot) : Infinity;
         if (this.t <= 0 && !this.carry.full() && this.carry.n < room) {
-          const it = this.job.take(w);
+          const it = this.job.take(w, this.slot);
           if (it) { this.carry.push(it); this.t = interval; }
         }
         if (this.carry.full() || (this.carry.n > 0 && (this.carry.n >= room || this.wait > cfg.maxWait))) { this.state = 'toUnload'; this.stuck = 0; }

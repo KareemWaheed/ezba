@@ -118,12 +118,16 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   steer(1.5, -15, 0.5);
   ok(c.field.driving && c.field.vehicle === 'combine', 'test farm: driving the combine in the corn');
   c.field.hopper.corn = 30; c.field.hopperN = 30;
-  // the old way in: toward the stall's front drop (it gets stuck short of it)
+  // toward the front drop (it can't fit in front, between the stall and the coop): it empties at the stall's side
   steer(FIELDS.stall.drop.x, FIELDS.stall.drop.z, 6);
-  const front = c.field.hopperN;
-  steer(1.5, -15, 3);
+  ok(c.field.hopperN === 0, `driving at the front, the combine empties against the stall's side (${c.field.hopperN} left)`);
+  // from the field to the back
+  c.field.hopper.corn = 30; c.field.hopperN = 30;
+  c.player.x = 1.5; c.player.z = -15;
+  steer(1.5, -15, 0.5);
+  const before = c.field.hopperN;
   steer(FIELDS.stall.vehicleDrop.x, FIELDS.stall.vehicleDrop.z, 6);
-  ok(c.field.hopperN === 0, `the combine empties at the back of the stall (${30 - front} at the front attempt, ${c.field.hopperN} left)`);
+  ok(before >= 30 && c.field.hopperN === 0, `from the field it empties at the back of the stall (${before} -> ${c.field.hopperN})`);
 }
 
 // the corn cable line (corn.machine): pile by the grain stall -> shop counter, over the coop; jams are fixed
@@ -166,20 +170,24 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   d.upgrades.apply();
   const mills = COMPANIES.find((c) => c.id === 'mills')!;
   d.contracts.truck = { state: 'loading', t: 600, company: mills, kind: 'standing', lines: [{ product: 'wheat', want: 20, loaded: 0 }, { product: 'corn', want: 20, loaded: 0 }], price: { wheat: 10, corn: 10 }, drive: 1 };
-  d.factory.silo = 12;
+  d.factory.silo = 0;
   d.stations.find((s) => s.def.product === 'corn')!.pile = 60;
-  tick(d, 5, () => { d.player.x = 8; d.player.z = 8; d.input.x = d.input.z = 0; });
-  // wheat cut now goes to the stall's keep for the truck
-  const kept0 = d.field.dockWheat;
-  d.player.x = 10; d.player.z = -15;
-  tick(d, 8);
-  const cut = d.field.held;
-  d.player.x = FIELDS.stall.drop.x; d.player.z = FIELDS.stall.drop.z;
-  tick(d, 3);
-  ok(d.field.dockWheat > kept0 || cut === 0, `wheat sold at the stall is kept for the truck (${d.field.dockWheat} kept)`);
+  // wheat handed in at the stall is kept for the truck (not the silo, not sold)
+  for (let i = 0; i < 6; i++) d.carry.push('wheat');
+  tick(d, 3, () => { d.player.x = FIELDS.stall.drop.x; d.player.z = FIELDS.stall.drop.z; d.input.x = d.input.z = 0; });
+  ok(d.field.dockWheat === 6 && d.factory.silo === 0, `wheat handed in at the stall is kept for the truck (${d.field.dockWheat} kept, silo ${d.factory.silo})`);
   tick(d, 150, () => { d.player.x = 8; d.player.z = 8; d.input.x = d.input.z = 0; });
   const l = d.contracts.truck.lines;
-  ok(l[0].loaded >= 12 && l[1].loaded >= 15, `the dock workers load the wheat and the corn (${l[0].loaded}/20 wheat, ${l[1].loaded}/20 corn)`);
+  ok(l[0].loaded === 6 && d.field.dockWheat === 0 && l[1].loaded >= 15, `the dock workers load the kept wheat and the corn (${l[0].loaded}/20 wheat, ${l[1].loaded}/20 corn)`);
+  // two workers on two different orders keep their own sources (cake from the bakery tray, corn from the pile)
+  const tseppas = COMPANIES.find((c) => c.id === 'tseppas')!;
+  d.contracts.truck = { state: 'loading', t: 600, company: tseppas, kind: 'standing', lines: [{ product: 'cake', want: 8, loaded: 0 }, { product: 'corn', want: 8, loaded: 0 }], price: { cake: 10, corn: 10 }, drive: 1 };
+  const bakery = d.factory.machines.find((m) => m.def.id === 'bakery')!;
+  bakery.conv.output.cake = 8; bakery.conv.input.egg = 0;
+  d.stations.find((s) => s.def.product === 'corn')!.pile = 30;
+  tick(d, 150, () => { d.player.x = 8; d.player.z = 8; d.input.x = d.input.z = 0; });
+  const l2 = d.contracts.truck.lines;
+  ok(l2[0].loaded === 8 && l2[1].loaded === 8 && bakery.conv.output.cake === 0, `two workers fill a cake + corn order from two places (${l2[0].loaded}/8 cake, ${l2[1].loaded}/8 corn)`);
 }
 
 // more land (field.expand): a second corn plot, then a second wheat plot, east of the wheat

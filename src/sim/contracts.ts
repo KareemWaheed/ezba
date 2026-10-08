@@ -37,7 +37,8 @@ interface DockSource { product: ItemId; x: number; z: number; spare: () => numbe
 class DockJob implements WorkerJob {
   readonly key = 'dock';
   readonly repick = true;
-  private src: DockSource | null = null;
+  /** Each worker's chosen source (by slot): two workers can be fetching different things. */
+  private src: (DockSource | null)[] = [];
   constructor(private sys: ContractSystem) {}
 
   private sources(w: SimWorld): DockSource[] {
@@ -71,14 +72,14 @@ class DockJob implements WorkerJob {
   }
 
   loadAt(w: SimWorld, slot: number, out: { x: number; z: number }): void {
-    this.src = this.pick(w);
-    const s = this.src ?? { x: LAYOUT.dock.load.x, z: LAYOUT.dock.load.z - 1 };
+    const src = this.src[slot] = this.pick(w);
+    const s = src ?? { x: LAYOUT.dock.load.x, z: LAYOUT.dock.load.z - 1 };
     out.x = s.x + (slot - 0.5) * 0.5;
     out.z = s.z;
   }
-  take(_w: SimWorld): ItemId | null {
+  take(_w: SimWorld, slot: number): ItemId | null {
     // the source may be stale (chosen before the truck came, or emptied since): only take what's still ordered
-    const s = this.src;
+    const s = this.src[slot];
     if (!s || this.sys.stillNeeds(s.product) <= 0 || s.spare() <= 0) return null;
     s.take();
     return s.product;
@@ -89,8 +90,8 @@ class DockJob implements WorkerJob {
   }
   give(_w: SimWorld, item: ItemId): boolean { return this.sys.load(item as ItemId); }
   /** Only what the waiting truck still needs (nothing while no truck is loading). */
-  room(_w: SimWorld): number {
-    const s = this.src;
+  room(_w: SimWorld, slot: number): number {
+    const s = this.src[slot];
     return s ? Math.max(0, this.sys.stillNeeds(s.product)) : 0;
   }
   putBack(w: SimWorld, item: ItemId): void {

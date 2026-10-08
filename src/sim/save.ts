@@ -113,7 +113,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
       cash: { value: w.cafe.uncollected - w.cafe.tables.reduce((a, t) => a + t.cash, 0), bills: w.cafe.cash.bills },
     },
     // (wheat kept for a truck counts as sold: the truck isn't saved)
-    field: { cash: w.field.cash.value + Math.round(w.field.dockWheat * priceOf('wheat') * w.priceMult), bills: w.field.cash.bills, hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
+    field: { cash: w.field.cash.value + w.field.dockWheat * Math.round(priceOf('wheat') * w.priceMult), bills: Math.min(40, w.field.cash.bills + w.field.dockWheat), hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
     surplus: { crate: w.surplus.crate, hatching: w.surplus.hatching, hatchT: w.surplus.hatchT, hatched: w.surplus.hatched, golden: w.surplus.golden, records: { ...w.surplus.records } },
     river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },

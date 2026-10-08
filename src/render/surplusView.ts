@@ -209,7 +209,7 @@ export class SurplusView {
     const need = s.need(p), have = s.ready ? need : Math.max(0, Math.floor(c0?.spare ?? 0));
     const frac = Math.min(1, have / need), hold = Math.floor((s.hold / ECONOMY.surplus.records.hold) * 10);
     const r = ECONOMY.surplus.records[p];
-    const key = `${p}|${have}|${need}|${!!s.ready}|${hold}`;
+    const key = `${p}|${have}|${need}|${!!s.ready}|${s.hold > 0}|${hold}`;
     if (key === this.standKey) return;
     this.standKey = key;
     this.standSign.draw((c, w, h) => {

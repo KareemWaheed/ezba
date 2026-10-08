@@ -187,7 +187,7 @@ export class FactorySystem {
     // the silo's auger tops the bakery up with wheat
     const bakery = this.machines[0].conv;
     // (not what a truck at the dock still needs: the dock workers take that)
-    const keep = Math.max(0, w.contracts.stillNeeds('wheat'));
+    const keep = Math.max(0, w.contracts.stillNeeds('wheat') - w.field.dockWheat);
     while (this.open && this.silo > keep && bakery.wants('wheat')) { bakery.accept('wheat'); this.silo--; }
     if (!w.scenario.powerCut) for (const m of this.machines) if (m.open) m.conv.update(dt, w);
   }

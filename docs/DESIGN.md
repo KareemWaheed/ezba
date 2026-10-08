@@ -264,8 +264,8 @@ This file records the decisions made on top of it.
 - More land (playtest: "the fields need a size upgrade too"): the river bank stops the fields growing north, so
   `field.expand` (250k, then 600k; after the wheat field and the tractor) opens new plots east of the wheat: a
   second corn plot (x 15.5-21.5), then a second wheat plot (22.5-28.5), shown locked until bought; the walkable
-  area reaches them. Drivers, hands and the combine work them like the others (they still sell at the one
-  stall). At 150k right after the wheat it pushed automation under the "active >= 1.5x" pacing target (1.47x).
+  area reaches them. Drivers and the combine work both new plots like the others; hands work the corn only.
+  All crops still sell at the one stall. At 150k right after the wheat it pushed automation under the "active >= 1.5x" pacing target (1.47x).
 - Events felt like they'd stopped (playtest): the countdown to the next one restarted at 10-16 min of play on
   every load and was never saved, so short phone sessions rarely reached one. Now it's saved (`eventT`), the
   gap is 6-9 min, and back after 10+ min away the next event comes within 90 s. `npm run eventcheck` covers it.
@@ -283,8 +283,10 @@ This file records the decisions made on top of it.
   and while the bakery's wheat plus the silo is under one input-load (30) the tractor drivers go to the wheat
   first. One driver now keeps a full-speed bakery stocked and the silo starts filling.
 - Dock workers only fetched from the shop counters (playtest: a mills truck sat at 0/28 wheat, corn slow):
-  they now fetch whatever the waiting truck ordered, nearest kind first: counter surplus, then the piles (the
-  corn's by the grain stall), factory trays (cake, cheese, grilled fish), wheat, the river's fish pile. Wheat
+  they now fetch whatever the waiting truck ordered: the product it still needs most, and for that product the
+  first source with stock, in this order: counter surplus, the pile (the corn's by the grain stall), factory
+  trays (cake, cheese, grilled fish), wheat (kept at the stall, then the silo), the river's fish pile. Each
+  worker keeps its own source. Wheat
   handed in at the stall while a truck still needs some is kept there for it (`field.dockWheat`, sold or put
   in the silo once the truck has enough or leaves); the silo's auger leaves the truck's share, and the tractor
   drivers go to the wheat while it's short.

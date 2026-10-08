@@ -333,7 +333,7 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
     case 'record': {
       const r = ECONOMY.surplus.records[e.product as 'egg' | 'milk' | 'corn'];
       if (!r) break;
-      if (e.n === 0) toast.show(`${r.icon} لسه بدري! محتاج ${ltr(e.id.toLocaleString('en-US'))} ${ITEM_ICON[e.product as ItemId]} زيادة (عندك ${ltr(Math.max(0, e.value).toLocaleString('en-US'))})`);
+      if (e.n === 0) toast.show(`${r.icon} لسه بدري! ناقصك ${ltr(Math.max(0, e.id - e.value).toLocaleString('en-US'))} ${ITEM_ICON[e.product as ItemId]} زيادة (عندك ${ltr(Math.max(0, e.value).toLocaleString('en-US'))} من ${ltr(e.id.toLocaleString('en-US'))})`);
       else if (e.n === 1) { sfx.sparkle(); toast.show(`🏆 عندك ${ITEM_ICON[e.product as ItemId]} كفاية لـ"${r.name}"! اقف عند منصة الأرقام القياسية`); }
       else { sfx.fanfare(); toast.show(`${r.icon} رقم قياسي! ${r.name} ${ltr(`+${fmtMoney(e.value)}`)} 💰🏆`); }
       break;
