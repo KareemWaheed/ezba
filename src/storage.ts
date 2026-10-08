@@ -31,13 +31,14 @@ export function loadSave(): SaveData | null {
   let text: string | null = null;
   try {
     text = localStorage.getItem(KEY);
+    // (this slot as stored: this page's writes must find it unchanged, see checkStale)
+    lastText = text;
     // supermarket switched off: a supermarket-first game (its own slot) loads as the farm, store refunded on load
     // (the next autosave moves it to the farm slot)
     if (!text && !FEATURES.supermarket) text = localStorage.getItem(keyOf('market'));
     raw = text ? JSON.parse(text) : null;
   } catch { return null; }
   if (!raw) return null;
-  lastT = Number((raw as { t?: number }).t) || 0;
   const v = (raw as { v?: number }).v ?? 0;
   if (v < SAVE_VERSION && text) {
     try { localStorage.setItem(`${KEY}-backup-v${v}`, text); } catch { /* storage full: still try to load */ }
@@ -50,10 +51,11 @@ let blocked = false;
 /**
  * Two copies of the game on one phone (an old tab and the installed app, two tabs...) would each autosave their
  * own state over the other's, and coming back to the older copy wiped what was bought in the newer one. So a
- * page remembers the save it last loaded or wrote (its `t`); once another copy has written a newer save this
- * page stops saving and asks to reload (`onStale`).
+ * page remembers the exact save it last loaded or wrote; once the stored save is anything else (another copy
+ * saved, an import from another device whatever its date, a wipe) this page stops saving and asks to reload
+ * (`onStale`). A copy only ever writes over its own last save, so two copies can't keep overwriting each other.
  */
-let lastT = 0;
+let lastText: string | null = null;
 let stale = false;
 let staleCb: (() => void) | null = null;
 
@@ -63,14 +65,10 @@ function goStale(): void {
   staleCb?.();
 }
 
-/** Has another copy of the game saved since this page last loaded or saved? (Also flags this page stale.) */
+/** Has the save changed since this page last loaded or wrote it? (Also flags this page stale.) */
 export function checkStale(): boolean {
   if (stale || blocked) return stale;
-  try {
-    const text = localStorage.getItem(KEY);
-    const t = text ? Number((JSON.parse(text) as { t?: number }).t) || 0 : 0;
-    if (t > lastT) goStale();
-  } catch { /* storage blocked: nothing to compare */ }
+  try { if (localStorage.getItem(KEY) !== lastText) goStale(); } catch { /* storage blocked: nothing to compare */ }
   return stale;
 }
 
@@ -80,20 +78,15 @@ export function onStale(cb: () => void): void {
   if (stale) cb();
 }
 
-// another copy saved something newer (or wiped the save: this copy's next autosave would bring it back)
+// another copy wrote or wiped the save (this copy's next autosave would undo it)
 try {
-  addEventListener('storage', (e) => {
-    if (e.key !== KEY || blocked) return;
-    if (e.newValue === null) { goStale(); return; }
-    let t = 0;
-    try { t = Number((JSON.parse(e.newValue) as { t?: number }).t) || 0; } catch { /* unreadable: leave it to the next write's check */ }
-    if (t > lastT) goStale();
-  });
+  addEventListener('storage', (e) => { if (e.key === KEY && !blocked && e.newValue !== lastText) goStale(); });
 } catch { /* no window (tools) */ }
 
 export function writeSave(s: SaveData): void {
   if (blocked || checkStale()) return;
-  try { localStorage.setItem(KEY, JSON.stringify(s)); lastT = s.t; } catch { /* quota / private mode */ }
+  const text = JSON.stringify(s);
+  try { localStorage.setItem(KEY, text); lastText = text; } catch { /* quota / private mode */ }
 }
 
 /** Replace the save for good (selling the farm): later writes from this page are blocked until reload. */

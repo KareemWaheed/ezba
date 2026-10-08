@@ -262,8 +262,9 @@ This file records the decisions made on top of it.
     stages 1-3 now lands on day 3 for an efficient player (pacing target moved from day 4, the user's call).
   - Saves: already every 3 s, on every purchase and on tab hide. The lost café was most likely a second copy
     of the game (an old tab, the installed app plus the browser) saving its older state over the newer one.
-    A page now remembers the save it last loaded or wrote; once another copy saves something newer (storage
-    event, or a newer `t` found on the next write / on coming back), it stops saving and offers to reload.
+    A page now remembers the exact save it last loaded or wrote; once the stored save is
+    anything else (another copy saved, an import from another device whatever its date, a wipe), it stops
+    saving and offers to reload.
   - Events always pay: 40% of the full reward for taking part, up to +40% for the goals met, and the full
     reward x the stars when every goal is met. Goals show as bonus targets (☆/⭐); rating only drops when a
     guest left unserved.
