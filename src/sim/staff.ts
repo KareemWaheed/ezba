@@ -1,6 +1,6 @@
 import { ECONOMY, type ItemId } from '../config/economy';
 import { LAYOUT } from '../config/layout';
-import { beltEnds } from '../config/stations';
+import { beltEnds, type StationDef } from '../config/stations';
 import { Carrier } from './carrier';
 import { dist, moveToward, turnToward } from './math';
 import type { Station } from './station';
@@ -167,10 +167,21 @@ export interface BeltRoute {
   deliver(item: ItemId): void;
   readonly ax: number; readonly az: number;
   readonly bx: number; readonly bz: number;
+  /** Travel time (default ECONOMY.machines.belt.travel), where jams are fixed (default the middle), cable line. */
+  readonly travel?: number;
+  readonly fix?: { x: number; z: number };
+  readonly sky?: StationDef['skyBelt'];
 }
 
 /** Station belt route: pile -> counter slot, along the outer side. */
 export function stationRoute(st: Station): BeltRoute {
+  const take = () => (st.pile > 0 ? (st.pile--, st.def.product) : null), deliver = () => { st.counter++; };
+  const sky = st.def.skyBelt;
+  if (sky) {
+    // a long line: about 5 m/s along the cable, plus the lift at each end
+    const L = Math.hypot(sky.tower.x - sky.a.x, sky.tower.z - sky.a.z);
+    return { ax: sky.a.x, az: sky.a.z, bx: st.def.counter.x, bz: st.def.counter.z, travel: 1.5 + L / 5, fix: sky.fix, sky, take, deliver };
+  }
   const e = beltEnds(st.def, LAYOUT.counter.z0);
   return {
     ax: e.ax, az: e.az, bx: e.bx, bz: e.bz,
@@ -191,8 +202,8 @@ export class Belt implements Breakable {
   readonly mz: number;
 
   constructor(readonly route: BeltRoute, readonly id: number, private baseInterval: number = ECONOMY.machines.belt.interval) {
-    this.mx = (route.ax + route.bx) / 2;
-    this.mz = (route.az + route.bz) / 2;
+    this.mx = route.fix ? route.fix.x : (route.ax + route.bx) / 2;
+    this.mz = route.fix ? route.fix.z : (route.az + route.bz) / 2;
   }
 
   get running(): boolean { return this.level > 0; }
@@ -203,7 +214,7 @@ export class Belt implements Breakable {
 
   update(dt: number): void {
     if (this.level <= 0 || this.broken) return;
-    const travel = ECONOMY.machines.belt.travel;
+    const travel = this.route.travel ?? ECONOMY.machines.belt.travel;
     this.timer -= dt;
     if (this.timer <= 0) {
       const item = this.route.take();

@@ -277,6 +277,9 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       save();
       break;
     }
+    case 'hopperFull':
+      toast.show('🌾 الكومباين مليان! سوقه لورا كشك الغلة (من ناحية الغيط) وهيفضّي لوحده');
+      break;
     case 'goldenStalk': {
       sfx.fanfare();
       const s = toScreen(e.x, 2, e.z);
@@ -460,7 +463,7 @@ function frame(now: number): void {
     // inside the supermarket its board takes the goal card's place
     goalCard.update(marketBoard.update(sim) ? null : nextGoal(sim), sim.money);
   }
-  if (sim.carry.full()) {
+  if (sim.carry.full() || (sim.field.driving && sim.field.vehicle === 'combine' && sim.field.full())) {
     const s = toScreen(p.x, 0.78 + playerStack.height + 0.5, p.z);
     hud.setFull(s.x, s.y, true);
   } else hud.setFull(0, 0, false);

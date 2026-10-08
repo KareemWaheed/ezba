@@ -353,7 +353,10 @@ export class FieldSystem {
           }
           if (++p.partial >= cfg.stalksPerBundle) {
             p.partial = 0;
-            if (combine) { this.hopper[p.crop]++; this.hopperN++; }
+            if (combine) {
+              this.hopper[p.crop]++; this.hopperN++;
+              if (this.hopperN === cfg.combine.hopper) w.events.emit('hopperFull', p.crop, pl.x, pl.z, 0);
+            }
             else {
               c.push(p.crop);
               w.events.emit('pick', p.crop, x, z, 0, c.n, -1);
@@ -365,7 +368,10 @@ export class FieldSystem {
     // sell bundles at the stall, one at a time
     const st = FIELDS.stall;
     this.sellT -= dt;
-    if (this.sellT <= 0 && dist(pl.x, pl.z, st.drop.x, st.drop.z) < (this.driving ? 1.9 : 1.25)) {
+    const atStall = this.driving
+      ? Math.hypot(Math.max(st.box.x0 - pl.x, 0, pl.x - st.box.x1), Math.max(st.box.z0 - pl.z, 0, pl.z - st.box.z1)) < pl.radius + 0.6
+      : dist(pl.x, pl.z, st.drop.x, st.drop.z) < 1.25;
+    if (this.sellT <= 0 && atStall) {
       const cornSt = w.stations.find((s) => s.def.product === 'corn');
       const cornRoom = !!cornSt && cornSt.open && !cornSt.pileFull;
       for (const p2 of this.plots) {

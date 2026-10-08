@@ -32,6 +32,7 @@ export type SimEventType =
   | 'truck'       // a company truck is on its way (n = 1 for a rush order)
   | 'truckDone'   // a truck left (value = payment, n = 1 if the company was happy)
   | 'cut'         // a stalk was cut (product = crop, id = plot)
+  | 'hopperFull'  // the combine's hopper just filled up (drive it to the stall)
   | 'goldenStalk' // a golden stalk was cut (value = reward)
   | 'cropSold'    // a bundle was sold at the grain stall (value)
   | 'trash'       // the player threw away the top carried item (n = stack size after)

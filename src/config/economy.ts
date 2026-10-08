@@ -485,6 +485,8 @@ export const ECONOMY = {
     'milk.animals': { base: 350, growth: 1.6, max: 6, step: 1 },
     /** Milk workers: +1 worker per level. */
     'milk.worker': { base: 2500, growth: 3, max: 2, step: 1 },
+    /** Corn cable line (pile by the grain stall -> shop counter, over the coop): level 1 builds it, later levels speed it up. */
+    'corn.machine': { base: 25000, growth: 2.5, max: 4, step: 1 },
     /** Milk belt: level 1 builds it, later levels speed it up. */
     'milk.machine': { base: 6000, growth: 2.5, max: 4, step: 1 },
     /** Maintenance: breakdowns.mean x (1 + step x level). Never reaches zero breakdowns. */

@@ -102,6 +102,46 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   ok(t.field.handStats().hopper > ECONOMY.field.hand.hopper, `...and carry more (${t.field.handStats().hopper} bundles)`);
 }
 
+// the combine unloads at the stall: it can't fit at the front (between the stall and the coop fence), so it
+// drives (for real, with collisions) to the back from the field and empties there
+{
+  const c = new SimWorld(3);
+  c.upgrades.levels['field.unlock'] = 1; c.upgrades.levels['field.wheat'] = 1;
+  c.upgrades.levels['field.tractor'] = 1; c.upgrades.levels['field.combine'] = 1;
+  c.upgrades.apply();
+  const steer = (tx: number, tz: number, s: number) => tick(c, s, () => {
+    const dx = tx - c.player.x, dz = tz - c.player.z, L = Math.hypot(dx, dz);
+    c.input.x = L > 0.2 ? dx / L : 0; c.input.z = L > 0.2 ? dz / L : 0;
+  });
+  c.player.x = 1.5; c.player.z = -15;
+  steer(1.5, -15, 0.5);
+  ok(c.field.driving && c.field.vehicle === 'combine', 'test farm: driving the combine in the corn');
+  c.field.hopper.corn = 30; c.field.hopperN = 30;
+  // the old way in: toward the stall's front drop (it gets stuck short of it)
+  steer(FIELDS.stall.drop.x, FIELDS.stall.drop.z, 6);
+  const front = c.field.hopperN;
+  steer(1.5, -15, 3);
+  steer(FIELDS.stall.vehicleDrop.x, FIELDS.stall.vehicleDrop.z, 6);
+  ok(c.field.hopperN === 0, `the combine empties at the back of the stall (${30 - front} at the front attempt, ${c.field.hopperN} left)`);
+}
+
+// the corn cable line (corn.machine): pile by the grain stall -> shop counter, over the coop; jams are fixed
+// at the counter-end tower (the middle of the line is over the coop, out of reach)
+{
+  const k = new SimWorld(3);
+  k.upgrades.levels['field.unlock'] = 1; k.upgrades.levels['corn.machine'] = 1;
+  k.upgrades.apply();
+  const st = k.stations.find((s) => s.def.product === 'corn')!, belt = k.staff.belts[st.index];
+  st.pile = 40; st.counter = 0;
+  tick(k, 12, () => { k.player.x = 8; k.player.z = 8; k.input.x = k.input.z = 0; });
+  ok(40 - st.pile >= 20 && st.counter + belt.inTransit > 0, `the cable line carries corn to the shop counter by itself (${40 - st.pile} sent in 12 s)`);
+  const fix = st.def.skyBelt!.fix;
+  ok(belt.mx === fix.x && belt.mz === fix.z, 'its jams are fixed at the counter-end tower');
+  belt.broken = true;
+  tick(k, 6, () => { k.player.x = fix.x; k.player.z = fix.z; k.input.x = k.input.z = 0; });
+  ok(!belt.broken && Math.hypot(k.player.x - fix.x, k.player.z - fix.z) < 0.5, 'the player reaches the fix spot and fixes it');
+}
+
 // more land (field.expand): a second corn plot, then a second wheat plot, east of the wheat
 {
   const x = new SimWorld(3);

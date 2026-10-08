@@ -158,6 +158,10 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 13.0, z: -11.1 }, requires: [{ id: 'field.tractor', level: 1 }],
   },
   {
+    id: 'corn.machine', icon: '🚡', label: 'تلفريك الدرة', msg: 'تلفريك الدرة شغال! بينقل الدرة فوق العشة للكاونتر 🚡',
+    pos: { x: -4.4, z: -13.3 }, requires: [{ id: 'field.unlock', level: 1 }],
+  },
+  {
     id: 'corn.worker', icon: '🌽', label: 'وظّف عامل درة', msg: 'عامل الدرة بيودّي الدرة للبيع 🌽',
     pos: { x: -6.6, z: -13.8 }, requires: [{ id: 'field.unlock', level: 1 }], milestone: true,
   },

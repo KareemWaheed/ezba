@@ -269,6 +269,15 @@ This file records the decisions made on top of it.
 - Events felt like they'd stopped (playtest): the countdown to the next one restarted at 10-16 min of play on
   every load and was never saved, so short phone sessions rarely reached one. Now it's saved (`eventT`), the
   gap is 6-9 min, and back after 10+ min away the next event comes within 90 s. `npm run eventcheck` covers it.
+- The combine couldn't unload (playtest): the gap between the grain stall and the coop fence (1.6 m) is
+  narrower than a vehicle (the tractor needs 1.8, the combine 2.4), so it never got within reach of the front
+  drop. A driven vehicle now unloads from any side of the stall (within its radius + 0.6 of the stall box); the
+  guide arrow and a toast send a full combine to the back (`FIELDS.stall.vehicleDrop`, field side).
+- Corn cable line (playtest: corn piles up at the stall, nothing takes it to the counter but the corn
+  workers): `corn.machine` (25k x2.5, 4 levels) is the corn's belt, but in the air (`skyBelt`): a tower by the
+  pile, cables over the coop to a tower behind the counter's west end, bundles ride up, across and down onto
+  the counter (~4.6 s ride, same rate as a belt). Jams are fixed at the counter-end tower (the line's middle is
+  over the coop). `npm run fieldcheck` covers both.
 - Playtest round (the café cashier felt out of reach; progress lost after a phone call; events felt
   all-or-nothing and the footballers too hard):
   - `cafe.waiter` 130k -> 55k (PRICE_VERSION 2: earlier buyers get the difference back). Full automation of

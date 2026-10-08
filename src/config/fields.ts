@@ -39,6 +39,11 @@ export const FIELDS = {
   stall: {
     box: { x0: -2.8, x1: -0.8, z0: -12.3, z1: -11.5 } as Box,
     drop: { x: -1.8, z: -10.75 },
+    /**
+     * A vehicle can't fit between the stall and the coop fence (the gap is narrower than it): it unloads
+     * from any side of the stall instead; the guide points to its back, on the field side.
+     */
+    vehicleDrop: { x: -1.8, z: -13.4 },
     cash: { x: -6.3, z: -11.0 },
   },
   /** Where the owned vehicle waits while the player is on foot. */
