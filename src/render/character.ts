@@ -92,7 +92,8 @@ export class CharacterView {
    */
   update(x: number, z: number, rot: number, speed: number, dt: number, carrying: boolean, sitting = false): void {
     this.root.position.set(x, 0, z);
-    this.root.rotation.y = rot;
+    // (all three: a vehicle seat leaves its pitch and roll on the root, which would tilt the walk after getting off)
+    this.root.rotation.set(0, rot, 0);
     this.spd += (speed - this.spd) * Math.min(1, dt * 20);
     const prev = this.phase;
     this.phase += this.spd * dt * STRIDE;
