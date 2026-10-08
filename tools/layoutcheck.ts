@@ -108,7 +108,7 @@ for (let i = 0; i < UPGRADES.length; i++) {
 
 // store work spots must stand on open floor (not inside a shelf, wall or counter)
 for (const z of zones) {
-  if (z.owner !== 'market.unlock') continue;
+  if (!z.owner?.startsWith('market.')) continue;
   for (const b of MARKET_SOLIDS) if (z.x > b.x0 - 0.3 && z.x < b.x1 + 0.3 && z.z > b.z0 - 0.3 && z.z < b.z1 + 0.3) problems.push(`work spot in a store solid: ${z.name}`);
 }
 

@@ -60,9 +60,10 @@ export interface Delivery { item: ItemId; n: number; t: number; /** From the pla
 
 /**
  * Take one farm-made item from the farm's surplus for a farm delivery: the shop counter beyond its reserve
- * (eggs, milk, corn), the factory trays (cheese, cake) or the fish pile. In a supermarket-first game there's
- * no farm shop, so an animal pile that has stayed full a while goes too (nobody is carrying it, and the
- * animals stop while it's full); one being collected is left for the player. False when there's none spare.
+ * (eggs, milk, corn), the factory trays (cheese, cake) or the fish pile. In a supermarket-first game an
+ * animal pile that has stayed full a while goes too (nobody is carrying it, and the animals stop while it's
+ * full; the farm shop's customers only buy off the counter, which nobody is filling from it); one being
+ * collected is left for the player. False when there's none spare.
  */
 function farmTake(w: SimWorld, item: ItemId): boolean {
   const st = w.stations.find((s) => s.def.product === item);
@@ -106,6 +107,11 @@ function segHits(ax: number, az: number, bx: number, bz: number, b: { x0: number
   }
   return true;
 }
+
+type CounterBox = { x0: number; x1: number; z0: number; z1: number };
+
+/** North edge of the checkout counters' line (counters and kiosk share it). */
+const COUNTERS_Z0 = Math.min(MARKET.checkout.box.z0, MARKET.checkout2.box.z0, MARKET.kiosk.box.z0);
 
 /** Whether walking straight from (x, z) to (tx, tz) would pass through a shelf unit (with a little clearance). */
 function crossesShelf(x: number, z: number, tx: number, tz: number): boolean {
@@ -298,9 +304,12 @@ export class MarketSystem {
 
   /** Bring up to a box of a farm product from the farm's surplus (free; arrives like an order). */
   orderFromFarm(item: ItemId): boolean {
-    if (!this.open || !this.canOrder(item)) return false;
+    const s = this.shelfFor(item), cfg = ECONOMY.supermarket;
+    // (the farm's surplus fills whatever room is left, not only a whole box: it's free, so it never waits)
+    const room = Math.min(cfg.box, cfg.storeMax - this.stocked(item));
+    if (!this.open || !s || !s.open || room <= 0) return false;
     let n = 0;
-    while (n < ECONOMY.supermarket.box && farmTake(this.w, item)) n++;
+    while (n < room && farmTake(this.w, item)) n++;
     if (n <= 0) return false;
     this.incoming.push({ item, n, t: ECONOMY.supermarket.deliveryTime, farm: true });
     return true;
@@ -485,6 +494,14 @@ export class MarketSystem {
     return !!s && !this.w.away && this.laneOpen(i) && dist(p.x, p.z, s.x, s.z) < LANES[i].serveR;
   }
 
+  /** The checkout counters standing right now (the second one and the kiosk once bought): shoppers walk round them. */
+  counters(): CounterBox[] {
+    const out: CounterBox[] = [MARKET.checkout.box];
+    if (this.laneOpen(1)) out.push(MARKET.checkout2.box);
+    if (this.laneOpen(2)) out.push(MARKET.kiosk.box);
+    return out;
+  }
+
   /** The first counter always; the second with market.lanes; the kiosk with market.selfcheck. */
   laneOpen(i: number): boolean {
     const up = this.w.upgrades;
@@ -602,9 +619,12 @@ export class MarketSystem {
           break;
         }
         case 'toQueue': {
-          // round the counter's east end first, then join the line
+          // round the counter's east end first, then join the line; when a counter (or the kiosk) is in the
+          // way, line up with this lane's gap in front of the counters, then walk through it
           const via = LANES[c.lane ?? 0].via;
-          const r = aisleRoute(c.x, c.z, via.x, via.z, this.way);
+          let tx = via.x, tz = via.z;
+          if (c.z < COUNTERS_Z0 && this.counters().some((b) => segHits(c.x, c.z, via.x, via.z, b, 0.1))) { tx = via.x; tz = COUNTERS_Z0 - 0.6; }
+          const r = aisleRoute(c.x, c.z, tx, tz, this.way);
           if (moveToward(c, r.x, r.z, walk, dt, 0.1) && r.x === via.x && r.z === via.z) c.state = 'queue';
           break;
         }

@@ -507,9 +507,9 @@ export const ECONOMY = {
     'field.tractor': { base: 90000, growth: 1, max: 1, step: 1 },
     /** Combine harvester: very wide path, bundles go into its hopper (unloads at the stall). */
     'field.combine': { base: 300000, growth: 1, max: 1, step: 1 },
-    /** Hired tractor drivers (+1 per level): they harvest on their own, also during time away. */
     /** Field hands (+1 per level): harvest the corn on foot with a sickle, slowly, also during time away. */
     'field.hand': { base: 10000, growth: 2.5, max: 2, step: 1 },
+    /** Hired tractor drivers (+1 per level): they harvest on their own, also during time away. */
     'field.driver': { base: 100000, growth: 2, max: 3, step: 1 },
     /** Bigger engine: vehicles drive faster, x (1 + step x level). */
     'field.engine': { base: 20000, growth: 2.3, max: 3, step: 0.12 },

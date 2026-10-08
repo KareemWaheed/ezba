@@ -226,15 +226,16 @@ This file records the decisions made on top of it.
   (version ~27 for a late-game save). The debug panel's older plain codes still read. `npm run transfercheck`;
   checked in a browser across separate contexts, including a fake camera showing the QR.
 - Supermarket-first game, the farm as the store's supplier (playtest: eggs piled up on the farm counter, a full
-  milk pile sat untouched while the store bought milk wholesale, shelves stood half empty). There is still no
-  farm shop in this mode (by design: the farm supplies the store), but now: every 4 s the farm sends a box of
-  what it makes from the counter to the storeroom when it fits (free), and once the store has stockers an
-  animal pile that has sat full 20 s goes too (`MarketSystem.pileIdle`; earlier the player fetches by hand).
+  milk pile sat untouched while the store bought milk wholesale, shelves stood half empty). At that point the
+  farm still had no shop of its own in this mode (it supplied the store; see the next entry), but now: every 4 s
+  the farm sends a box of what it makes from the counter to the storeroom when it fits (free; a part box tops
+  up the last of the room), and once the store has stockers an animal pile that has sat full 20 s goes too (`MarketSystem.pileIdle`; earlier the player fetches by hand).
   Shelf stockers push a trolley: 8 items a trip (was the farm workers' 3). Playtest save over 5 minutes:
   empty shelves 6.8 -> 0.6 of 15, unhappy shoppers 20 -> 1, items sold 300 -> 517.
 - Supermarket-first game, more to do in the store (playtest: "the supermarket is very boring"; and the farm
   had no customers of its own). The farm shop now opens with the coop in this mode too: its customers buy at
-  the farm counters first and the store gets what's left (shop rushes and shop events stay off). New store
+  the farm counters first and the store gets what's left (shop rushes and shop events stay off). This replaces
+  the Phase 2 rule above that the supermarket path has no farm shop. New store
   upgrades (third tile row in the yard south of the store, which becomes walkable once the store is built):
   `market.lanes` a second checkout with its own line (its cashier is `market.cashier` level 2, capped by the
   lanes), `market.selfcheck` a kiosk for baskets of <= 5 items (3x slower than the player); shoppers pick the

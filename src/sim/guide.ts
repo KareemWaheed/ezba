@@ -81,8 +81,12 @@ function storeAlert(w: SimWorld, out: { x: number; z: number }): boolean {
   if (t && w.upgrades.level('market.guard') === 0) { out.x = t.x; out.z = t.z; return true; }
   const o = m.extras.order;
   if (!o || w.upgrades.level('market.delivery') > 1) return false;
-  if (o.lines.some((l) => l.left > 0 && c.has(l.item))) { out.x = MARKET.van.x; out.z = MARKET.van.z; return true; }
-  return false;
+  if (!o.lines.some((l) => l.left > 0 && c.has(l.item))) return false;
+  // (same order as the store board: shoppers waiting at an unserved checkout come before the van)
+  const lane = m.unservedLane();
+  const at = lane >= 0 ? m.laneServe(lane) : MARKET.van;
+  out.x = at.x; out.z = at.z;
+  return true;
 }
 
 /** Early-game hint: the next step of the carry-and-sell loop. */
@@ -262,7 +266,7 @@ export function marketHint(w: SimWorld): MarketHint {
   if (m.unservedLane() >= 0) return 'checkout';
   // a phone order: what's in hand goes to the van, the rest comes from the storeroom
   if (x.order && x.order.lines.some((l) => l.left > 0 && c.has(l.item))) return 'van';
-  if (x.order && w.upgrades.level('market.delivery') < 2 && x.order.lines.some((l) => x.orderNeeds(l.item) > 0)) return 'phone';
+  if (x.order && w.upgrades.level('market.delivery') < 2 && x.order.lines.some((l) => x.orderNeeds(l.item) > 0 && (m.store[l.item] ?? 0) > 0)) return 'phone';
   if (m.shelves.some((s) => s.open && c.has(s.def.item) && s.stock < cfg.shelfMax)) return 'stock';
   const low = m.shelves.filter((s) => m.low(s));
   if (low.some((s) => m.store[s.def.item] > 0)) return 'fetch';
