@@ -80,7 +80,16 @@ export function onStale(cb: () => void): void {
   if (stale) cb();
 }
 
-try { addEventListener('storage', (e) => { if (e.key === KEY && e.newValue && !blocked) goStale(); }); } catch { /* no window (tools) */ }
+// another copy saved something newer (or wiped the save: this copy's next autosave would bring it back)
+try {
+  addEventListener('storage', (e) => {
+    if (e.key !== KEY || blocked) return;
+    if (e.newValue === null) { goStale(); return; }
+    let t = 0;
+    try { t = Number((JSON.parse(e.newValue) as { t?: number }).t) || 0; } catch { /* unreadable: leave it to the next write's check */ }
+    if (t > lastT) goStale();
+  });
+} catch { /* no window (tools) */ }
 
 export function writeSave(s: SaveData): void {
   if (blocked || checkStale()) return;

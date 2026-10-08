@@ -6,8 +6,8 @@ import type { SimWorld } from '../world';
 import type { Mechanic } from './mechanic';
 import { plazaSpot } from './plaza';
 
-/** A bundle of money on its way down: lands at (x, z) when t reaches 0. */
-export interface MoneyDrop { x: number; z: number; t: number; tMax: number }
+/** A bundle of money on its way down: thrown from the helicopter at (fx, fz), lands at (x, z) when t reaches 0. */
+export interface MoneyDrop { x: number; z: number; fx: number; fz: number; t: number; tMax: number }
 
 /** Seconds between bundles, the fall time, and how close the player must be when one lands. */
 const EVERY = 1.2;
@@ -68,7 +68,7 @@ export class MoneyRainMechanic implements Mechanic {
     this.nextT = EVERY;
     // somewhere open on the square, not right on top of the last few
     const s = plazaSpot(w, this.drops, 2);
-    this.drops.push({ x: s.x, z: s.z, t: FALL, tMax: FALL });
+    this.drops.push({ x: s.x, z: s.z, fx: h.x, fz: h.z, t: FALL, tMax: FALL });
   }
 
   goal(_w: SimWorld, g: ScenarioGoal): boolean | undefined {

@@ -140,13 +140,13 @@ function showRefund(): void {
   save();
 }
 // the game was saved from another copy (a second tab, the app and the browser): this one stops saving; reload
-// into the newest progress rather than play on and lose it
+// into the newest progress rather than play on and lose it (closing the card any way reloads too)
 onStale(() => {
   const card = modal.open(`
     <div class="m-icon">📱</div>
     <div class="m-title">اللعبة مفتوحة في مكان تاني</div>
     <div>اتحفظ تقدّم أحدث من نسخة تانية للعبة (تاب تاني أو التطبيق). علشان ما يضيعش، كمّل من آخر حفظ.</div>
-    <button class="m-btn" data-reload>🔄 كمّل من آخر حفظ</button>`);
+    <button class="m-btn" data-reload>🔄 كمّل من آخر حفظ</button>`, () => location.reload());
   card.querySelector('[data-reload]')?.addEventListener('click', () => location.reload());
 });
 let hiddenAt = 0;

@@ -10,12 +10,20 @@ import type { MechanicView } from './types';
 
 const { box, cyl, sph } = PRIM;
 
-/** A soft dark disc on the ground (the drop's shadow, a gate's glow). */
+const DISC_GEO = new THREE.CircleGeometry(0.5, 24).rotateX(-Math.PI / 2);
+
+/** A soft dark disc on the ground (the drop's shadow, a gate's glow): shared geometry, its own material. */
 function disc(color: number, opacity: number): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.CircleGeometry(0.5, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false }));
+  const m = new THREE.Mesh(DISC_GEO, new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false }));
   m.position.y = 0.03;
   return m;
 }
+
+/** Free a disc's material (the geometry is shared). */
+function dropDisc(m: THREE.Mesh): void { (m.material as THREE.Material).dispose(); }
+
+/** The sprinter's cap (one look object: the accessory cache is keyed by it). */
+const BOLT_CAP = { hat: { kind: 'cap' as const, color: 0x1f8a3a } };
 
 // ---- money rain ----
 
@@ -65,8 +73,9 @@ export class MoneyRainView implements MechanicView {
       const d = m.drops[i], s = this.shadows[i];
       c.visible = s.visible = !!d;
       if (!d) return;
+      // from under the helicopter down onto its shadow
       const f = Math.max(0, d.t / d.tMax);
-      c.position.set(d.x, 0.15 + f * 6.5, d.z);
+      c.position.set(d.x + (d.fx - d.x) * f, 0.15 + f * 7, d.z + (d.fz - d.z) * f);
       c.rotation.set(Math.sin(this.time * 4 + i) * 0.5, this.time * 3 + i, 0);
       s.position.set(d.x, 0.03, d.z);
       // the shadow grows and darkens as it comes down (the catch zone)
@@ -77,6 +86,7 @@ export class MoneyRainView implements MechanicView {
 
   dispose(): void {
     this.scene.remove(this.heli, ...this.cash, ...this.shadows);
+    this.shadows.forEach(dropDisc);
   }
 }
 
@@ -177,7 +187,7 @@ export class RaceView implements MechanicView {
     this.glow.scale.setScalar(2.6);
     scene.add(this.glow);
     this.runner = new CharacterView({ shirt: 0xf2d03d, pants: 0x1f8a3a, skin: 0x5a3a22, hair: 0x111111 });
-    const acc = bodyAccessories({ hat: { kind: 'cap', color: 0x1f8a3a } });
+    const acc = bodyAccessories(BOLT_CAP);
     if (acc) this.runner.attach(acc);
     scene.add(this.runner.root);
   }
@@ -199,5 +209,6 @@ export class RaceView implements MechanicView {
 
   dispose(): void {
     this.scene.remove(this.glow, this.runner.root, ...this.gates);
+    dropDisc(this.glow);
   }
 }

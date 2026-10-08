@@ -82,7 +82,8 @@ export class RaceMechanic implements Mechanic {
     return g === 'race' ? this.won : undefined;
   }
 
-  progress(_w: SimWorld, g: ScenarioGoal): number { return g === 'race' ? Math.min(1, this.playerGate / RACE_GATES.length) : 0; }
+  /** Course gates passed (the start line doesn't count; the same count as the banner). */
+  progress(_w: SimWorld, g: ScenarioGoal): number { return g === 'race' ? Math.min(1, Math.max(0, this.playerGate - 1) / (RACE_GATES.length - 1)) : 0; }
 
   bonus(): boolean { return this.won && (this.runnerTime === 0 || this.runnerTime - this.playerTime >= CLEAR); }
 

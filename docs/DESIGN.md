@@ -273,7 +273,7 @@ This file records the decisions made on top of it.
     shadow grows to catch a bundle, paid at once); Mr. Bean hides in one of five boxes on the square (hot/cold
     on the banner, found = a reward, then he hides again); Usain Bolt races the player round a lap of gates
     (he runs 86% of the player's top speed and stops to pose halfway). Plus a Hamo Bika mahraganat night on
-    the dance pads. Spots are random open ground on the square (`scenarios/plaza.ts`).
+    the dance pads. Spots are random open ground on the square (`sim/scenarios/plaza.ts`).
 - Locked previews (playtest: no way to see what the next stage needs, e.g. the corn field): a new area
   (`*.unlock`) or a big step (wheat, tractor, combine, dairy, grill) that's only missing upgrades whose tiles
   are up right now shows as a faded, locked tile at its spot: icon, name and "محتاج:" with what to buy

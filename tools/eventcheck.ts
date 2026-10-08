@@ -13,6 +13,7 @@ import type { InspectorMechanic } from '../src/sim/scenarios/inspector';
 import { FOOTBALL, type FootballMechanic } from '../src/sim/scenarios/football';
 import type { MoneyRainMechanic } from '../src/sim/scenarios/moneyrain';
 import { RACE_GATES } from '../src/sim/scenarios/race';
+import { BASE_PART, BONUS_PART } from '../src/sim/scenario';
 import { openGround } from '../src/sim/scenarios/plaza';
 import type { CommentsMechanic } from '../src/sim/scenarios/comments';
 import type { StageMechanic } from '../src/sim/scenarios/stage';
@@ -82,7 +83,11 @@ for (const def of SCENARIOS) {
     let reward = -1;
     for (let i = 0; i < 400 / DT && w.scenario.phase !== 'idle'; i++) { w.tick(DT); w.events.drain((e) => { if (e.type === 'scenarioEnd') reward = e.value; }); }
     ok(w.scenario.phase === 'idle' && w.scenario.lastGoals.length === def.goals.length, `${def.id}: ends and evaluates every goal`);
-    ok(reward > 0, `${def.id}: pays something even with no goal met (${reward})`);
+    // (unattended, some goals may still pass, e.g. nobody angry: check the pay matches the goals actually met)
+    const goals = w.scenario.lastGoals, met = goals.filter((g) => g.ok).length / goals.length;
+    const full = def.rewardSeconds * w.perSec + w.scenario.sales * def.rewardShare;
+    const want = met === 1 ? reward : Math.round(full * (BASE_PART + BONUS_PART * met));
+    ok(reward > 0 && Math.abs(reward - want) <= 1, `${def.id}: pays for taking part plus the goals met (${reward}, ${Math.round(met * 100)}% of goals)`);
   }
   {
     const w = fresh();
