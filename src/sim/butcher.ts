@@ -93,6 +93,20 @@ export class ButcherSystem {
     }
   }
 
+  /** Age of the calf growing in the pen (-1 = none): saved, since pen animals aren't. */
+  calfAge(): number {
+    const st = this.pen;
+    const calf = st?.animals.find((a) => !a.leaving && a.age < ECONOMY.butcher.calfAge);
+    return calf ? calf.age : -1;
+  }
+
+  /** On load: one of the (rebuilt) cows is the calf again, `age` s old. */
+  restoreCalf(age: number): void {
+    const st = this.pen;
+    if (!st || age < 0 || age >= ECONOMY.butcher.calfAge || st.animals.length === 0) return;
+    st.animals[st.animals.length - 1].age = age;
+  }
+
   /** Player: collect the window's money. */
   interact(): void {
     const w = this.w, p = w.player, c = LAYOUT.butcher.cash;

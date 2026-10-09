@@ -223,6 +223,9 @@ const untilParked = (w: SimWorld, max: number) => {
   // a save while the cow is on its way: it's in at the butcher's on load (the chopping isn't lost)
   const mid = new SimWorld(9); restore(mid, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
   ok(mid.butcher.chopT === B.chopTime, `a save mid-walk keeps the cow (chopping on load: ${mid.butcher.chopT} s)`);
+  const midPen = mid.stations.find((s) => s.def.producer === 'cow')!;
+  const midCalves = midPen.animals.filter((a) => a.age < B.calfAge);
+  ok(midCalves.length === 1 && Math.abs(midCalves[0].age - (calf?.age ?? -1)) < 1e-6 && midPen.animals.length === cows, `...and the calf stays a calf (${midCalves.length} calf, ${midCalves[0]?.age.toFixed(1)} s old, ${midPen.animals.length} in the pen)`);
   // a cow bought while one is on its way still joins the herd
   w.upgrades.levels['milk.animals']++; w.upgrades.apply();
   tick(30);

@@ -50,7 +50,7 @@ export interface SaveData {
   album?: { seen: string[]; paid: string[] };
   river?: { pile: number; cash: number; bills: number; untied: number };
   /** `chop`: seconds of chopping left (a cow still on its way is saved as just arrived). */
-  butcher?: { stock: number; cash: number; bills: number; chop?: number };
+  butcher?: { stock: number; cash: number; bills: number; chop?: number; calf?: number };
   /** Incubator (chicks in the crate / hatching, chicks hatched so far, golden hens) and records set per product. */
   surplus?: { crate: number; hatching: number; hatchT: number; hatched: number; golden: number; records: Record<string, number> };
   /** Factory machine buffers and the wheat silo. */
@@ -120,7 +120,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     field: { cash: w.field.cash.value + w.field.dockWheat * Math.round(priceOf('wheat') * w.priceMult), bills: Math.min(40, w.field.cash.bills + w.field.dockWheat), hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
     surplus: { crate: w.surplus.crate, hatching: w.surplus.hatching, hatchT: w.surplus.hatchT, hatched: w.surplus.hatched, golden: w.surplus.golden, records: { ...w.surplus.records } },
-    butcher: { stock: w.butcher.stock, cash: w.butcher.cash.value, bills: w.butcher.cash.bills, chop: w.butcher.cow ? ECONOMY.butcher.chopTime : w.butcher.chopT },
+    butcher: { stock: w.butcher.stock, cash: w.butcher.cash.value, bills: w.butcher.cash.bills, chop: w.butcher.cow ? ECONOMY.butcher.chopTime : w.butcher.chopT, calf: w.butcher.calfAge() },
     river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },
     factory: { silo: w.factory.silo, machines: Object.fromEntries(w.factory.machines.map((m) => [m.def.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])) },
     daily: { day: w.daily.day, tasks: w.daily.tasks.map((t) => ({ ...t })) },
@@ -257,6 +257,8 @@ export function restore(w: SimWorld, s: SaveData): void {
   // upgrades that got cheaper since this save was priced: the difference comes back (main.ts says so)
   w.refunds = refundPriceDrops(w, Math.floor(num(s.pv)));
   up.apply();
+  // (pen animals aren't saved: the growing calf, if any, gets its age back)
+  w.butcher.restoreCalf(num(s.butcher?.calf, -1));
   w.carry.items.length = 0;
   for (const p of s.carry ?? []) if ((ITEM_IDS as string[]).includes(p) && !w.carry.full()) w.carry.push(p as ItemId);
   w.staff.machines.forEach((m, i) => { m.broken = m.running && !!s.broken?.[String(i)]; });
