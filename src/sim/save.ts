@@ -50,7 +50,7 @@ export interface SaveData {
   album?: { seen: string[]; paid: string[] };
   river?: { pile: number; cash: number; bills: number; untied: number };
   /** `chop`: seconds of chopping left (a cow still on its way is saved as just arrived). */
-  butcher?: { stock: number; cash: number; bills: number; chop?: number; calf?: number };
+  butcher?: { stock?: number; cash?: number; bills?: number; chop?: number; calf?: number };
   /** Incubator (chicks in the crate / hatching, chicks hatched so far, golden hens) and records set per product. */
   surplus?: { crate: number; hatching: number; hatchT: number; hatched: number; golden: number; records: Record<string, number> };
   /** Factory machine buffers and the wheat silo. */
@@ -103,7 +103,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     v: SAVE_VERSION, mode: w.mode, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
-    rating: w.service.rating, legacy: w.legacy, easy: w.easy, pv: PRICE_VERSION, vipT: w.customers.vipT,
+    rating: w.service.rating, legacy: w.legacy, ...(w.easy ? { easy: true } : {}), pv: PRICE_VERSION, vipT: w.customers.vipT,
     market: marketSave(w),
     trust: { ...w.contracts.trust },
     ...(w.scenario.phase === 'idle' ? { eventT: Math.round(w.scenario.t) } : {}),
@@ -120,7 +120,8 @@ export function serialize(w: SimWorld, now: number): SaveData {
     field: { cash: w.field.cash.value + w.field.dockWheat * Math.round(priceOf('wheat') * w.priceMult), bills: Math.min(40, w.field.cash.bills + w.field.dockWheat), hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
     surplus: { crate: w.surplus.crate, hatching: w.surplus.hatching, hatchT: w.surplus.hatchT, hatched: w.surplus.hatched, golden: w.surplus.golden, records: { ...w.surplus.records } },
-    butcher: { stock: w.butcher.stock, cash: w.butcher.cash.value, bills: w.butcher.cash.bills, chop: w.butcher.cow ? ECONOMY.butcher.chopTime : w.butcher.chopT, calf: w.butcher.calfAge() },
+    // (only what's set: the save travels as a QR code, every field counts)
+    ...(butcherSave(w) ? { butcher: butcherSave(w) } : {}),
     river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },
     factory: { silo: w.factory.silo, machines: Object.fromEntries(w.factory.machines.map((m) => [m.def.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])) },
     daily: { day: w.daily.day, tasks: w.daily.tasks.map((t) => ({ ...t })) },
@@ -140,6 +141,17 @@ function marketSave(w: SimWorld): SaveData['market'] {
 }
 
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
+
+/** The butcher's state, without its zero fields (undefined when there's nothing to keep). */
+function butcherSave(w: SimWorld): SaveData['butcher'] | undefined {
+  const b = w.butcher, chop = b.cow ? ECONOMY.butcher.chopTime : b.chopT, calf = b.calfAge();
+  const out: Record<string, number> = {};
+  if (b.stock) out.stock = b.stock;
+  if (b.cash.value) { out.cash = b.cash.value; out.bills = b.cash.bills; }
+  if (chop > 0) out.chop = Math.round(chop * 10) / 10;
+  if (calf >= 0) out.calf = Math.round(calf * 10) / 10;
+  return Object.keys(out).length ? (out as SaveData['butcher']) : undefined;
+}
 
 /** Load a (migrated) save into a fresh world. */
 export function restore(w: SimWorld, s: SaveData): void {
