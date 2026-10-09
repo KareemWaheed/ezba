@@ -45,7 +45,7 @@ export const STATIONS: readonly StationDef[] = [
     workerTrack: 'eggs.worker', machineTrack: 'eggs.machine', expand: { track: 'eggs.expand', dx0: -4, dx1: 0 },
     pile: { x: -3, z: -0.8, cols: 2, rows: 2 },
     trough: { x: -1.0, z: -1.5 },
-    counter: { x: -4.4, z: 4, dropX: -4.4, dropZ: 2.9 },
+    counter: { x: -5.8, z: 4, dropX: -5.8, dropZ: 2.9 },
     startsOpen: true,
   },
   {
@@ -53,7 +53,7 @@ export const STATIONS: readonly StationDef[] = [
     animalTrack: 'milk.animals', workerTrack: 'milk.worker', machineTrack: 'milk.machine', expand: { track: 'milk.expand', dx0: 0, dx1: 4 },
     pile: { x: 6.5, z: -0.8, cols: 2, rows: 2 },
     trough: { x: 4.4, z: -1.5 },
-    counter: { x: 4.4, z: 4, dropX: 4.4, dropZ: 2.9 },
+    counter: { x: 5.8, z: 4, dropX: 5.8, dropZ: 2.9 },
     startsOpen: false,
   },
   {
@@ -62,7 +62,15 @@ export const STATIONS: readonly StationDef[] = [
     id: 'corn', product: 'corn', unlockTrack: 'field.unlock', workerTrack: 'corn.worker', machineTrack: 'corn.machine',
     skyBelt: { a: { x: -5.7, z: -10.2 }, tower: { x: -7.2, z: 4.95 }, fix: { x: -8.1, z: 3.2 } },
     pile: { x: -4.4, z: -10.9, cols: 2, rows: 2 },
-    counter: { x: -6.6, z: 4, dropX: -6.6, dropZ: 2.9 },
+    counter: { x: -7.0, z: 4, dropX: -7.0, dropZ: 2.9 },
+    startsOpen: false,
+  },
+  {
+    // bees: hives east of the cow pen, honey sold at the east end of the counter
+    id: 'honey', product: 'honey', producer: 'bee', area: LAYOUT.apiary, unlockTrack: 'honey.unlock',
+    animalTrack: 'honey.animals', workerTrack: 'honey.worker',
+    pile: { x: 17.3, z: -0.8, cols: 2, rows: 2 },
+    counter: { x: 7.0, z: 4, dropX: 7.0, dropZ: 2.9 },
     startsOpen: false,
   },
 ];

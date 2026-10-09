@@ -33,7 +33,8 @@ export class GoldenSystem {
 
   /** Spawn one now (debug panel). */
   spawn(): void {
-    const w = this.w, open = w.stations.filter((s) => s.open && s.farmed);
+    // (animals that escape over a trough: the hives have none)
+    const w = this.w, open = w.stations.filter((s) => s.open && s.farmed && !!s.def.trough);
     if (!open.length || this.animal) return;
     const st = w.rng.pick(open), d = st.def;
     this.animal = { station: st.index, x: d.trough!.x, z: d.trough!.z + 0.8, rot: 0, speed: 0, tx: d.pile.x, tz: 1.5, t: ECONOMY.golden.lifetime };

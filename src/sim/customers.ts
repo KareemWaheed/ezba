@@ -66,8 +66,8 @@ export class CustomerSystem {
   private nextId = 1;
   private spawnT = 1;
   /** Customers waiting per lane (rebuilt each tick). */
-  readonly waitingPerLane = [0, 0, 0];
-  private slots = [0, 0, 0];
+  readonly waitingPerLane: number[] = LAYOUT.shop.lanes.map(() => 0);
+  private slots: number[] = LAYOUT.shop.lanes.map(() => 0);
   /** Debug: make the next arrival a VIP and bring it now. */
   forceVip = false;
   /** Seconds until another VIP may arrive. */
@@ -215,7 +215,7 @@ export class CustomerSystem {
   update(dt: number): void {
     const w = this.w, cfg = ECONOMY.customers, shop = LAYOUT.shop;
     const wl = this.waitingPerLane;
-    wl[0] = wl[1] = wl[2] = 0;
+    wl.fill(0);
     for (const c of this.list) if (c.state === 'queue') wl[c.lane]++;
 
     this.spawnT -= dt;
@@ -231,7 +231,7 @@ export class CustomerSystem {
 
     // walk the list in order; each customer's slot is how many of its lane are ahead of it
     const slots = this.slots;
-    slots[0] = slots[1] = slots[2] = 0;
+    slots.fill(0);
     for (const c of this.list) {
       if (c.state === 'queue') {
         const slot = slots[c.lane]++;

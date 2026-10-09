@@ -370,3 +370,14 @@ This file records the decisions made on top of it.
   trough closest to empty once it's under the refill mark, refills it in 2 s; also during time away. Doesn't
   count toward the player's feeds. Active/auto pacing stays 1.68x. `npm run awaycheck`.
 
+- Bees and honey (playtest: "a third animal, bees, fine, but sold on the counter like the rest; and two more
+  cashiers"): an apiary (`LAYOUT.apiary`, `honey.unlock` 30k, milestone, after the café) east of the cow pen,
+  fenced with flowers and hives, shaded until bought. Three hives at the start (`honey.animals`, up to 6 more),
+  bees wander and drop honey jars (🍯, 8 each) on its pile; a honey worker (`honey.worker`) carries them like
+  the other stations. Honey has its own counter slot (between the milk and the café side) and shoppers ask for
+  1-3 jars. No trough: the golden animal never spawns in the apiary. Hay bales moved east (a bot got stuck
+  between them and the fence).
+- Five checkout lanes: `shop.lanes` goes to 4 (5 lanes) and `cashier` to 5; the counter is longer and the
+  egg/milk/corn slots and a few tiles moved. Shoppers used to be held to the first 3 lanes (fixed-size arrays in
+  `customers.ts`). The derby's "hot" mark dropped to 0.65 so it still clashes when left alone with the new layout.
+  eventcheck's grown farm keeps 3 lanes and cashiers (its timings were tuned on that). `npm run surpluscheck`.

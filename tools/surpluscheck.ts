@@ -186,5 +186,23 @@ const untilParked = (w: SimWorld, max: number) => {
   ok(old.bounds.x0 <= LAYOUT.surplusYard.unlockedX0, '...and the walkable area reaching it');
 }
 
+// bees: the apiary makes honey, its worker carries it to the counter, and shoppers buy it; five lanes with five cashiers
+{
+  const w = farm({ 'milk.unlock': 1, 'cafe.unlock': 1, 'honey.unlock': 1, 'honey.worker': 1, 'cashier': 5, 'shop.lanes': 4 });
+  const h = w.stations.find((s) => s.def.product === 'honey')!;
+  ok(h.open && h.animals.length === ECONOMY.producers.bee.start, `the apiary opens with ${h.animals.length} hives`);
+  const sold0 = w.stats.sold;
+  let made = 0, bought = 0;
+  for (let i = 0; i < 240 * 30; i++) {
+    w.player.x = 8; w.player.z = 8; w.input.x = w.input.z = 0; w.tick(1 / 30);
+    w.events.drain((e) => { if (e.type === 'produce' && e.product === 'honey') made++; if (e.type === 'sell' && e.product === 'honey') bought++; });
+  }
+  ok(made > 50, `hives make honey (${made} jars in 4 min)`);
+  ok(bought > 10 && w.stats.sold > sold0, `shoppers buy it off the counter (${bought} jars)`);
+  ok(w.lanes === 5 && w.cashiers === 5, `five lanes, five cashiers (${w.lanes}/${w.cashiers})`);
+  const lanesUsed = new Set(w.customers.list.map((c) => c.lane));
+  ok(lanesUsed.size >= 4, `shoppers use the new lanes (${[...lanesUsed].sort().join(',')})`);
+}
+
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }
 console.log('\nall surplus checks passed');

@@ -40,11 +40,11 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'player.capacity', icon: '🎒', label: 'شيل أكتر', msg: 'بقيت تشيل أكتر 💪',
-    pos: { x: -4.3, z: 6.3 }, requires: [{ id: 'eggs.animals', level: 1 }],
+    pos: { x: -4.4, z: 11.8 }, requires: [{ id: 'eggs.animals', level: 1 }],
   },
   {
     id: 'player.speed', icon: '👟', label: 'جري أسرع', msg: 'بقيت أسرع ⚡',
-    pos: { x: 8.0, z: 6.6 }, requires: [{ id: 'player.capacity', level: 1 }],
+    pos: { x: -6.6, z: 9.8 }, requires: [{ id: 'player.capacity', level: 1 }],
   },
   {
     id: 'eggs.worker', icon: '👷', label: 'وظّف عامل بيض', msg: 'العامل بيلم البيض بدالك 👷',
@@ -56,7 +56,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'shop.lanes', icon: '🛒', label: 'خط دفع جديد', msg: 'فتحت خط دفع جديد، زباين أكتر 🛒',
-    pos: { x: 7.6, z: 2.3 }, requires: [{ id: 'cashier', level: 1 }], milestone: true,
+    pos: { x: 8.4, z: 6.6 }, requires: [{ id: 'cashier', level: 1 }], milestone: true,
   },
   {
     id: 'eggs.machine', icon: '⚙️', label: 'سير للبيض', msg: 'سير البيض شغال لوحده ⚙️',
@@ -111,6 +111,19 @@ export const UPGRADES: readonly UpgradeDef[] = [
   {
     id: 'cafe.helper', icon: '🧑‍🍳', label: 'وظّف مساعد مطبخ', msg: 'مساعد مطبخ جديد بيجيب البيض واللبن 🧑‍🍳',
     pos: { x: 19.4, z: 3.3 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+  },
+  // bees: the apiary east of the cow pen (after the café, whose opening reaches it)
+  {
+    id: 'honey.unlock', icon: '🐝', label: 'منحل العسل', msg: 'فتحت المنحل! النحل بيطلع عسل 🍯 بيتباع على الكاونتر',
+    pos: { x: 13.0, z: -0.9 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'honey.animals', icon: '🐝', label: 'خلية جديدة', msg: 'خلية نحل جديدة 🐝',
+    pos: { x: 15.0, z: -0.9 }, requires: [{ id: 'honey.unlock', level: 1 }],
+  },
+  {
+    id: 'honey.worker', icon: '🍯', label: 'وظّف عامل عسل', msg: 'عامل العسل بيودّي العسل للكاونتر 🍯',
+    pos: { x: 11.0, z: -0.9 }, requires: [{ id: 'honey.unlock', level: 1 }], milestone: true,
   },
   // Stage 4: crop fields north of the pens
   {

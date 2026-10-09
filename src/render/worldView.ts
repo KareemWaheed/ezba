@@ -37,6 +37,17 @@ export function barn(x: number, z: number, out: THREE.BufferGeometry[]): void {
   );
 }
 
+/** A wooden beehive: stacked white boxes on legs, a little roof, an entrance slot. */
+export function hive(x: number, z: number, out: THREE.BufferGeometry[]): void {
+  out.push(
+    ...[[-0.28, -0.22], [0.28, -0.22], [-0.28, 0.22], [0.28, 0.22]].map(([a, b]) => part(box, 0x8a5a32, x + a, 0.12, z + b, 0, 0, 0, 0.08, 0.24, 0.08)),
+    part(box, 0xf3efe3, x, 0.48, z, 0, 0, 0, 0.8, 0.46, 0.62),
+    part(box, 0xf2c230, x, 0.92, z, 0, 0, 0, 0.8, 0.4, 0.62),
+    part(box, 0xc8463c, x, 1.18, z, 0, 0, 0, 0.92, 0.1, 0.74),
+    part(box, 0x2b2b2b, x, 0.32, z + 0.32, 0, 0, 0, 0.4, 0.05, 0.02),
+  );
+}
+
 /** Static scenery merged into a single mesh. Returns the lock overlays of not-yet-unlocked areas. */
 export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
   const g: THREE.BufferGeometry[] = [];
@@ -153,13 +164,14 @@ export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
   const gate = new THREE.Mesh(merge([part(box, 0x9a6233, yb.x1 - 0.15, 0.55, (y.gate.z0 + y.gate.z1) / 2, 0, 0, 0, 0.12, 0.9, y.gate.z1 - y.gate.z0 - 0.4)]), MAT);
   return {
     pen: lockOverlay(scene, L.pen),
+    apiary: lockOverlay(scene, L.apiary),
     hrYard: lockOverlay(scene, yb, gate),
     surplusYard: lockOverlay(scene, sb, new THREE.Mesh(merge([part(box, 0x9a6233, sb.x1 - 0.15, 0.55, (sy.gate.z0 + sy.gate.z1) / 2, 0, 0, 0, 0.12, 0.9, sy.gate.z1 - sy.gate.z0 - 0.4)]), MAT)),
     cafe: lockOverlay(scene, cp),
   };
 }
 
-export type LockId = 'pen' | 'hrYard' | 'surplusYard' | 'cafe';
+export type LockId = 'pen' | 'apiary' | 'hrYard' | 'surplusYard' | 'cafe';
 
 const LOCK_MAT = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false });
 

@@ -39,11 +39,13 @@ const ok = (cond: boolean, msg: string): void => {
  * A farm with most areas open: the active bot with plenty of money buys `n` upgrade levels. The
  * supermarket stays closed: these checks are about the events, and its shoppers would change the
  * world's random sequence (the store has its own checks in tools/marketcheck.ts). Field hands, the
- * incubator and the trader deal stay out too: the farm the event timings were tuned on had none (they have
+ * incubator, the trader deal, the apiary and the 4th/5th lanes stay out too: the farm the event timings were tuned on had none (they have
  * their own checks in fieldcheck and surpluscheck).
  */
 function grownSave(n = 160, seed = 7): SaveData {
-  const w = new SimWorld(seed), bot = new Bot(w, 'active', (id) => id.startsWith('market.') || ['field.hand', 'field.handSkill', 'field.expand', 'corn.machine', 'surplus.yard', 'hr.feeder', 'eggs.incubator', 'trader.deal'].includes(id));
+  const w = new SimWorld(seed), bot = new Bot(w, 'active', (id) => id.startsWith('market.') || ['field.hand', 'field.handSkill', 'field.expand', 'corn.machine', 'surplus.yard', 'hr.feeder', 'honey.unlock', 'honey.animals', 'honey.worker', 'eggs.incubator', 'trader.deal'].includes(id)
+    // (3 lanes and cashiers, as the event timings were tuned on: the 4th and 5th lanes came later)
+    || (id === 'shop.lanes' && w.upgrades.level('shop.lanes') >= 2) || (id === 'cashier' && w.upgrades.level('cashier') >= 3));
   for (let i = 0; i < 30 * 60 * 60 && w.upgrades.bought < n; i++) {
     w.money = Math.max(w.money, 1e9);
     bot.update(DT);

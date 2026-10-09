@@ -18,19 +18,21 @@ export const LAYOUT = {
   /** Fenced animal areas. */
   coop: { x0: -7, x1: 0, z0: -9.4, z1: -2 } as Box,
   pen: { x0: 3, x1: 10, z0: -9.4, z1: -2 } as Box,
+  /** The apiary east of the cow pen: a 1.5 m walk between it and the grown pen; flush with the walkable edge east. */
+  apiary: { x0: 15.6, x1: 19.6, z0: -9.4, z1: -2 } as Box,
   /**
    * Shop front. Products are stocked at the two ends of the counter (see stations.ts) so workers and
    * belts deliver at the sides; checkout lanes sit in the middle (opened in this order). The
    * player/cashier stands at (x, serveZ) behind the counter, customers line up from (x, queueZ).
    */
   shop: {
-    lanes: [{ x: 0 }, { x: -2.4 }, { x: 2.4 }],
+    lanes: [{ x: 0 }, { x: -2.4 }, { x: 2.4 }, { x: -4.8 }, { x: 4.8 }],
     serveZ: 3.0,
     queueZ: 5.45,
     queueGap: 1.15,
     spawn: { x0: -3, x1: -1.5, z: 14.5 },
     exit: { x: 2.8, z: 15.5 },
-    cash: { x: 6.6, z: 4.6 },
+    cash: { x: 8.6, z: 4.2 },
   },
   /**
    * Walled HR yard west of the farm. Locked (shaded, outside the walkable area) until the
@@ -119,14 +121,15 @@ export const LAYOUT = {
     platform: { x0: 7.2, x1: 11.2, z0: 10.9, z1: 11.5 } as Box,
   },
   /** Sell counter body. */
-  counter: { x0: -7.6, x1: 5.4, z0: 3.55, z1: 4.45 } as Box,
+  counter: { x0: -7.6, x1: 7.6, z0: 3.55, z1: 4.45 } as Box,
 
   /** Decorative trees around the edge (x, z); kept clear of the wholesale trader's road (z 12.2, west of the yard). */
   trees: [
     [-18.5, -11], [-17.5, -5], [-23.6, 2.5], [-23.2, 9], [-15.5, 18.6], [-18.5, 18.8], [-21.2, 19.2], [-14, -1], [31, -12.5], [31, -3], [31.5, 4],
     [31.5, 11], [-12.5, 27.5], [10.5, 28.5], [-15.2, 21.0], [11.3, 24.8], [-2, 30], [6, 31],
   ] as const,
-  hay: [[19.6, -7.6], [19.6, -6.0], [19.6, -4.4], [20.8, -6.8]] as const,
+  // (east of the apiary, with room to walk between: a narrow gap there trapped the walker)
+  hay: [[22.4, -7.6], [22.4, -6.0], [22.4, -4.4], [23.6, -6.8]] as const,
 } as const;
 
 /** Walls (0.3 thick) around a yard, with a gate in the east wall and, optionally, a road gap in the west wall. */
@@ -150,6 +153,7 @@ export const SURPLUS_WALLS = yardWalls(LAYOUT.surplusYard.box, LAYOUT.surplusYar
 export const FENCES: Record<string, Box> = {
   eggs: { x0: LAYOUT.coop.x0 - 0.1, x1: LAYOUT.coop.x1 + 0.1, z0: LAYOUT.coop.z0 - 0.5, z1: LAYOUT.coop.z1 + 0.1 },
   milk: { x0: LAYOUT.pen.x0 - 0.1, x1: LAYOUT.pen.x1 + 0.1, z0: LAYOUT.pen.z0 - 0.5, z1: LAYOUT.pen.z1 + 0.1 },
+  honey: { x0: LAYOUT.apiary.x0 - 0.1, x1: LAYOUT.apiary.x1 + 0.1, z0: LAYOUT.apiary.z0 - 0.5, z1: LAYOUT.apiary.z1 + 0.1 },
 };
 /** Bumped whenever solids change, so cached routing can rebuild. */
 export const SOLIDS_VERSION = { v: 0 };
@@ -158,6 +162,7 @@ export const SOLIDS_VERSION = { v: 0 };
 export const SOLIDS: Box[] = [
   FENCES.eggs,
   FENCES.milk,
+  FENCES.honey,
   { ...LAYOUT.counter },
   ...hrWalls(),
   ...SURPLUS_WALLS,

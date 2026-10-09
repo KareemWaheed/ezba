@@ -458,6 +458,7 @@ function frame(now: number): void {
   locks.hrYard.visible = sim.upgrades.level('hr.office') === 0;
   locks.surplusYard.visible = !sim.surplus.open;
   locks.pen.visible = !sim.stations.some((s) => s.def.id === 'milk' && s.open);
+  locks.apiary.visible = !sim.stations.some((s) => s.def.id === 'honey' && s.open);
   locks.cafe.visible = !sim.cafe.open;
   hud.setMoney(sim.money);
   pressureHud.update(sim);

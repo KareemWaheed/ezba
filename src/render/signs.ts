@@ -45,7 +45,7 @@ export class SignsView {
     };
     const early = (w: SimWorld) => w.upgrades.bought < 6;
     for (const st of sim.stations) {
-      const d = st.def, name = d.product === 'egg' ? 'البيض' : d.product === 'milk' ? 'اللبن' : 'الدرة';
+      const d = st.def, name = d.product === 'egg' ? 'البيض' : d.product === 'milk' ? 'اللبن' : d.product === 'honey' ? 'العسل' : 'الدرة';
       add(`لمّ ${name} من هنا`, d.pile.x, d.pile.z + 0.6, (w) => st.open && early(w), 1.7);
       add(`حط ${name} هنا للبيع`, d.counter.dropX, d.counter.dropZ, (w) => st.open && early(w), 1.6);
     }

@@ -33,6 +33,8 @@ export const ECONOMY = {
     milk: { price: 4 },
     /** Cut in the corn field, sold at the shop counter like eggs and milk. */
     corn: { price: 5 },
+    /** From the beehives east of the cow pen, sold at the shop counter like the rest. */
+    honey: { price: 8 },
   },
 
   /** Goods sold at stalls: wheat (grain stall; it also feeds the bakery), fish (fish stall; or the grill). */
@@ -267,6 +269,8 @@ export const ECONOMY = {
       wanderSpeed: 0.9,
     },
     cow: { interval: 6.0, start: 1, wanderSpeed: 0.6 },
+    /** One per hive: its bees buzz about the apiary (visual), a jar of honey every `interval` s. */
+    bee: { interval: 7.0, start: 3, wanderSpeed: 1.4 },
   },
 
   /** Pickup piles next to producers. Producers pause when their pile is full. */
@@ -307,6 +311,7 @@ export const ECONOMY = {
       egg: { base: 2, perProducer: 0.5, max: 6 },
       milk: { base: 1, perProducer: 1, max: 4 },
       corn: { base: 2, perProducer: 0, max: 4 },
+      honey: { base: 1, perProducer: 0.4, max: 3 },
     },
   },
 
@@ -491,6 +496,12 @@ export const ECONOMY = {
     'milk.animals': { base: 350, growth: 1.6, max: 6, step: 1 },
     /** Milk workers: +1 worker per level. */
     'milk.worker': { base: 2500, growth: 3, max: 2, step: 1 },
+    /** The apiary east of the cow pen (single level): the honey station starts with producers.bee.start hives. */
+    'honey.unlock': { base: 30000, growth: 1, max: 1, step: 1 },
+    /** +1 hive per level. */
+    'honey.animals': { base: 2500, growth: 1.6, max: 6, step: 1 },
+    /** Honey workers: +1 per level. */
+    'honey.worker': { base: 12000, growth: 3, max: 2, step: 1 },
     /** Corn cable line (pile by the grain stall -> shop counter, over the coop): level 1 builds it, later levels speed it up. */
     'corn.machine': { base: 25000, growth: 2.5, max: 4, step: 1 },
     /** Milk belt: level 1 builds it, later levels speed it up. */
@@ -606,9 +617,9 @@ export const ECONOMY = {
     /** Auto-reorder: a box is ordered whenever a product runs low in the storeroom. */
     'market.auto': { base: 120000, growth: 1, max: 1, step: 1 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
-    'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
+    'shop.lanes': { base: 3500, growth: 2.4, max: 4, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */
-    cashier: { base: 2500, growth: 2.2, max: 3, step: 1 },
+    cashier: { base: 2500, growth: 2.2, max: 5, step: 1 },
     /** Build the HR office (opens the walled HR yard). */
     'hr.office': { base: 1000, growth: 1, max: 1, step: 1 },
     /** The farm's overseer (ناظر): time away counts longer (ECONOMY.offline.capLevels). */
