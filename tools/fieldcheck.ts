@@ -8,6 +8,8 @@ import { SimWorld } from '../src/sim/world';
 import { serialize, restore, migrate } from '../src/sim/save';
 import { Bot } from '../src/sim/bot';
 import { FIELDS } from '../src/config/fields';
+import { ECONOMY } from '../src/config/economy';
+import { COMPANIES } from '../src/config/contracts';
 
 const DT = 1 / 30;
 let fails = 0;
@@ -73,8 +75,8 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   const crops0 = h.stats.crops, stalks0 = h.stats.stalks;
   tick(h, 180);
   const bundles = h.stats.crops - crops0, stalks = h.stats.stalks - stalks0;
-  // (two hands, 3 min: a few bundles a minute each; a tractor driver brings far more)
-  ok(bundles >= 15 && bundles <= 70, `two hands harvest and hand in on their own, slowly (${bundles} bundles, ${stalks} stalks in 3 min)`);
+  // (two hands, 3 min: ~18 bundles a minute each; a tractor driver still brings more)
+  ok(bundles >= 60 && bundles <= 150, `two hands harvest and hand in on their own (${bundles} bundles, ${stalks} stalks in 3 min)`);
   const d2 = new SimWorld(3);
   d2.upgrades.levels['field.unlock'] = 1;
   d2.upgrades.levels['field.tractor'] = 1;
@@ -83,10 +85,130 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   d2.player.x = 8; d2.player.z = 8;
   const dc0 = d2.stats.crops;
   tick(d2, 180);
-  ok(d2.stats.crops - dc0 > bundles * 3, `one tractor driver out-harvests two hands several times over (${d2.stats.crops - dc0} vs ${bundles})`);
+  ok(d2.stats.crops - dc0 > bundles * 1.4, `one tractor driver out-harvests two untrained hands (${d2.stats.crops - dc0} vs ${bundles})`);
   const h2 = new SimWorld(1);
   restore(h2, migrate(JSON.parse(JSON.stringify(serialize(h, Date.now()))))!);
   ok(h2.field.hands.length === 2, 'the hands come back after a reload');
+  // training (field.handSkill): faster sickles and legs, bigger sacks
+  const t = new SimWorld(3);
+  t.upgrades.levels['field.unlock'] = 1;
+  t.upgrades.levels['field.hand'] = 2;
+  t.upgrades.levels['field.handSkill'] = ECONOMY.upgrades['field.handSkill'].max;
+  t.upgrades.apply();
+  t.player.x = 8; t.player.z = 8;
+  const tc0 = t.stats.crops;
+  tick(t, 180);
+  const trained = t.stats.crops - tc0;
+  ok(trained >= bundles * 2, `fully trained hands bring at least twice as much (${trained} vs ${bundles} bundles in 3 min)`);
+  ok(t.field.handStats().hopper > ECONOMY.field.hand.hopper, `...and carry more (${t.field.handStats().hopper} bundles)`);
+}
+
+// the combine unloads at the stall: it can't fit at the front (between the stall and the coop fence), so it
+// drives (for real, with collisions) to the back from the field and empties there
+{
+  const c = new SimWorld(3);
+  c.upgrades.levels['field.unlock'] = 1; c.upgrades.levels['field.wheat'] = 1;
+  c.upgrades.levels['field.tractor'] = 1; c.upgrades.levels['field.combine'] = 1;
+  c.upgrades.apply();
+  const steer = (tx: number, tz: number, s: number) => tick(c, s, () => {
+    const dx = tx - c.player.x, dz = tz - c.player.z, L = Math.hypot(dx, dz);
+    c.input.x = L > 0.2 ? dx / L : 0; c.input.z = L > 0.2 ? dz / L : 0;
+  });
+  c.player.x = 1.5; c.player.z = -15;
+  steer(1.5, -15, 0.5);
+  ok(c.field.driving && c.field.vehicle === 'combine', 'test farm: driving the combine in the corn');
+  c.field.hopper.corn = 30; c.field.hopperN = 30;
+  // toward the front drop (it can't fit in front, between the stall and the coop): it empties at the stall's side
+  steer(FIELDS.stall.drop.x, FIELDS.stall.drop.z, 6);
+  ok(c.field.hopperN === 0, `driving at the front, the combine empties against the stall's side (${c.field.hopperN} left)`);
+  // from the field to the back
+  c.field.hopper.corn = 30; c.field.hopperN = 30;
+  c.player.x = 1.5; c.player.z = -15;
+  steer(1.5, -15, 0.5);
+  const before = c.field.hopperN;
+  steer(FIELDS.stall.vehicleDrop.x, FIELDS.stall.vehicleDrop.z, 6);
+  ok(before >= 30 && c.field.hopperN === 0, `from the field it empties at the back of the stall (${before} -> ${c.field.hopperN})`);
+}
+
+// the corn cable line (corn.machine): pile by the grain stall -> shop counter, over the coop; jams are fixed
+// at the counter-end tower (the middle of the line is over the coop, out of reach)
+{
+  const k = new SimWorld(3);
+  k.upgrades.levels['field.unlock'] = 1; k.upgrades.levels['corn.machine'] = 1;
+  k.upgrades.apply();
+  const st = k.stations.find((s) => s.def.product === 'corn')!, belt = k.staff.belts[st.index];
+  st.pile = 40; st.counter = 0;
+  tick(k, 12, () => { k.player.x = 8; k.player.z = 8; k.input.x = k.input.z = 0; });
+  ok(40 - st.pile >= 20 && st.counter + belt.inTransit > 0, `the cable line carries corn to the shop counter by itself (${40 - st.pile} sent in 12 s)`);
+  const fix = st.def.skyBelt!.fix;
+  ok(belt.mx === fix.x && belt.mz === fix.z, 'its jams are fixed at the counter-end tower');
+  belt.broken = true;
+  tick(k, 6, () => { k.player.x = fix.x; k.player.z = fix.z; k.input.x = k.input.z = 0; });
+  ok(!belt.broken && Math.hypot(k.player.x - fix.x, k.player.z - fix.z) < 0.5, 'the player reaches the fix spot and fixes it');
+}
+
+// a hungry bakery sends the tractor drivers to the wheat (its silo was stuck at 0 with the drivers on the corn)
+{
+  const b = new SimWorld(3);
+  for (const k of ['cafe.unlock', 'field.unlock', 'field.wheat', 'factory.unlock', 'field.tractor', 'field.driver'] as const) b.upgrades.levels[k] = 1;
+  b.upgrades.apply();
+  const wheatIx = b.field.plots.findIndex((p) => p.crop === 'wheat');
+  tick(b, 2, () => { b.player.x = 8; b.player.z = 8; b.input.x = b.input.z = 0; });
+  ok(b.field.drivers[0].plot === wheatIx, `with the bakery short of wheat the driver works the wheat (plot ${b.field.drivers[0].plot})`);
+  b.factory.silo = ECONOMY.factory.siloMax;
+  b.field.drivers[0].state = 'back';
+  tick(b, 2, () => { b.player.x = 8; b.player.z = 8; b.input.x = b.input.z = 0; });
+  ok(b.field.drivers[0].plot !== wheatIx, 'with the silo full it goes back to its own plot');
+}
+
+// dock workers fetch whatever the truck ordered: wheat (kept at the stall, or from the silo) and corn (the
+// pile by the stall too, not only the shop counter's surplus) for the mills truck (playtest: 0/28 wheat, slow corn)
+{
+  const d = new SimWorld(3);
+  for (const k of ['cafe.unlock', 'field.unlock', 'field.wheat', 'factory.unlock', 'dock.unlock'] as const) d.upgrades.levels[k] = 1;
+  d.upgrades.levels['dock.worker'] = 2;
+  d.upgrades.apply();
+  const mills = COMPANIES.find((c) => c.id === 'mills')!;
+  d.contracts.truck = { state: 'loading', t: 600, company: mills, kind: 'standing', lines: [{ product: 'wheat', want: 20, loaded: 0 }, { product: 'corn', want: 20, loaded: 0 }], price: { wheat: 10, corn: 10 }, drive: 1 };
+  d.factory.silo = 0;
+  d.stations.find((s) => s.def.product === 'corn')!.pile = 60;
+  // wheat handed in at the stall is kept for the truck (not the silo, not sold)
+  for (let i = 0; i < 6; i++) d.carry.push('wheat');
+  tick(d, 3, () => { d.player.x = FIELDS.stall.drop.x; d.player.z = FIELDS.stall.drop.z; d.input.x = d.input.z = 0; });
+  ok(d.field.dockWheat === 6 && d.factory.silo === 0, `wheat handed in at the stall is kept for the truck (${d.field.dockWheat} kept, silo ${d.factory.silo})`);
+  tick(d, 150, () => { d.player.x = 8; d.player.z = 8; d.input.x = d.input.z = 0; });
+  const l = d.contracts.truck.lines;
+  ok(l[0].loaded === 6 && d.field.dockWheat === 0 && l[1].loaded >= 15, `the dock workers load the kept wheat and the corn (${l[0].loaded}/20 wheat, ${l[1].loaded}/20 corn)`);
+  // two workers on two different orders keep their own sources (cake from the bakery tray, corn from the pile)
+  const tseppas = COMPANIES.find((c) => c.id === 'tseppas')!;
+  d.contracts.truck = { state: 'loading', t: 600, company: tseppas, kind: 'standing', lines: [{ product: 'cake', want: 8, loaded: 0 }, { product: 'corn', want: 8, loaded: 0 }], price: { cake: 10, corn: 10 }, drive: 1 };
+  const bakery = d.factory.machines.find((m) => m.def.id === 'bakery')!;
+  bakery.conv.output.cake = 8; bakery.conv.input.egg = 0;
+  d.stations.find((s) => s.def.product === 'corn')!.pile = 30;
+  tick(d, 150, () => { d.player.x = 8; d.player.z = 8; d.input.x = d.input.z = 0; });
+  const l2 = d.contracts.truck.lines;
+  ok(l2[0].loaded === 8 && l2[1].loaded === 8 && bakery.conv.output.cake === 0, `two workers fill a cake + corn order from two places (${l2[0].loaded}/8 cake, ${l2[1].loaded}/8 corn)`);
+}
+
+// more land (field.expand): a second corn plot, then a second wheat plot, east of the wheat
+{
+  const x = new SimWorld(3);
+  x.upgrades.levels['field.unlock'] = 1; x.upgrades.levels['field.wheat'] = 1;
+  x.upgrades.apply();
+  const n0 = x.field.plots.filter((p) => p.open).length, x1 = x.bounds.x1;
+  x.upgrades.levels['field.expand'] = 1; x.upgrades.apply();
+  const corn2 = x.field.plots.find((p) => p.def.id === 'corn2')!, wheat2 = x.field.plots.find((p) => p.def.id === 'wheat2')!;
+  ok(corn2.open && !wheat2.open && x.bounds.x1 >= corn2.def.box.x1, `level 1 opens a second corn plot (${n0} -> ${x.field.plots.filter((p) => p.open).length} plots, reach x ${x1} -> ${x.bounds.x1})`);
+  x.upgrades.levels['field.expand'] = 2; x.upgrades.apply();
+  ok(wheat2.open && x.bounds.x1 >= wheat2.def.box.x1, 'level 2 opens a second wheat plot');
+  // cutting the new corn works like the old
+  const c0 = x.stats.stalks;
+  x.player.x = (corn2.def.box.x0 + corn2.def.box.x1) / 2; x.player.z = -15;
+  tick(x, 1);
+  ok(x.stats.stalks > c0, `the player harvests the new plot (${x.stats.stalks - c0} stalks)`);
+  const x2 = new SimWorld(1);
+  restore(x2, migrate(JSON.parse(JSON.stringify(serialize(x, Date.now()))))!);
+  ok(x2.field.plots.find((p) => p.def.id === 'wheat2')!.open, 'the new land stays after a reload');
 }
 
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }

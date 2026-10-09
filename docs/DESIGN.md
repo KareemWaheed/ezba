@@ -90,7 +90,7 @@ This file records the decisions made on top of it.
   pile by the grain stall where drivers/combine unload; `corn.worker` carries pile -> counter). Staff crossing
   between yard and farmland walk through the gap between the pens (farmRoute). Barn/stall/tile positions
   adjusted (player capacity/speed tiles moved off the longer counter).
-- M11 factories (east of the café): bakery (2 eggs + 2 wheat -> cake), dairy (3 milk -> cheese), generic
+- M11 factories (east of the café): bakery (2 eggs + 2 wheat -> cake; 1 wheat since the silo playtest below), dairy (3 milk -> cheese), generic
   Converter machines. Wheat handed in at the grain stall fills the bakery silo (80) first. Supplier brings
   eggs/milk from shop surplus; porter carries cake/cheese to the café counter's front row; the player can do
   both. Café customers order cake/cheese only while some is on display.
@@ -254,8 +254,43 @@ This file records the decisions made on top of it.
   4 bundles on the back, then to the stall (west of the drivers' spots); corn only (wheat feeds the bakery and
   stays with the player and the tractors); they leave stalks within 3 m of the player alone. Two hands bring
   ~19 bundles a minute, under a third of one tractor driver; they work during time away like the drivers.
-  `npm run fieldcheck` covers them. (Hands on wheat too pushed automation past the "active earns >= 1.5x"
-  target.)
+  Playtest follow-up ("the hands are so slow it's like they aren't there"): base pace up (a stalk every
+  0.8 s, 6 bundles on the back, faster on foot: two hands ~28 bundles a minute, under half a driver), and
+  `field.handSkill` (8k x2.2, 4 levels, after the first hand) trains them: per level +50% cutting rate, +15%
+  walking speed, +3 bundles carried. Fully trained, two hands bring ~72 a minute, a little more than one
+  tractor driver (which costs 190k with its tractor). A stalk every 0.6 s pushed automation under the
+  "active earns >= 1.5x" target (1.47x); 0.8 s keeps it (1.55x). Hands on wheat too pushed automation past it
+  as well. `npm run fieldcheck` covers them.
+- More land (playtest: "the fields need a size upgrade too"): the river bank stops the fields growing north, so
+  `field.expand` (250k, then 600k; after the wheat field and the tractor) opens new plots east of the wheat: a
+  second corn plot (x 15.5-21.5), then a second wheat plot (22.5-28.5), shown locked until bought; the walkable
+  area reaches them. Drivers and the combine work both new plots like the others; hands work the corn only.
+  Everything is still handed in at the one grain stall: corn goes onto the corn pile there for the shop counter,
+  wheat to a truck that ordered it, the silo, or is sold. At 150k right after the wheat it pushed automation under the "active >= 1.5x" pacing target (1.47x).
+- Events felt like they'd stopped (playtest): the countdown to the next one restarted at 10-16 min of play on
+  every load and was never saved, so short phone sessions rarely reached one. Now it's saved (`eventT`), the
+  gap is 6-9 min, and back after 10+ min away the next event comes within 90 s. `npm run eventcheck` covers it.
+- The combine couldn't unload (playtest): the gap between the grain stall and the coop fence (1.6 m) is
+  narrower than a vehicle (the tractor needs 1.8, the combine 2.4), so it never got within reach of the front
+  drop. A driven vehicle now unloads from any side of the stall (within its radius + 0.6 of the stall box); the
+  guide arrow and a toast send a full combine to the back (`FIELDS.stall.vehicleDrop`, field side).
+- Corn cable line (playtest: corn piles up at the stall, nothing takes it to the counter but the corn
+  workers): `corn.machine` (25k x2.5, 4 levels) is the corn's belt, but in the air (`skyBelt`): a tower by the
+  pile, cables over the coop to a tower behind the counter's west end, bundles ride up, across and down onto
+  the counter (~4.6 s ride, same rate as a belt). Jams are fixed at the counter-end tower (the line's middle is
+  over the coop). `npm run fieldcheck` covers both.
+- The wheat silo sat at 0/80 (playtest): with factory.speed the bakery ate up to ~70 wheat a minute, more than
+  a whole wheat field grows (~65 at best), and the drivers mostly mowed the corn. Cake is now 2 eggs + 1 wheat,
+  and while the bakery's wheat plus the silo is under one input-load (30) the tractor drivers go to the wheat
+  first. One driver now keeps a full-speed bakery stocked and the silo starts filling.
+- Dock workers only fetched from the shop counters (playtest: a mills truck sat at 0/28 wheat, corn slow):
+  they now fetch whatever the waiting truck ordered: the product it still needs most, and for that product the
+  first source with stock, in this order: counter surplus, the pile (the corn's by the grain stall), factory
+  trays (cake, cheese, grilled fish), wheat (kept at the stall, then the silo), the river's fish pile. Each
+  worker keeps its own source. Wheat
+  handed in at the stall while a truck still needs some is kept there for it (`field.dockWheat`, sold or put
+  in the silo once the truck has enough or leaves); the silo's auger leaves the truck's share, and the tractor
+  drivers go to the wheat while it's short.
 - Playtest round (the café cashier felt out of reach; progress lost after a phone call; events felt
   all-or-nothing and the footballers too hard):
   - `cafe.waiter` 130k -> 55k (PRICE_VERSION 2: earlier buyers get the difference back). Full automation of

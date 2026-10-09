@@ -1,4 +1,4 @@
-import { ECONOMY, ITEM_IDS, type ItemId, type UpgradeId } from '../config/economy';
+import { ECONOMY, ITEM_IDS, priceOf, type ItemId, type UpgradeId } from '../config/economy';
 import { SimWorld } from './world';
 import { LEGACY } from '../config/legacy';
 import { FIELDS } from '../config/fields';
@@ -7,6 +7,7 @@ import { FEATURES } from '../config/features';
 import { PRICE_VERSION } from '../config/priceHistory';
 import { refundPriceDrops } from './refund';
 import { RECORD_PRODUCTS } from './surplus';
+import { SCENARIO_GAP, SCENARIO_WELCOME } from '../config/scenarios';
 
 /**
  * Versioned save format. Bump SAVE_VERSION when the shape changes and add a migration from the
@@ -21,6 +22,8 @@ export interface SaveData {
   mode?: GameMode;
   /** Wall-clock ms when saved (for offline earnings). */
   t: number;
+  /** Seconds of play until the next event (kept so short sessions still reach one). */
+  eventT?: number;
   /** Sim time played (s). */
   time: number;
   money: number;
@@ -99,6 +102,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     rating: w.service.rating, legacy: w.legacy, pv: PRICE_VERSION, vipT: w.customers.vipT,
     market: marketSave(w),
     trust: { ...w.contracts.trust },
+    ...(w.scenario.phase === 'idle' ? { eventT: Math.round(w.scenario.t) } : {}),
     boost: Object.fromEntries(w.stations.map((s) => [s.def.id, s.boostT])),
     broken: Object.fromEntries(w.staff.machines.map((m, i) => [String(i), m.broken])),
     cafe: {
@@ -108,7 +112,8 @@ export function serialize(w: SimWorld, now: number): SaveData {
       tables: w.cafe.tables.map((t) => ({ dirty: t.dirty, cash: t.cash, bills: t.bills })),
       cash: { value: w.cafe.uncollected - w.cafe.tables.reduce((a, t) => a + t.cash, 0), bills: w.cafe.cash.bills },
     },
-    field: { cash: w.field.cash.value, bills: w.field.cash.bills, hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
+    // (wheat kept for a truck counts as sold: the truck isn't saved)
+    field: { cash: w.field.cash.value + w.field.dockWheat * Math.round(priceOf('wheat') * w.priceMult), bills: Math.min(40, w.field.cash.bills + w.field.dockWheat), hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
     surplus: { crate: w.surplus.crate, hatching: w.surplus.hatching, hatchT: w.surplus.hatchT, hatched: w.surplus.hatched, golden: w.surplus.golden, records: { ...w.surplus.records } },
     river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },
@@ -155,6 +160,10 @@ export function restore(w: SimWorld, s: SaveData): void {
   w.player.z = num(s.player?.z, w.player.z);
   for (const k of Object.keys(w.stats) as (keyof typeof w.stats)[]) w.stats[k] = num(s.stats?.[k]);
   w.service.rating = Math.max(1, Math.min(5, num(s.rating, w.service.rating)));
+  // the event countdown carries over (it used to restart at 10-16 min on every load, so with short sessions
+  // events almost never came); after a long time away the next one comes soon
+  if (Number.isFinite(s.eventT)) w.scenario.t = Math.max(20, Math.min(SCENARIO_GAP.max, s.eventT!));
+  if (Number.isFinite(s.t) && Date.now() - s.t > SCENARIO_WELCOME.away * 1000) w.scenario.t = Math.min(w.scenario.t, SCENARIO_WELCOME.soon);
   for (const k of Object.keys(w.contracts.trust)) w.contracts.trust[k] = Math.max(0, Math.min(5, num(s.trust?.[k])));
   for (const st of w.stations) st.boostT = Math.max(0, num(s.boost?.[st.def.id]));
   const cf = s.cafe, cafe = w.cafe;

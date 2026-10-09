@@ -39,6 +39,9 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
   // the wholesale trader is only here for a while (with a deal he loads by himself)
   const tv = w.surplus.visit;
   if (tv && tv.state === 'parked' && tv.left > 0 && w.upgrades.level('trader.deal') === 0) { out.x = LAYOUT.surplus.load.x; out.z = LAYOUT.surplus.load.z; return true; }
+  // a full combine: to the stall's back (it can't squeeze in at the front)
+  const f = w.field;
+  if (f.driving && f.vehicle === 'combine' && f.hopperN > 0 && (f.full() || f.ready === 0)) { out.x = FIELDS.stall.vehicleDrop.x; out.z = FIELDS.stall.vehicleDrop.z; return true; }
   // the cheapest upgrade the player can afford right now
   const up = w.upgrades;
   let best: UpgradeDef | null = null, bestR = Infinity;

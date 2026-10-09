@@ -29,6 +29,12 @@ export interface StationDef {
   unlockTrack?: UpgradeId;
   /** Fence moves out by these amounts per level of `track` (bigger pen). */
   expand?: { track: UpgradeId; dx0: number; dx1: number };
+  /**
+   * The belt is a cable line in the air instead (the corn's pile is far from the shop, past the coop): from a
+   * tower by the pile (`a`) over the coop to a tower behind the counter's end (`tower`), then down onto the
+   * counter slot. Jams are fixed at `fix` (the counter-end tower; the line's middle is over the coop).
+   */
+  skyBelt?: { a: { x: number; z: number }; tower: { x: number; z: number }; fix: { x: number; z: number } };
   /** Feeding trough on the front fence (player refills it for a production boost). */
   trough?: { x: number; z: number };
 }
@@ -53,7 +59,8 @@ export const STATIONS: readonly StationDef[] = [
   {
     // corn: the pile sits by the grain stall (drivers and the combine unload there); its counter slot is
     // at the left end of the shop counter
-    id: 'corn', product: 'corn', unlockTrack: 'field.unlock', workerTrack: 'corn.worker',
+    id: 'corn', product: 'corn', unlockTrack: 'field.unlock', workerTrack: 'corn.worker', machineTrack: 'corn.machine',
+    skyBelt: { a: { x: -5.7, z: -10.2 }, tower: { x: -7.2, z: 4.95 }, fix: { x: -8.1, z: 3.2 } },
     pile: { x: -4.4, z: -10.9, cols: 2, rows: 2 },
     counter: { x: -6.6, z: 4, dropX: -6.6, dropZ: 2.9 },
     startsOpen: false,

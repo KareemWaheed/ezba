@@ -38,6 +38,7 @@ export class SurplusSystem {
   /** Records set per product, and how long the player has stood at the stand. */
   readonly records: Record<RecordProduct, number> = { egg: 0, milk: 0, corn: 0 };
   hold = 0;
+  private atStand = false;
   /** The product a record is ready for (null = none), and seconds left of the last record's celebration. */
   ready: RecordProduct | null = null;
   celebT = 0;
@@ -168,6 +169,18 @@ export class SurplusSystem {
     return Math.round(this.need(p) * priceOf(p as ProductId) * this.w.priceMult * this.productMult(p) * ECONOMY.surplus.records.pay);
   }
 
+  /** The record product closest to its mark right now (spare and need), or null with no record stations open. */
+  closest(): { p: RecordProduct; spare: number; need: number } | null {
+    let best: { p: RecordProduct; spare: number; need: number } | null = null, bestF = -1;
+    for (const p of RECORD_PRODUCTS) {
+      const st = this.station(p);
+      if (!st || !st.open) continue;
+      const spare = this.stationSpare(st), need = this.need(p), f = spare / need;
+      if (f > bestF) { best = { p, spare, need }; bestF = f; }
+    }
+    return best;
+  }
+
   private updateRecords(dt: number): void {
     const w = this.w;
     this.celebT = Math.max(0, this.celebT - dt);
@@ -199,8 +212,14 @@ export class SurplusSystem {
       w.events.emit('incubator', '', L.incubator.crate.x, L.incubator.crate.z, v, 2, this.crate);
       this.crate = 0;
     }
-    const r = this.ready;
-    if (!r || dist(p.x, p.z, L.record.x, L.record.z) >= R) { this.hold = 0; return; }
+    const r = this.ready, near = dist(p.x, p.z, L.record.x, L.record.z) < R;
+    // walking up to the stand with no record ready yet: say what it still needs (once per visit)
+    if (near && !r && !this.atStand) {
+      const c = this.closest();
+      if (c) w.events.emit('record', c.p, L.record.x, L.record.z, Math.floor(c.spare), 0, c.need);
+    }
+    this.atStand = near;
+    if (!r || !near) { this.hold = 0; return; }
     this.hold += dt;
     if (this.hold < ECONOMY.surplus.records.hold) return;
     const st = this.station(r)!, n = this.need(r), pay = this.recordPay(r);

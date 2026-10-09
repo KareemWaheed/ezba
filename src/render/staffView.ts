@@ -51,12 +51,65 @@ class BeltView {
   }
 }
 
+/**
+ * Cable line (the corn's belt): a tower by the pile, cables over the coop to a tower behind the counter's end;
+ * bundles ride up, along the cable, and down onto the counter.
+ */
+const SKY_H = 3.7;
+class SkyBeltView {
+  readonly mesh: THREE.Group;
+  private A = new THREE.Vector3();
+  private B = new THREE.Vector3();
+  private end = new THREE.Vector3();
+
+  constructor(scene: THREE.Scene, belt: Belt) {
+    const r = belt.route, sky = r.sky!;
+    this.A.set(sky.a.x, SKY_H, sky.a.z);
+    this.B.set(sky.tower.x, SKY_H, sky.tower.z);
+    this.end.set(r.bx, 1.15, r.bz);
+    this.mesh = new THREE.Group();
+    const dx = this.B.x - this.A.x, dz = this.B.z - this.A.z, L = Math.hypot(dx, dz), yaw = Math.atan2(dx, dz);
+    // towers: a mast, a cross arm with the pulleys, a little sign of the product on top
+    for (const t of [this.A, this.B]) {
+      const tower = new THREE.Mesh(merge([
+        part(PRIM.box, 0xc9a227, 0, 0.12, 0, 0, 0, 0, 0.7, 0.24, 0.7),
+        part(PRIM.box, 0xd94f45, 0, SKY_H / 2, 0, 0, 0, 0, 0.18, SKY_H, 0.18),
+        part(PRIM.box, 0xd94f45, 0, SKY_H + 0.12, 0, 0, 0, 0, 0.9, 0.12, 0.16),
+        part(PRIM.cyl, 0x2e3238, -0.3, SKY_H + 0.12, 0, 0, 0, Math.PI / 2, 0.16, 0.2, 0.16),
+        part(PRIM.cyl, 0x2e3238, 0.3, SKY_H + 0.12, 0, 0, 0, Math.PI / 2, 0.16, 0.2, 0.16),
+      ]), MAT);
+      tower.position.set(t.x, 0, t.z);
+      tower.rotation.y = yaw + Math.PI / 2;
+      this.mesh.add(tower);
+    }
+    // two cables (out and back)
+    const cables = new THREE.Mesh(merge([
+      part(PRIM.box, 0x2e3238, -0.3, SKY_H + 0.12, 0, 0, 0, 0, 0.04, 0.04, L),
+      part(PRIM.box, 0x2e3238, 0.3, SKY_H + 0.12, 0, 0, 0, 0, 0.04, 0.04, L),
+    ]), MAT);
+    cables.position.set((this.A.x + this.B.x) / 2, 0, (this.A.z + this.B.z) / 2);
+    cables.rotation.y = yaw;
+    this.mesh.add(cables);
+    scene.add(this.mesh);
+  }
+
+  /** Where a bundle rides at k (0..1): up the first tower, along the cable, down onto the counter. */
+  at(k: number, out: THREE.Vector3): THREE.Vector3 {
+    if (k < 0.1) return out.set(this.A.x, 0.5 + (SKY_H - 0.85) * (k / 0.1), this.A.z);
+    if (k > 0.9) return out.copy(this.B).setY(SKY_H - 0.35).lerp(this.end, (k - 0.9) / 0.1);
+    const u = (k - 0.1) / 0.8;
+    return out.copy(this.A).lerp(this.B, u).setY(SKY_H - 0.35 - 0.25 * Math.sin(Math.PI * u));
+  }
+}
+const _sky = new THREE.Vector3();
+
 /** Workers, the cashier and belts. */
 export class StaffView {
   private workers: { char: CharacterView; stack: CarrierView }[] = [];
   private cashiers: CharacterView[] = [];
   private lanes: THREE.Object3D[] = [];
   private belts = new Map<number, BeltView>();
+  private skies = new Map<number, SkyBeltView>();
   private pops: Popper[] = [];
 
   constructor(private scene: THREE.Scene) {}
@@ -101,6 +154,16 @@ export class StaffView {
 
     for (const belt of staff.belts) {
       if (belt.level <= 0) continue;
+      if (belt.route.sky) {
+        let s = this.skies.get(belt.id);
+        if (!s) { s = new SkyBeltView(this.scene, belt); this.skies.set(belt.id, s); this.pop(s.mesh, animate); }
+        for (const it of belt.items) {
+          if (!it.active) continue;
+          s.at(it.t, _sky);
+          flyers.put(it.item, _sky.x, _sky.y, _sky.z, 0, 0.8);
+        }
+        continue;
+      }
       let v = this.belts.get(belt.id);
       if (!v) {
         v = new BeltView(this.scene, belt);

@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { ECONOMY } from '../config/economy';
 import { LAYOUT } from '../config/layout';
 import type { SimWorld } from '../sim/world';
-import { RECORD_PRODUCTS } from '../sim/surplus';
 import { MAT, PRIM, merge, part } from './geo';
 import { CanvasSprite, EMOJI, FONT, groundMarker, rr } from './canvas';
 import { ANIMAL_GEO, ITEM_ICON } from './models';
@@ -75,7 +74,7 @@ export class SurplusView {
   private crateKey = '';
   private stand = new THREE.Mesh(STAND_GEO, MAT);
   private standMark = groundMarker('🏆', 1.5, 'rgba(217,180,74,0.3)', '#d9b44a');
-  private standSign = new CanvasSprite(360, 130, 2.8);
+  private standSign = new CanvasSprite(360, 160, 2.8);
   private standKey = '';
   private dish = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.12, 24), new THREE.MeshLambertMaterial({ color: 0xffd84d }));
   private hens: THREE.InstancedMesh;
@@ -98,7 +97,7 @@ export class SurplusView {
     this.chicks.frustumCulled = false;
     this.stand.position.set(L.record.x, 0, L.record.z - 0.9);
     this.standMark.position.set(L.record.x, 0, L.record.z);
-    this.standSign.sprite.position.set(L.record.x, 2.3, L.record.z - 0.9);
+    this.standSign.sprite.position.set(L.record.x, 2.45, L.record.z - 0.9);
     this.dish.position.set(L.record.x, 0.45, L.record.z - 0.9);
     this.hens = new THREE.InstancedMesh(GOLD_HEN, MAT, ECONOMY.surplus.incubator.goldenMax);
     this.hens.frustumCulled = false;
@@ -203,21 +202,14 @@ export class SurplusView {
 
   /** Over the stand: the next record of the product closest to one, and how far along the surplus is. */
   private drawStand(sim: SimWorld): void {
-    const s = sim.surplus;
-    let p = s.ready, frac = 1;
-    if (!p) {
-      frac = 0;
-      for (const q of RECORD_PRODUCTS) {
-        const st = sim.stations.find((x) => x.def.product === q);
-        if (!st || !st.open) continue;
-        const f = Math.max(0, sim.counterSpare(st)) / s.need(q);
-        if (f > frac || !p) { p = q; frac = f; }
-      }
-    }
+    const s = sim.surplus, c0 = s.closest();
+    const p = s.ready ?? c0?.p ?? null;
     this.standSign.sprite.visible = !!p;
     if (!p) return;
-    const r = ECONOMY.surplus.records[p], pct = Math.min(100, Math.floor(frac * 100));
-    const key = `${p}|${pct}|${s.need(p)}|${s.hold > 0}`;
+    const need = s.need(p), have = s.ready ? need : Math.max(0, Math.floor(c0?.spare ?? 0));
+    const frac = Math.min(1, have / need), hold = Math.floor((s.hold / ECONOMY.surplus.records.hold) * 10);
+    const r = ECONOMY.surplus.records[p];
+    const key = `${p}|${have}|${need}|${!!s.ready}|${s.hold > 0}|${hold}`;
     if (key === this.standKey) return;
     this.standKey = key;
     this.standSign.draw((c, w, h) => {
@@ -225,12 +217,19 @@ export class SurplusView {
       rr(c, 4, 4, w - 8, h - 8, 22); c.fill();
       c.lineWidth = 4; c.strokeStyle = '#d9b44a'; c.stroke();
       c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl';
-      c.font = `40px ${EMOJI}`; c.fillText(r.icon, w - 44, 46);
+      c.font = `40px ${EMOJI}`; c.fillText(r.icon, w - 44, 42);
       c.fillStyle = '#2b2a1f'; c.font = `800 28px ${FONT}`;
-      c.fillText(r.name, w / 2 - 20, 46);
+      c.fillText(r.name, w / 2 - 20, 42);
+      // how much spare it needs (beyond what the shop's line wants), or that it's ready
+      c.font = `700 24px ${FONT}`; c.fillStyle = s.ready ? '#2f9e44' : '#6b5a2a';
+      const line = s.ready
+        ? (s.hold > 0 ? 'استنى هنا... ⏳' : 'جاهز! اقف هنا ✋')
+        : `محتاج \u2066${have.toLocaleString('en-US')} / ${need.toLocaleString('en-US')}\u2069 ${ITEM_ICON[p]} زيادة`;
+      c.fillText(line, w / 2, 88);
       c.direction = 'ltr';
-      c.fillStyle = '#e9e4d4'; rr(c, 24, h - 38, w - 48, 16, 8); c.fill();
-      c.fillStyle = s.ready ? '#2f9e44' : '#d9b44a'; rr(c, 24, h - 38, Math.max(16, (w - 48) * Math.min(1, frac)), 16, 8); c.fill();
+      const fill = s.ready && s.hold > 0 ? Math.min(1, s.hold / ECONOMY.surplus.records.hold) : frac;
+      c.fillStyle = '#e9e4d4'; rr(c, 24, h - 34, w - 48, 16, 8); c.fill();
+      c.fillStyle = s.ready ? '#2f9e44' : '#d9b44a'; rr(c, 24, h - 34, Math.max(16, (w - 48) * fill), 16, 8); c.fill();
     });
   }
 

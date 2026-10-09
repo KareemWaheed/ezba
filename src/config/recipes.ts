@@ -20,7 +20,7 @@ export const KITCHEN_RECIPES: Record<string, readonly Recipe[]> = {
 
 /** Stage 5 factories (keyed by FACTORY.machines ids): bakery and dairy. */
 export const FACTORY_RECIPES: Record<string, readonly Recipe[]> = {
-  bakery: [{ output: 'cake', inputs: { egg: 2, wheat: 2 }, time: 4 }],
+  bakery: [{ output: 'cake', inputs: { egg: 2, wheat: 1 }, time: 4 }],
   dairy: [{ output: 'cheese', inputs: { milk: 3 }, time: 4 }],
   grill: [{ output: 'grilledFish', inputs: { fish: 1 }, time: 3 }],
 };

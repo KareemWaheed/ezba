@@ -43,7 +43,7 @@ const ok = (cond: boolean, msg: string): void => {
  * their own checks in fieldcheck and surpluscheck).
  */
 function grownSave(n = 160, seed = 7): SaveData {
-  const w = new SimWorld(seed), bot = new Bot(w, 'active', (id) => id.startsWith('market.') || ['field.hand', 'eggs.incubator', 'trader.deal'].includes(id));
+  const w = new SimWorld(seed), bot = new Bot(w, 'active', (id) => id.startsWith('market.') || ['field.hand', 'field.handSkill', 'field.expand', 'corn.machine', 'eggs.incubator', 'trader.deal'].includes(id));
   for (let i = 0; i < 30 * 60 * 60 && w.upgrades.bought < n; i++) {
     w.money = Math.max(w.money, 1e9);
     bot.update(DT);
@@ -577,6 +577,18 @@ if (!only || only === 'khamaseen') {
     if (d && ((d.when && !d.when(w)) || (d.id === 'inspector' && !w.cafe.open))) bad = d.id;
   }
   ok(!bad, `fresh farm never picks a locked event${bad ? ` (picked ${bad})` : ''}`);
+}
+
+// the countdown to the next event survives a reload; after a long time away the next one comes soon
+{
+  const w = new SimWorld(5);
+  w.scenario.t = 200;
+  const a = new SimWorld(1);
+  restore(a, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
+  ok(Math.abs(a.scenario.t - 200) < 1, `a reload keeps the event countdown (${Math.round(a.scenario.t)} s left)`);
+  const b = new SimWorld(1);
+  restore(b, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now() - 3600_000))))!);
+  ok(b.scenario.t <= 90, `back after an hour: the next event comes soon (${Math.round(b.scenario.t)} s)`);
 }
 
 export { goalOk };

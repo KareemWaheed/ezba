@@ -161,6 +161,8 @@ export class UpgradeSystem {
     w.contracts.sync();
     w.factory.sync();
     w.bounds.x1 = w.factory.open || w.mode === 'market' ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
+    const ex = this.level('field.expand');
+    if (ex > 0) w.bounds.x1 = Math.max(w.bounds.x1, FIELDS.expandX1[Math.min(ex, FIELDS.expandX1.length) - 1]);
     // the yard south of a built store is walkable (its upgrade tiles stand there)
     w.bounds.z1 = w.market.open ? MARKET.yardZ1 : LAYOUT.bounds.z1;
     if (w.market.open) {

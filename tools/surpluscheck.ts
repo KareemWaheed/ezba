@@ -129,6 +129,15 @@ const untilParked = (w: SimWorld, max: number) => {
   e.counter = 300;
   run(w, 1, away);
   ok(w.surplus.ready === null, 'a small surplus sets no record');
+  // walking up to the stand without enough: one hint with what's still needed
+  const hints: { value: number; id: number }[] = [];
+  for (let i = 0; i < 2 / DT; i++) {
+    w.player.x = L.record.x; w.player.z = L.record.z; w.tick(DT);
+    w.events.drain((ev) => { if (ev.type === 'record' && ev.n === 0) hints.push(ev); });
+  }
+  ok(hints.length === 1 && hints[0].id === w.surplus.need(w.surplus.closest()!.p) && hints[0].value < hints[0].id,
+    `at the stand with too little: one hint (${hints[0]?.value}/${hints[0]?.id})`);
+  ok(w.surplus.records.egg === 1, '...and nothing is taken');
 }
 
 // ---- seafood trucks at the river ----

@@ -161,7 +161,7 @@ export class VehicleView {
       h.char.update(d.x, d.z, d.rot, d.speed, dt, false);
       h.sickle.rotation.x = d.cutting > 0 ? Math.sin(this.time * 18 + i) * 0.9 : 0;
       h.load.visible = d.hopper > 0;
-      h.load.scale.y = 0.5 + 0.5 * Math.min(1, d.hopper / ECONOMY.field.hand.hopper);
+      h.load.scale.y = 0.5 + 0.5 * Math.min(1, d.hopper / sim.field.handStats().hopper);
     }
   }
 

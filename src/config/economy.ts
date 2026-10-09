@@ -184,7 +184,9 @@ export const ECONOMY = {
      * on their back, then to the stall (west of the drivers' spots). Corn only; they leave stalks within
      * `giveWay` of the player to the player.
      */
-    hand: { speed: 1.5, reach: 0.9, hopper: 4, cutEvery: 1.2, unloadInterval: 0.3, giveWay: 3 },
+    hand: { speed: 1.8, reach: 0.9, hopper: 6, cutEvery: 0.8, unloadInterval: 0.2, giveWay: 3 },
+    /** field.handSkill per level: cutting this much faster, walking this much faster, this many more bundles carried. */
+    handSkill: { cut: 0.5, speed: 0.15, hopper: 3 },
   },
 
   /**
@@ -483,6 +485,8 @@ export const ECONOMY = {
     'milk.animals': { base: 350, growth: 1.6, max: 6, step: 1 },
     /** Milk workers: +1 worker per level. */
     'milk.worker': { base: 2500, growth: 3, max: 2, step: 1 },
+    /** Corn cable line (pile by the grain stall -> shop counter, over the coop): level 1 builds it, later levels speed it up. */
+    'corn.machine': { base: 25000, growth: 2.5, max: 4, step: 1 },
     /** Milk belt: level 1 builds it, later levels speed it up. */
     'milk.machine': { base: 6000, growth: 2.5, max: 4, step: 1 },
     /** Maintenance: breakdowns.mean x (1 + step x level). Never reaches zero breakdowns. */
@@ -521,12 +525,16 @@ export const ECONOMY = {
     'field.tool': { base: 4000, growth: 2.2, max: 5, step: 0.3 },
     /** Open the wheat field next to the corn (pricier crop). */
     'field.wheat': { base: 60000, growth: 1, max: 1, step: 1 },
+    /** More land (+1 plot per level, east of the wheat): a second corn plot, then a second wheat plot. */
+    'field.expand': { base: 250000, growth: 2.4, max: 2, step: 1 },
     /** Tractor with a cutter: you drive it in the fields (faster, wider path). */
     'field.tractor': { base: 90000, growth: 1, max: 1, step: 1 },
     /** Combine harvester: very wide path, bundles go into its hopper (unloads at the stall). */
     'field.combine': { base: 300000, growth: 1, max: 1, step: 1 },
     /** Field hands (+1 per level): harvest the corn on foot with a sickle, slowly, also during time away. */
     'field.hand': { base: 10000, growth: 2.5, max: 2, step: 1 },
+    /** Training for the field hands: faster sickles and legs, bigger sacks (see field.handSkill). */
+    'field.handSkill': { base: 8000, growth: 2.2, max: 4, step: 1 },
     /** Hired tractor drivers (+1 per level): they harvest on their own, also during time away. */
     'field.driver': { base: 100000, growth: 2, max: 3, step: 1 },
     /** Bigger engine: vehicles drive faster, x (1 + step x level). */
