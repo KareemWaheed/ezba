@@ -4,11 +4,13 @@ import { LAYOUT } from '../config/layout';
 import type { SimWorld } from '../sim/world';
 import type { Belt } from '../sim/staff';
 import { CharacterView } from './character';
+import { hatGeo } from './accessories';
 import { CarrierView, easeOutBack } from './stacks';
 import { MAT, PRIM, merge, part } from './geo';
 import type { Flyers } from './flyers';
 
 const WORKER = { shirt: 0xf28c38, pants: 0x3b4a6b, skin: 0xd9a074, hair: 0x1d1d1d };
+const MECHANIC = { shirt: 0x2f5fa8, pants: 0x2f5fa8, skin: 0xc68a5a, hair: 0x1d1d1d };
 const CASHIER = { shirt: 0x3fae5a, pants: 0x2e2e2e, skin: 0xf1c7a0, hair: 0x8b4513 };
 
 interface Popper { obj: THREE.Object3D; t: number }
@@ -107,6 +109,7 @@ const _sky = new THREE.Vector3();
 export class StaffView {
   private workers: { char: CharacterView; stack: CarrierView }[] = [];
   private cashiers: CharacterView[] = [];
+  private mechanics: CharacterView[] = [];
   private lanes: THREE.Object3D[] = [];
   private belts = new Map<number, BeltView>();
   private skies = new Map<number, SkyBeltView>();
@@ -134,6 +137,16 @@ export class StaffView {
       v.char.update(w.x, w.z, w.rot, w.speed, dt, w.carry.n > 0);
       v.stack.update(w.carry.items, Math.min(1, w.speed / ECONOMY.staff.worker.speed), dt);
     });
+
+    // mechanics: blue overalls and a yellow hard hat
+    while (this.mechanics.length < staff.mechanics.length) {
+      const c = new CharacterView(MECHANIC);
+      c.attach(merge(hatGeo({ kind: 'hardhat', color: 0xf2c230 })));
+      this.scene.add(c.root);
+      this.pop(c.body, animate);
+      this.mechanics.push(c);
+    }
+    staff.mechanics.forEach((m, i) => this.mechanics[i].update(m.x, m.z, m.rot, m.speed, dt, false));
 
     // checkout lanes: a register on the counter and a rope line on the ground
     while (this.lanes.length < sim.lanes) {

@@ -308,6 +308,22 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: -12.9, z: 8.8 }, requires: [{ id: 'hr.office', level: 1 }],
   },
   {
+    id: 'away.cap', icon: '🧔', label: 'ناظر العزبة', msg: 'الناظر بيشغّل العزبة وانت غايب وقت أطول ⏰',
+    pos: { x: -17.1, z: 6.8 }, requires: [{ id: 'hr.office', level: 1 }, { id: 'cafe.unlock', level: 1 }],
+  },
+  {
+    id: 'hr.mechanic', icon: '👷', label: 'وظّف فني صيانة', msg: 'فني الصيانة بيصلّح السيور والمكن لوحده 🔧',
+    pos: { x: -17.1, z: 8.8 }, requires: [{ id: 'hr.office', level: 1 }, { id: 'maint', level: 2 }],
+  },
+  {
+    id: 'hr.accountant', icon: '🧾', label: 'وظّف محاسب', msg: 'المحاسب بيلم فلوس الكاشات لوحده 🧾',
+    pos: { x: -17.1, z: 4.8 }, requires: [{ id: 'hr.office', level: 1 }, { id: 'cafe.unlock', level: 1 }],
+  },
+  {
+    id: 'hr.service', icon: '🤝', label: 'خدمة العملاء', msg: 'الزباين بقوا أصبر 🤝',
+    pos: { x: -19.2, z: 6.8 }, requires: [{ id: 'hr.office', level: 1 }],
+  },
+  {
     id: 'rush.warning', icon: '📣', label: 'إنذار بدري', msg: 'هتعرف بالزحمة بدري ⏰',
     pos: { x: -15.0, z: 8.8 }, requires: [{ id: 'hr.office', level: 1 }],
   },

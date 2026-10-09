@@ -6,6 +6,7 @@ export type SimEventType =
   | 'sell'      // a customer took an item off the counter (id = customer)
   | 'paid'      // a customer finished and left cash (value)
   | 'collect'   // player collected the cash pile (value, n = bills)
+  | 'accountant' // the accountant collected the cash piles (value)
   | 'produce'   // an animal produced an item (id = station index)
   | 'buy'       // an upgrade level was bought (id = UPGRADES index, n = new level)
   | 'angry'     // a customer gave up (id = customer)

@@ -42,7 +42,7 @@ import { MarketBoard } from './ui/marketBoard';
 import { TransferPanel } from './ui/transferPanel';
 import { ITEM_ICON } from './render/models';
 import { ALBUM_PAGES } from './config/album';
-import { simulateAway } from './sim/offline';
+import { awayCap, simulateAway } from './sim/offline';
 
 preventZoom();
 const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -101,7 +101,8 @@ function welcomeBack(seconds: number): void {
   if (seconds < ECONOMY.offline.minSeconds) return;
   const r = simulateAway(sim, seconds);
   sim.events.drain(() => {});
-  const capped = seconds > ECONOMY.offline.capSeconds ? `<div class="m-note">(بنحسب لحد ${fmtAway(ECONOMY.offline.capSeconds)} بس)</div>` : '';
+  const cap = awayCap(sim);
+  const capped = seconds > cap ? `<div class="m-note">(بنحسب لحد ${fmtAway(cap)} بس${sim.upgrades.level('away.cap') < ECONOMY.upgrades['away.cap'].max ? ' — ناظر العزبة بيطوّلها' : ''})</div>` : '';
   if (r.earned > 0) {
     sfx.kaching();
     modal.open(`
@@ -384,7 +385,7 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       if (e.n) { sfx.fanfare(); toast.show(`الزحمة عدّت من غير زعل! ${ltr(`+${e.value}`)} 🎉`); }
       else toast.show('الزحمة خلصت، بس في زباين زعلوا 😕');
       break;
-    case 'break': sfx.clunk(); toast.show('السير عطل! روح صلّحه 🔧'); break;
+    case 'break': sfx.clunk(); toast.show(sim.staff.mechanics.length ? 'السير عطل! فني الصيانة رايح يصلّحه 👷' : 'السير عطل! روح صلّحه 🔧'); break;
     case 'fixed': sfx.fixed(); break;
     case 'feed': sfx.drop(); break;
     case 'golden': sfx.sparkle(); toast.show('في حيوان دهبي هرب! امسكه ✨'); break;
@@ -399,6 +400,12 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       toast.show(UPGRADES[e.id].msg);
       save();
       break;
+    case 'accountant': {
+      sfx.coin();
+      const s = toScreen(sim.player.x, 2.6, sim.player.z);
+      hud.float(`🧾 +${e.value}`, s.x, s.y);
+      break;
+    }
     case 'collect': {
       sfx.kaching();
       const s = toScreen(sim.player.x, 2.6, sim.player.z);

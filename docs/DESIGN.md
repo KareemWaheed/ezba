@@ -338,3 +338,23 @@ This file records the decisions made on top of it.
   the seafood trucks share one visit state machine (`sim/visit.ts`). Own timing
   jitter (world random sequence untouched); never during time away. Once the grill is built the café's name
   board reads "مطعم وكافيه المزرعة". Covered in `npm run surpluscheck`.
+- Time away (playtest: "is there a cap if I leave it 3-4 days? there shouldn't be"): it was 2 h at 30%. Now 8 h
+  count, and the overseer `away.cap` (ناظر العزبة, 30k then 120k, after the café, in the HR yard: widened 4.3 m west for the new staff tiles) raises it to 12 h then 24 h. The
+  first 2 h earn at full rate (25%: the simulated hour and what's extrapolated up to 2 h), the hours after
+  that at 35% of it, so a night away pays but doesn't skip the game
+  (30% and half-rate later hours pushed the café / corn field / automation pacing targets early). Only the first
+  hour is simulated tick by tick; the rest is extrapolated at the mean of that run's second-half rate (skips the opening burst of
+  stock on the counters) and its whole-run rate (so one odd half-hour doesn't set a day's pay) (a phone can't tick a
+  whole day on reopen). No cap at all would let a week away skip most of the game. `npm run awaycheck`.
+- Mechanic (playtest: "an HR job, a bit pricey, someone who fixes the belts"): `hr.mechanic` (فني صيانة, 150k
+  then 375k, up to 2; in the HR yard after maintenance level 2). Blue overalls, hard hat: waits by the office,
+  walks (through the yard's gate) to the nearest jam no other mechanic has taken and fixes it in 4 s (the
+  player: 2 s); works during time away too. The guide arrow skips jams a mechanic is on. At 60k after maint 1
+  automation got too strong early (active/auto 1.49x < 1.5x); at 150k after maint 2 it's 1.60x. `npm run awaycheck`.
+- More HR staff (playtest: "add other HR things if you have ideas"):
+  - Accountant `hr.accountant` (محاسب, 40k then 120k, after the café): the farm's cash piles (shop, café, grain
+    stall, fish stall; not the supermarket's, it has its own checkout) go into the player's money every 30 s
+    (12 s at level 2), with a small 🧾 float. Not during time away (that pays its own sum).
+  - Customer service `hr.service` (خدمة العملاء, 20k x2.5, 3 levels): shop customers' patience +15% per level.
+  - `npm run awaycheck` covers both.
+

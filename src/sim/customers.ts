@@ -129,7 +129,8 @@ export class CustomerSystem {
     for (const l of lines) qty += l.qty;
     const pc = ECONOMY.patience;
     const grace = pc.early * Math.max(0, 1 - w.upgrades.bought / pc.earlyUpgrades);
-    const patience = (pc.normal + grace) * (vip ? ECONOMY.vip.patienceMult : 1) * (inScenario ? sc.def.patienceMult : 1);
+    const service = 1 + w.upgrades.level('hr.service') * ECONOMY.upgrades['hr.service'].step;
+    const patience = (pc.normal + grace) * service * (vip ? ECONOMY.vip.patienceMult : 1) * (inScenario ? sc.def.patienceMult : 1);
     const sp = LAYOUT.shop.spawn;
     const look = rng.int(1 << 30);
     // some events seat their crowd in particular lanes (derby: each side has its own stand)

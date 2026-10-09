@@ -29,7 +29,7 @@ export function guideTarget(w: SimWorld, out: { x: number; z: number }): boolean
     const handedOver = f?.kind === 'vip' && i < w.cashiers && f.frontT >= ECONOMY.vip.cashierAfter;
     if (f && f.kind !== 'normal' && !handedOver) { out.x = LAYOUT.shop.lanes[i].x; out.z = LAYOUT.shop.serveZ; return true; }
   }
-  for (const b of w.staff.machines) if (b.running && b.broken) { out.x = b.mx; out.z = b.mz; return true; }
+  for (const b of w.staff.machines) if (b.running && b.broken && !w.staff.taken(b)) { out.x = b.mx; out.z = b.mz; return true; }
   const g = w.golden.animal;
   if (g) { out.x = g.x; out.z = g.z; return true; }
   if (storeAlert(w, out)) return true;

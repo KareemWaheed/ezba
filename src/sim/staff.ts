@@ -238,6 +238,23 @@ export class Belt implements Breakable {
   get inTransit(): number { let n = 0; for (const i of this.items) if (i.active) n++; return n; }
 }
 
+/** Like farmRoute, but in and out of the walled HR yard through its gate (east wall). */
+function yardRoute(x: number, z: number, tx: number, tz: number, out: { x: number; z: number }): { x: number; z: number } {
+  const y = LAYOUT.hrYard, b = y.box, gz = (y.gate.z0 + y.gate.z1) / 2;
+  const inside = (px: number, pz: number) => px > b.x0 && px < b.x1 && pz > b.z0 && pz < b.z1;
+  const a = inside(x, z), t = inside(tx, tz);
+  if (a === t) return farmRoute(x, z, tx, tz, out);
+  // line up with the gate on this side, then step through it
+  const inX = b.x1 - 0.6, outX = b.x1 + 0.8, lined = Math.abs(z - gz) < 0.3;
+  if (a) { out.x = lined && x > inX - 0.3 ? outX : inX; out.z = gz; return out; }
+  if (Math.abs(x - outX) > 0.3 || !lined) return farmRoute(x, z, outX, gz, out);
+  out.x = inX; out.z = gz;
+  return out;
+}
+
+/** A hired mechanic: waits by the HR office, walks to the nearest jam nobody else has taken and fixes it. */
+export interface Mechanic { x: number; z: number; rot: number; speed: number; target: Breakable | null; fixT: number }
+
 /** Station workers and belts, reconciled from upgrade levels, plus every machine that can jam. */
 export class StaffSystem {
   readonly workers: Worker[] = [];
@@ -245,6 +262,10 @@ export class StaffSystem {
   readonly belts: Belt[] = [];
   /** Everything the jam/fix logic looks at. */
   readonly machines: Breakable[] = [];
+  readonly mechanics: Mechanic[] = [];
+  /** Accountant: seconds until the next round of the cash piles. */
+  private accountT = 0;
+  private way = { x: 0, z: 0 };
 
   constructor(private w: SimWorld) {
     for (const s of w.stations) this.addBelt(new Belt(stationRoute(s), s.index));
@@ -269,10 +290,67 @@ export class StaffSystem {
       const mt = s.def.machineTrack;
       if (mt) this.belts[s.index].level = up.level(mt);
     }
+    while (this.mechanics.length < up.level('hr.mechanic') * ECONOMY.upgrades['hr.mechanic'].step) {
+      const h = LAYOUT.hrYard.mechanics;
+      this.mechanics.push({ x: h.x + this.mechanics.length * 0.8, z: h.z, rot: 0, speed: 0, target: null, fixT: 0 });
+    }
     const cap = ECONOMY.staff.worker.capacity + up.level('hr.capacity') * ECONOMY.upgrades['hr.capacity'].step;
     // kitchen helpers and shelf stockers (with a trolley) carry more than farm workers; HR capacity adds on top
     const base = (key: string) => key === 'cafe.supply' ? ECONOMY.cafe.helperCapacity : key.startsWith('market.stock') ? ECONOMY.supermarket.stockerCapacity : ECONOMY.staff.worker.capacity;
     for (const x of this.workers) x.carry.cap = cap - ECONOMY.staff.worker.capacity + base(x.job.key);
+  }
+
+  /** Accountant (hr.accountant): every so often the cash piles go straight into the player's money. */
+  private updateAccountant(dt: number): void {
+    const w = this.w, lv = w.upgrades.level('hr.accountant');
+    // (not while away: time away pays its own sum)
+    if (lv <= 0 || w.away) return;
+    if ((this.accountT -= dt) > 0) return;
+    this.accountT = ECONOMY.upgrades['hr.accountant'].step * (lv >= 2 ? 0.4 : 1);
+    let v = 0;
+    // (the farm's piles; the supermarket has its own checkout staff)
+    for (const c of [w.cash, w.cafe.cash, w.field.cash, w.river.cash]) { v += c.value; c.value = 0; c.bills = 0; }
+    if (v <= 0) return;
+    w.money += v;
+    w.stats.earned += v;
+    w.events.emit('accountant', '', LAYOUT.shop.cash.x, LAYOUT.shop.cash.z, v);
+  }
+
+  /** A mechanic is on its way to (or fixing) this jam. */
+  taken(b: Breakable): boolean { return this.mechanics.some((m) => m.target === b); }
+
+  private updateMechanics(dt: number, speedMult: number): void {
+    const w = this.w, B = ECONOMY.breakdowns, home = LAYOUT.hrYard.mechanics;
+    this.mechanics.forEach((m, i) => {
+      m.speed = 0;
+      if (m.target && !m.target.broken) { m.target = null; m.fixT = 0; }
+      if (!m.target) {
+        // the nearest jam nobody has taken
+        let best: Breakable | null = null, bestD = Infinity;
+        for (const b of this.machines) {
+          if (!b.running || !b.broken || this.taken(b)) continue;
+          const d = dist(m.x, m.z, b.mx, b.mz);
+          if (d < bestD) { best = b; bestD = d; }
+        }
+        m.target = best;
+      }
+      const t = m.target;
+      const tx = t ? t.mx : home.x + i * 0.8, tz = t ? t.mz + 0.6 : home.z;
+      const r = yardRoute(m.x, m.z, tx, tz, this.way);
+      const prevX = m.x, prevZ = m.z;
+      const there = moveToward(m, r.x, r.z, B.mechanicSpeed * speedMult, dt, 0.2) && r.x === tx && r.z === tz;
+      if (m.x !== prevX || m.z !== prevZ) m.speed = B.mechanicSpeed * speedMult;
+      if (!t || !there) return;
+      m.rot = turnToward(m.rot, t.mx - m.x, t.mz - m.z, 12, dt);
+      m.fixT += dt;
+      if (m.fixT < B.mechanicFixTime) return;
+      t.broken = false;
+      t.fixT = 0;
+      t.breakT = nextBreak(w);
+      m.target = null;
+      m.fixT = 0;
+      if (!w.away) w.events.emit('fixed', '', t.mx, t.mz, 0, 1, this.machines.indexOf(t));
+    });
   }
 
   /** Cashier service slowdown vs. the player (1 = player speed). */
@@ -284,6 +362,8 @@ export class StaffSystem {
     const w = this.w, speedMult = 1 + w.upgrades.level('hr.speed') * ECONOMY.upgrades['hr.speed'].step;
     for (const x of this.workers) x.update(w, dt, speedMult);
     if (!w.scenario.powerCut) for (const b of this.belts) b.update(dt);
+    this.updateMechanics(dt, speedMult);
+    this.updateAccountant(dt);
     // schedule and trigger jams for every running machine
     for (const m of this.machines) {
       if (!m.running || m.broken) continue;

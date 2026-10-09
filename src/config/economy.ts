@@ -396,6 +396,9 @@ export const ECONOMY = {
     /** Seconds the player must stand next to a jammed machine. */
     fixTime: 2,
     fixRadius: 1.6,
+    /** Hired mechanics (hr.mechanic): walk to the nearest jam and fix it in `mechanicFixTime` s. */
+    mechanicSpeed: 2.8,
+    mechanicFixTime: 4,
   },
 
   /** Golden animal: escapes into the yard now and then; catch it before it runs off. */
@@ -491,6 +494,12 @@ export const ECONOMY = {
     'milk.machine': { base: 6000, growth: 2.5, max: 4, step: 1 },
     /** Maintenance: breakdowns.mean x (1 + step x level). Never reaches zero breakdowns. */
     maint: { base: 3000, growth: 2, max: 4, step: 0.6 },
+    /** Mechanics (+1 per level): fix jammed belts and machines on their own, also during time away. */
+    'hr.mechanic': { base: 150000, growth: 2.5, max: 2, step: 1 },
+    /** Accountant: collects the farm's cash piles (shop, café, grain stall, fish stall) every `step` s (level 1), x0.4 at level 2. */
+    'hr.accountant': { base: 40000, growth: 3, max: 2, step: 30 },
+    /** Customer service: shop customers' patience +step per level. */
+    'hr.service': { base: 20000, growth: 2.5, max: 3, step: 0.15 },
     /** Rush bonus share +step per level. */
     'rush.reward': { base: 2500, growth: 2, max: 4, step: 0.5 },
     /** Rush warning +step seconds per level. */
@@ -595,6 +604,8 @@ export const ECONOMY = {
     cashier: { base: 2500, growth: 2.2, max: 3, step: 1 },
     /** Build the HR office (opens the walled HR yard). */
     'hr.office': { base: 1000, growth: 1, max: 1, step: 1 },
+    /** The farm's overseer (ناظر): time away counts longer (ECONOMY.offline.capLevels). */
+    'away.cap': { base: 30000, growth: 4, max: 2, step: 1 },
     /** HR office: worker speed +step per level. */
     'hr.speed': { base: 900, growth: 1.8, max: 5, step: 0.15 },
     /** HR office: worker capacity +step per level. */
@@ -617,10 +628,16 @@ export const ECONOMY = {
   },
 
   offline: {
-    /** Max time away that earns money (s). */
-    capSeconds: 2 * 60 * 60,
+    /** Max time away that earns money (s): 8 h, then `away.cap` levels raise it to these. */
+    capSeconds: 8 * 60 * 60,
+    capLevels: [12 * 60 * 60, 24 * 60 * 60],
+    /** The first `fullSeconds` away earn at full efficiency; time beyond that earns `lateFactor` of it. */
+    fullSeconds: 2 * 60 * 60,
+    lateFactor: 0.35,
+    /** At most this much is simulated tick by tick; the rest is extrapolated at the rate of its second half. */
+    simSeconds: 60 * 60,
     /** Fraction of what staff/machines would have earned that the player actually gets for time away. */
-    efficiency: 0.3,
+    efficiency: 0.25,
     /** Minimum time away before the welcome-back popup shows (s). */
     minSeconds: 30,
   },
