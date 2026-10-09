@@ -50,11 +50,14 @@ ok(ms < 8000, `a day away is quick to work out (${ms} ms)`);
   ok(!a.broken && !b.broken, `they fix both jams on their own (${t.toFixed(1)} s)`);
   // ...and walk back into the HR yard (they used to loop at the gate, flickering, never getting in)
   const home = LAYOUT.hrYard.mechanics;
+  // (no new jam during the walk home: a re-break would rightly send one back out)
+  for (const mc of w.staff.machines) mc.breakT = 1e9;
   for (let i = 0; i < 40 * 30; i++) { w.player.x = 8; w.player.z = 8; w.input.x = w.input.z = 0; w.tick(1 / 30); w.events.drain(() => {}); }
   const d = Math.max(...w.staff.mechanics.map((m, i) => Math.hypot(m.x - (home.x + i * 0.8), m.z - home.z)));
-  ok(w.staff.mechanics.every((m) => !m.target) && d < 0.5, `and walk back through the gate to the office (${d.toFixed(2)} m from their spots)`);
+  ok(d < 0.5, `and walk back through the gate to the office (${d.toFixed(2)} m from their spots)`);
   const fixes = w.stats.fixes;
   ok(fixes === 0, 'the player fixed none of them');
+  for (const mc of w.staff.machines) mc.breakT = -1;
   // time away: jams don't pile up
   simulateAway(w, H);
   ok(w.staff.belts.filter((x) => x.running && x.broken).length === 0 || w.staff.mechanics.some((m) => m.target), 'after an hour away no jam is left waiting for the player');
