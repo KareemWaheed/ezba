@@ -211,5 +211,22 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   ok(x2.field.plots.find((p) => p.def.id === 'wheat2')!.open, 'the new land stays after a reload');
 }
 
+// field hands and a hungry bakery, no tractors (playtest: "the bakery and the silo never get wheat"): one hand
+// goes to the wheat, the other stays on the corn
+{
+  const h = new SimWorld(5);
+  const lv: Record<string, number> = { 'eggs.animals': 4, 'milk.unlock': 1, 'cafe.unlock': 1, 'field.unlock': 1, 'field.wheat': 1, 'field.hand': 2, 'factory.unlock': 1 };
+  for (const [k, v] of Object.entries(lv)) (h.upgrades.levels as Record<string, number>)[k] = v;
+  h.upgrades.apply(); h.upgrades.refresh();
+  const bakery = h.factory.machine('bakery')!;
+  let wheatCut = 0, cornCut = 0;
+  for (let i = 0; i < 240 / DT; i++) {
+    h.player.x = 8; h.player.z = 8; h.input.x = h.input.z = 0; h.tick(DT);
+    h.events.drain((e) => { if (e.type === 'cut') { if (e.product === 'wheat') wheatCut++; else cornCut++; } });
+  }
+  ok(h.field.drivers.length === 0 && wheatCut > 0 && cornCut > 0, `with no tractors, the hands cut wheat for the bakery and corn too (${wheatCut} wheat, ${cornCut} corn)`);
+  ok(bakery.conv.input.wheat + h.factory.silo > 0, `the wheat reaches the bakery (${bakery.conv.input.wheat} in the bakery, ${h.factory.silo} in the silo)`);
+}
+
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }
 console.log('\nall field checks passed');

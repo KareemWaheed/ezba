@@ -178,10 +178,12 @@ export class FieldSystem {
           let best = -1, bestN = -1;
           for (let k = 0; k < this.plots.length; k++) {
             const p = this.plots[k];
-            // (hands only work the corn: wheat is for the tractors)
-            if (!p.open || (hands && p.crop !== 'corn')) continue;
+            // (hands work the corn: wheat is for the tractors, unless there are none and the bakery is short;
+            // then the first hand goes to the wheat and the rest stay on the corn)
+            const handWheat = hands && i === 0 && wheatLow && this.drivers.length === 0;
+            if (!p.open || (hands && p.crop !== 'corn' && !handWheat)) continue;
             // (a hungry bakery: its wheat and the silo running low send the tractors to the wheat first)
-            const n = p.grown + (k === i % this.plots.length ? 10 : 0) + (!hands && p.crop === 'wheat' && wheatLow ? 60 : 0);
+            const n = p.grown + (k === i % this.plots.length ? 10 : 0) + ((!hands || handWheat) && p.crop === 'wheat' && wheatLow ? 60 : 0);
             if (n > bestN) { best = k; bestN = n; }
           }
           if (best < 0) { d.speed = 0; break; }

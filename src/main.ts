@@ -323,6 +323,16 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       else if (e.n === 2 || (e.n === 3 && e.value > 0 && sim.river.truck && sim.river.truck.left > 0)) { sfx.kaching(); toast.show(`🐟 ${co} اشترت السمك ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
       break;
     }
+    case 'factoryHint': {
+      // (corn at the bakery...: what this machine takes, and where the carried thing goes instead)
+      const m = sim.factory.machines[e.id];
+      if (!m) break;
+      const takes = Object.keys(m.conv.input).map((k) => ITEM_ICON[k as ItemId]).join(' و ');
+      const it = e.product as ItemId, ic = ITEM_ICON[it];
+      const where = sim.stations.some((s) => s.def.product === it) ? 'بيتباع على الكاونتر' : 'مش بيدخل هنا';
+      toast.show(`${m.def.icon} ${m.def.name} بياخد ${takes} بس. ${ic} ${where}`);
+      break;
+    }
     case 'trader': {
       const ic = ITEM_ICON[e.product as ItemId];
       if (e.n === 1) { sfx.sparkle(); toast.show(sim.upgrades.level('trader.deal') > 0 ? `🤝 تاجر الجملة جه ياخد ${ltr(e.value.toLocaleString('en-US'))} ${ic}` : `🧑‍💼 تاجر الجملة عايز ${ltr(e.value.toLocaleString('en-US'))} ${ic} الزيادة! قابله عند العربية 🚚`); }
