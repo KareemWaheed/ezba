@@ -42,7 +42,7 @@ import { MarketBoard } from './ui/marketBoard';
 import { TransferPanel } from './ui/transferPanel';
 import { ITEM_ICON } from './render/models';
 import { ALBUM_PAGES } from './config/album';
-import { simulateAway } from './sim/offline';
+import { awayCap, simulateAway } from './sim/offline';
 
 preventZoom();
 const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -101,7 +101,8 @@ function welcomeBack(seconds: number): void {
   if (seconds < ECONOMY.offline.minSeconds) return;
   const r = simulateAway(sim, seconds);
   sim.events.drain(() => {});
-  const capped = seconds > ECONOMY.offline.capSeconds ? `<div class="m-note">(بنحسب لحد ${fmtAway(ECONOMY.offline.capSeconds)} بس)</div>` : '';
+  const cap = awayCap(sim);
+  const capped = seconds > cap ? `<div class="m-note">(بنحسب لحد ${fmtAway(cap)} بس${sim.upgrades.level('away.cap') < ECONOMY.upgrades['away.cap'].max ? ' — ناظر العزبة بيطوّلها' : ''})</div>` : '';
   if (r.earned > 0) {
     sfx.kaching();
     modal.open(`

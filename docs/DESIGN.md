@@ -338,3 +338,9 @@ This file records the decisions made on top of it.
   the seafood trucks share one visit state machine (`sim/visit.ts`). Own timing
   jitter (world random sequence untouched); never during time away. Once the grill is built the café's name
   board reads "مطعم وكافيه المزرعة". Covered in `npm run surpluscheck`.
+- Time away (playtest: "is there a cap if I leave it 3-4 days? there shouldn't be"): it was 2 h at 30%. Now 8 h
+  count, and the overseer `away.cap` (ناظر العزبة, 30k then 120k, after the café) raises it to 12 h then 24 h. The
+  first 2 h earn at full rate (25%), later hours at 35% of that, so a night away pays but doesn't skip the game
+  (30% and half-rate later hours pushed the café / corn field / automation pacing targets early). Only the first
+  hour is simulated tick by tick; the rest is extrapolated at that run's second-half rate (a phone can't tick a
+  whole day on reopen). No cap at all would let a week away skip most of the game. `npm run awaycheck`.
