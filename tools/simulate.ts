@@ -25,11 +25,12 @@ const DT = 1 / 30;
 /** Upgrade levels this game still offers (every track not hidden on its path, up to its max). */
 function levelsLeft(w: SimWorld): number {
   let n = 0;
-  for (const d of UPGRADES) if (!w.upgrades.hidden(d.id)) n += Math.max(0, w.upgrades.maxOf(d.id) - w.upgrades.level(d.id));
+  // (a product's workers once its belt runs aren't on offer any more)
+  for (const d of UPGRADES) if (!w.upgrades.hidden(d.id) && !w.upgrades.beltReplaces(d.id)) n += Math.max(0, w.upgrades.maxOf(d.id) - w.upgrades.level(d.id));
   return n;
 }
 function leftIds(w: SimWorld): string[] {
-  return UPGRADES.filter((d) => !w.upgrades.hidden(d.id) && !w.upgrades.maxed(d.id)).map((d) => `${d.id} ${w.upgrades.level(d.id)}/${w.upgrades.maxOf(d.id)}`);
+  return UPGRADES.filter((d) => !w.upgrades.hidden(d.id) && !w.upgrades.beltReplaces(d.id) && !w.upgrades.maxed(d.id)).map((d) => `${d.id} ${w.upgrades.level(d.id)}/${w.upgrades.maxOf(d.id)}`);
 }
 
 function run(profile: BotProfile): RunResult {

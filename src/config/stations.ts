@@ -81,6 +81,8 @@ export interface PathPoint { x: number; y: number; z: number }
 
 /** Height of a ground belt's top, and of the cable line. */
 export const BELT_Y = 0.2, SKY_Y = 3.7;
+/** Height items ride up to inside a sorter (a gantry over the walkway). */
+export const SORTER_Y = 2.4;
 
 /**
  * Where a product's items ride once its belt is built (LAYOUT.trunk): off the pile (or up the corn's cable line and
@@ -92,7 +94,7 @@ export function beltPath(d: StationDef): PathPoint[] {
   const down: PathPoint[] = [
     { x: side.x, y: BELT_Y, z: T.z },
     { x: side.x, y: BELT_Y, z: T.sortZ },
-    { x: side.x, y: 1.0, z: (T.westSorter.z0 + T.westSorter.z1) / 2 },
+    { x: side.x, y: SORTER_Y, z: (T.westSorter.z0 + T.westSorter.z1) / 2 },
     slot,
   ];
   const sky = d.skyBelt;

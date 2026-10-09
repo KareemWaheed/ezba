@@ -3,7 +3,7 @@ import { ECONOMY } from '../config/economy';
 import { LAYOUT } from '../config/layout';
 import type { SimWorld } from '../sim/world';
 import type { Belt } from '../sim/staff';
-import { BELT_Y, type PathPoint } from '../config/stations';
+import { BELT_Y, SORTER_Y, type PathPoint } from '../config/stations';
 import { CanvasSprite, FONT, rr } from './canvas';
 import { CharacterView } from './character';
 import { hatGeo } from './accessories';
@@ -85,17 +85,22 @@ function mast(x: number, z: number, h: number, yaw: number): THREE.Mesh {
   return m;
 }
 
-/** The sorter (الفرّازة) at a counter end: a hopper on legs over a chute down onto the counter's slots. */
+/**
+ * The sorter (الفرّازة) at a counter end: a gantry on four thin legs over the walkway (people pass under it), the
+ * machine up top with its hopper, and a chute down onto the counter's slots.
+ */
 function sorter(b: { x0: number; x1: number; z0: number; z1: number }, toward: number): THREE.Group {
   const g = new THREE.Group(), cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2, w = b.x1 - b.x0, d = b.z1 - b.z0;
+  const y = SORTER_Y, legs = [[b.x0 + 0.1, b.z0 + 0.1], [b.x1 - 0.1, b.z0 + 0.1], [b.x0 + 0.1, b.z1 - 0.1], [b.x1 - 0.1, b.z1 - 0.1]];
   g.add(new THREE.Mesh(merge([
-    part(PRIM.box, 0x3f9d4f, cx, 0.45, cz, 0, 0, 0, w, 0.9, d),
-    part(PRIM.box, 0x2f7a3c, cx, 0.92, cz, 0, 0, 0, w + 0.06, 0.06, d + 0.06),
-    // hopper on top, the chute toward the counter, two lights
-    part(PRIM.cone, 0xc9a227, cx, 1.35, cz, Math.PI, 0, 0, 0.55, 0.7, 0.55),
-    part(PRIM.box, 0x777e88, cx + toward * (w / 2 + 0.2), 1.0, cz, 0, 0, toward * 0.35, 0.6, 0.06, 0.7),
-    part(PRIM.sph, 0xff4d4d, cx - 0.4, 0.95, b.z1 + 0.01, 0, 0, 0, 0.08, 0.08, 0.08),
-    part(PRIM.sph, 0x4dff7a, cx + 0.4, 0.95, b.z1 + 0.01, 0, 0, 0, 0.08, 0.08, 0.08),
+    ...legs.map(([x, z]) => part(PRIM.box, 0x2f7a3c, x, (y - 0.3) / 2, z, 0, 0, 0, 0.1, y - 0.3, 0.1)),
+    part(PRIM.box, 0x3f9d4f, cx, y, cz, 0, 0, 0, w, 0.6, d),
+    part(PRIM.box, 0x2f7a3c, cx, y + 0.32, cz, 0, 0, 0, w + 0.06, 0.06, d + 0.06),
+    // hopper on top, the chute down toward the counter, two lights
+    part(PRIM.cone, 0xc9a227, cx, y + 0.75, cz, Math.PI, 0, 0, 0.55, 0.7, 0.55),
+    part(PRIM.box, 0x777e88, cx + toward * (w / 2 + 0.35), y - 0.55, cz, 0, 0, toward * 0.9, 0.9, 0.06, 0.7),
+    part(PRIM.sph, 0xff4d4d, cx - 0.4, y, b.z1 + 0.01, 0, 0, 0, 0.08, 0.08, 0.08),
+    part(PRIM.sph, 0x4dff7a, cx + 0.4, y, b.z1 + 0.01, 0, 0, 0, 0.08, 0.08, 0.08),
   ]), MAT));
   const sign = new CanvasSprite(260, 80, 1.6);
   sign.draw((c, cw, ch) => {
@@ -103,7 +108,7 @@ function sorter(b: { x0: number; x1: number; z0: number; z1: number }, toward: n
     c.fillStyle = 'rgba(47,122,60,0.92)'; rr(c, 6, 6, cw - 12, ch - 12, 20); c.fill();
     c.fillStyle = '#fff'; c.fillText('🔀 الفرّازة', cw / 2, ch / 2 + 2);
   });
-  sign.sprite.position.set(cx, 2.2, cz);
+  sign.sprite.position.set(cx, y + 1.5, cz);
   g.add(sign.sprite);
   return g;
 }

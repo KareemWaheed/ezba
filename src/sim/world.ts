@@ -174,7 +174,7 @@ export class SimWorld {
 
   /** Milestone upgrades not bought yet (all bought = the farm can be sold for a bigger one). */
   get legacyMissing(): typeof UPGRADES[number][] {
-    return UPGRADES.filter((d) => d.milestone && !this.upgrades.hidden(d.id) && this.upgrades.level(d.id) === 0);
+    return UPGRADES.filter((d) => d.milestone && !this.upgrades.hidden(d.id) && !this.upgrades.beltReplaces(d.id) && this.upgrades.level(d.id) === 0);
   }
 
   /** Open checkout lanes (1 at the start). */

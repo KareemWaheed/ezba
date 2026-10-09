@@ -193,13 +193,6 @@ export class UpgradeSystem {
     w.river.sync();
     if (w.river.open) { w.bounds.z0 = RIVER.unlockedZ0; w.addSolid('fishStall', RIVER.stall.box); }
     if (this.level('eggs.incubator') > 0) w.addSolid('incubator', LAYOUT.surplus.incubator.box);
-    // the sorters stand on reachable ground: solid once a belt on their side is built
-    for (const st of w.stations) {
-      const mt = st.def.machineTrack;
-      if (!mt || this.level(mt) <= 0) continue;
-      if (st.def.counter.x < 0) w.addSolid('westSorter', LAYOUT.trunk.westSorter);
-      else w.addSolid('eastSorter', LAYOUT.trunk.eastSorter);
-    }
     if (this.level('meat.unlock') > 0) w.addSolid('butcher', { ...LAYOUT.butcher.box, z1: LAYOUT.butcher.box.z1 + 0.5 }); // (with the window counter)
     const grill = FACTORY.machines.find((m) => m.id === 'grill');
     if (grill && this.level(grill.unlockTrack) > 0) w.addSolid('grill', grill.box);

@@ -50,7 +50,8 @@ export const LAYOUT = {
     east: { x: 8.5 },
     /** Where the belt down from the junction ends, on top of the sorter. */
     sortZ: 3.2,
-    /** The sorters' footprint (solid), against the counter's ends. */
+    /** The sorters' footprint, against the counter's ends: gantries up on legs, walked under (the west one spans
+     *  the only way round that end of the counter). */
     westSorter: { x0: -9.3, x1: -7.6, z0: 3.2, z1: 4.8 } as Box,
     eastSorter: { x0: 7.6, x1: 9.3, z0: 3.2, z1: 4.8 } as Box,
   },
@@ -196,7 +197,6 @@ export const SOLIDS: Box[] = [
   FENCES.milk,
   FENCES.honey,
   { ...LAYOUT.counter },
-  // (the sorters stand on reachable ground: they become solid once a belt that ends there is built, SimWorld.addSolid)
   ...hrWalls(),
   ...SURPLUS_WALLS,
   { ...LAYOUT.hrYard.building },

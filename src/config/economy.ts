@@ -476,9 +476,10 @@ export const ECONOMY = {
     belt: {
       /**
        * Seconds between items at level 1; each further level divides it by speedUp.
-       * Must beat a worker (~0.8-1.8 items/s depending on HR upgrades): 2/s at level 1, ~5/s at level 4.
+       * A built belt sends its product's workers home, so it carries what they and the old belt did together:
+       * ~2.9/s at level 1, ~7/s at level 4.
        */
-      interval: 0.5,
+      interval: 0.35,
       speedUp: 1.35,
       /** Travel time along the belt. */
       travel: 2.2,

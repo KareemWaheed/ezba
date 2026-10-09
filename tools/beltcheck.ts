@@ -1,8 +1,8 @@
 /**
  * Main belt checks (LAYOUT.trunk): each product's belt carries its pile along its side's main belt to the sorter and
  * onto its counter slot (eggs and milk on the ground, corn and honey on cable lines); buying a product's belt sends
- * its workers home with what they cost back; a save from before that rule gets its refund once; the sorters turn
- * solid with the first belt that reaches them.
+ * its workers home with what they cost back; a save from before that rule gets its refund once; the sorters are
+ * gantries the way round the counter passes under.
  *
  *   npm run beltcheck
  */
@@ -58,8 +58,9 @@ const delivered = (w: SimWorld, product: string, s: number): number => {
   ok(w.upgrades.level('eggs.machine') === 1 && workers() === 0, `the belt is built and the egg workers are gone (${workers()} left)`);
   ok(seen.includes('retired') && Math.abs(m0 - before - 10 - cost) < 1, `their cost came back (+${Math.round(m0 - before - 10)} of ${cost}, a 'retired' event)`);
   ok(!w.upgrades.tiles.some((t) => t.def.id === 'eggs.worker'), 'no egg worker tile while the belt runs');
-  ok(w.solids.some((b) => b.x0 === LAYOUT.trunk.westSorter.x0 && b.z0 === LAYOUT.trunk.westSorter.z0), 'the west sorter is solid now');
-  ok(!w.solids.some((b) => b.x0 === LAYOUT.trunk.eastSorter.x0 && b.z0 === LAYOUT.trunk.eastSorter.z0), '...the east one not yet (no belt there)');
+  // (the sorter is a gantry: the way round the counter's west end stays open)
+  const T = LAYOUT.trunk.westSorter;
+  ok(!w.solids.some((b) => b.x0 < T.x1 && b.x1 > T.x0 && b.z0 < T.z1 && b.z1 > T.z0), 'nothing solid under the west sorter: the way round the counter stays open');
   const n = delivered(w, 'egg', 20);
   ok(n > 25, `the belt carries eggs along the main belt to the counter (${n} in 20 s)`);
   ok(w.money - m0 < cost, 'the refund was paid once');
@@ -74,7 +75,6 @@ const delivered = (w: SimWorld, product: string, s: number): number => {
   }
   const honey = w.staff.belts[w.stations.find((s) => s.def.product === 'honey')!.index];
   ok(!!honey.route.path && honey.route.path[2].y > 3, 'the honey rides a cable line');
-  ok(w.solids.some((b) => b.x0 === LAYOUT.trunk.eastSorter.x0), 'the east sorter is solid');
 }
 
 // a save from before belts replaced workers: their cost comes back once, listed with the refunds
@@ -90,6 +90,12 @@ const delivered = (w: SimWorld, product: string, s: number): number => {
   restore(b, migrate(JSON.parse(JSON.stringify(serialize(a, Date.now()))))!);
   ok(!b.refunds.some((l) => l.retired) && b.money === a.money, 'and only once');
   ok(b.staff.workers.filter((k) => k.job.key === 'eggs').length === 0, 'no egg workers come back on load');
+}
+
+// a worker never hired before its belt doesn't hold back selling the farm (legacy: every milestone)
+{
+  const w = farm({ 'field.unlock': 1, 'corn.machine': 1 });
+  ok(w.upgrades.level('corn.worker') === 0 && !w.legacyMissing.some((d) => d.id === 'corn.worker'), 'the corn worker is no longer a missing milestone once the corn cable runs');
 }
 
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }

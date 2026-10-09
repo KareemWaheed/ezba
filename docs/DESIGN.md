@@ -414,8 +414,10 @@ This file records the decisions made on top of it.
   lands on the west junction); east, milk (ground) and honey (a cable line over the pen fronts: no room for a ground
   belt beside the apiary's tiles), with a new honey belt `honey.machine`. The middle of the road stays clear.
   Buying a product's belt sends its workers home and gives back what they cost (their tile goes; levels stay, so
-  price growth and requirements don't change); saves from before get that refund once on load (`rt`). The sorters
-  turn solid with their side's first belt. The shop cash moved south-west of the east sorter; a few tiles moved off
+  price growth and requirements don't change; a worker never hired doesn't block selling the farm); saves from before
+  get that refund once on load (`rt`). Belts are faster (one item per 0.35 s at level 1, was 0.5: they now carry what
+  the workers did too). The sorters are gantries on thin legs, walked under: the west one spans the only way round that
+  end of the counter (as a solid box it trapped the casual bot). The shop cash moved south-west of the east sorter; a few tiles moved off
   the belts (layoutcheck: no tile on a main belt or a sorter). The café helper only leaves a pile for the shop when
   a worker or a belt will carry it there (otherwise nobody did and the coffee ran dry). The inspector no longer checks
   the pile behind the belt he just jammed, picks an empty café table, and doesn't fail a checkpoint that went bad
