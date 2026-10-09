@@ -10,7 +10,6 @@ export interface AwayResult {
   seconds: number;
 }
 
-/**
 /** Longest time away that earns money (8 h; the overseer, `away.cap`, raises it). */
 export function awayCap(w: SimWorld): number {
   const O = ECONOMY.offline, lv = Math.min(w.upgrades.level('away.cap'), O.capLevels.length);
@@ -53,8 +52,9 @@ export function simulateAway(w: SimWorld, seconds: number, step = 0.5): AwayResu
   w.input.x = ix;
   w.input.z = iz;
   const simRaw = Math.max(0, gained());
-  // (the second half's rate: the first minutes can be a burst of stock already on the counters)
-  const rate = simT > 0 ? Math.max(0, simRaw - mid) / (simT / 2) : 0;
+  // the rate for the rest: the mean of the second half's rate (the first minutes can be a burst of stock
+  // already on the counters) and the whole run's (so one odd half-hour doesn't set a whole day's pay)
+  const rate = simT > 0 ? (Math.max(0, simRaw - mid) / (simT / 2) + simRaw / simT) / 2 : 0;
   const raw = simRaw + rate * (capped - simT);
   w.market.cash.value = market0[0];
   w.market.cash.bills = market0[1];
@@ -70,9 +70,10 @@ export function simulateAway(w: SimWorld, seconds: number, step = 0.5): AwayResu
   w.money = money0;
   w.cash.value = cash0;
   w.cash.bills = bills0;
-  // full rate for the first hours, then less (raw is spread evenly over the time away)
-  const weight = capped > 0 ? (Math.min(capped, O.fullSeconds) + O.lateFactor * Math.max(0, capped - O.fullSeconds)) / capped : 0;
-  const earned = Math.floor(raw * weight * O.efficiency);
+  // full rate up to `fullSeconds` (the simulated part included), `lateFactor` of it after
+  const fullRaw = simRaw + rate * Math.max(0, Math.min(capped, O.fullSeconds) - simT);
+  const lateRaw = rate * Math.max(0, capped - Math.max(simT, O.fullSeconds));
+  const earned = Math.floor((fullRaw + lateRaw * O.lateFactor) * O.efficiency);
   w.money += earned;
   w.stats.earned += earned;
   return { earned, raw, seconds: capped };

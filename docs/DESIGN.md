@@ -340,9 +340,11 @@ This file records the decisions made on top of it.
   board reads "مطعم وكافيه المزرعة". Covered in `npm run surpluscheck`.
 - Time away (playtest: "is there a cap if I leave it 3-4 days? there shouldn't be"): it was 2 h at 30%. Now 8 h
   count, and the overseer `away.cap` (ناظر العزبة, 30k then 120k, after the café, in the HR yard: widened 4.3 m west for the new staff tiles) raises it to 12 h then 24 h. The
-  first 2 h earn at full rate (25%), later hours at 35% of that, so a night away pays but doesn't skip the game
+  first 2 h earn at full rate (25%: the simulated hour and what's extrapolated up to 2 h), the hours after
+  that at 35% of it, so a night away pays but doesn't skip the game
   (30% and half-rate later hours pushed the café / corn field / automation pacing targets early). Only the first
-  hour is simulated tick by tick; the rest is extrapolated at that run's second-half rate (a phone can't tick a
+  hour is simulated tick by tick; the rest is extrapolated at the mean of that run's second-half rate (skips the opening burst of
+  stock on the counters) and its whole-run rate (so one odd half-hour doesn't set a day's pay) (a phone can't tick a
   whole day on reopen). No cap at all would let a week away skip most of the game. `npm run awaycheck`.
 - Mechanic (playtest: "an HR job, a bit pricey, someone who fixes the belts"): `hr.mechanic` (فني صيانة, 150k
   then 375k, up to 2; in the HR yard after maintenance level 2). Blue overalls, hard hat: waits by the office,

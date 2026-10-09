@@ -31,9 +31,10 @@ ok(r30.earned === r8.earned, 'a day away pays the same as 8 h without the overse
 // 8 h = 2 h at full rate + 6 h at lateFactor (the rate wobbles a little run to run)
 const k = r8.earned / r2.earned, want = (2 + 6 * ECONOMY.offline.lateFactor) / 2;
 ok(Math.abs(k - want) < 0.3, `the hours after the first two earn less (8 h pays ${k.toFixed(2)}x of 2 h, ~${want.toFixed(2)} expected)`);
-const t0 = Date.now(), r24 = simulateAway(farm(2), 30 * H), ms = Date.now() - t0;
+const f24 = farm(2), t0 = Date.now(), r24 = simulateAway(f24, 30 * H), ms = Date.now() - t0;
 ok(r24.seconds === 24 * H && r24.earned > r8.earned * 2, `with the overseer a day counts (${r24.earned})`);
-ok(ms < 8000, `a day away is quick to work out (${ms} ms incl. building the farm)`);
+// (only the first simSeconds are ticked; a generous bound so a slow machine doesn't flake)
+ok(ms < 8000, `a day away is quick to work out (${ms} ms)`);
 
 // mechanics (hr.mechanic): walk out of the HR yard to a jam and fix it, the player far away; also while away
 {
@@ -62,6 +63,17 @@ ok(ms < 8000, `a day away is quick to work out (${ms} ms incl. building the farm
   const m0 = w.money;
   for (let i = 0; i < 35 * 30; i++) { w.player.x = -15; w.player.z = 6; w.input.x = w.input.z = 0; w.tick(1 / 30); w.events.drain(() => {}); }
   ok(w.money - m0 >= 1000 && w.cafe.cash.value === 0 && w.field.cash.value === 0, `the accountant collects the cash piles (${Math.round(w.money - m0)} in 35 s, player in the HR yard)`);
+  // not the supermarket's till (it has its own checkout staff)
+  w.market.cash.value = 700;
+  for (let i = 0; i < 35 * 30; i++) { w.player.x = -15; w.player.z = 6; w.input.x = w.input.z = 0; w.tick(1 / 30); w.events.drain(() => {}); }
+  ok(w.market.cash.value >= 700, `...but not the supermarket's till (${w.market.cash.value} still there)`);
+  // not while away: the piles a time away leaves are its own sum (taken back out and paid once)
+  w.cash.value = 0; w.field.cash.value = 0; w.cafe.cash.value = 0;
+  let collected = 0;
+  w.away = true;
+  for (let i = 0; i < 60 * 2; i++) { w.tick(0.5); w.events.drain((e) => { if (e.type === 'accountant') collected += e.value; }); }
+  w.away = false;
+  ok(collected === 0, 'and not during time away');
 }
 
 // customer service (hr.service): shop customers wait longer

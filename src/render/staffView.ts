@@ -146,7 +146,7 @@ export class StaffView {
       this.pop(c.body, animate);
       this.mechanics.push(c);
     }
-    staff.mechanics.forEach((m, i) => this.mechanics[i].update(m.x, m.z, m.rot, m.speed, dt, !!m.target && m.speed === 0));
+    staff.mechanics.forEach((m, i) => this.mechanics[i].update(m.x, m.z, m.rot, m.speed, dt, false));
 
     // checkout lanes: a register on the counter and a rope line on the ground
     while (this.lanes.length < sim.lanes) {
