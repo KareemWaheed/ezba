@@ -396,7 +396,8 @@ This file records the decisions made on top of it.
   start in easy mode; old saves stay normal; the settings switch it either way (prices change at once). Normal mode
   and its targets are unchanged. `npm run simulate:easy` (3 days, its own targets): the casual bot buys every upgrade
   level at minute 142 (day 2), the efficient one at minute 101 (not inside the first hour); 45 events in 4 h of play
-  (about twice as many as normal); active/auto stays 1.55x.
+  (normal: 58 in 9 h 20 min, one every ~10 min, so about twice as often); active/auto stays 1.41x. In normal mode
+  the casual bot buys everything on day 6.
   `npm run transfercheck` covers prices, the save and the switch.
 - Review fixes (Cubic on the honey/butcher commits): the cow pen grows 2 m a level (was 4: at level 2 it ran into
   the apiary; cows per level unchanged, so old saves at level 2 just get a smaller pen). A cow on its way to the
