@@ -27,16 +27,16 @@ export interface UpgradeDef {
 export const UPGRADES: readonly UpgradeDef[] = [
   {
     id: 'eggs.animals', icon: '🐔', label: 'فرخة جديدة', msg: 'فرخة جديدة في العشة 🐔',
-    pos: { x: -7.6, z: -0.2 }, requires: [], maxBonus: { by: 'eggs.expand', per: 6 },
+    pos: { x: -7.4, z: -0.95 }, requires: [], maxBonus: { by: 'eggs.expand', per: 6 },
   },
   {
     // supermarket path only (hidden on the farm path): the coop opens; the chickens tile then takes this spot
     id: 'eggs.unlock', icon: '🐔', label: 'افتح العشة', msg: 'فتحت عشة الفراخ! البيض بقى ببلاش للسوبر ماركت 🐔',
-    pos: { x: -7.6, z: -0.2 }, requires: [{ id: 'market.cashier', level: 1 }], milestone: true,
+    pos: { x: -7.4, z: -0.95 }, requires: [{ id: 'market.cashier', level: 1 }], milestone: true,
   },
   {
     id: 'eggs.expand', icon: '🏗️', label: 'كبّر العشة', msg: 'العشة كبرت! مكان لفراخ أكتر 🏗️',
-    pos: { x: -7.6, z: -0.2 }, requires: [{ id: 'eggs.worker', level: 1 }], requiresMaxed: 'eggs.animals', milestone: true,
+    pos: { x: -7.4, z: -0.95 }, requires: [{ id: 'eggs.worker', level: 1 }], requiresMaxed: 'eggs.animals', milestone: true,
   },
   {
     id: 'player.capacity', icon: '🎒', label: 'شيل أكتر', msg: 'بقيت تشيل أكتر 💪',
@@ -56,24 +56,24 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'shop.lanes', icon: '🛒', label: 'خط دفع جديد', msg: 'فتحت خط دفع جديد، زباين أكتر 🛒',
-    pos: { x: 8.4, z: 6.6 }, requires: [{ id: 'cashier', level: 1 }], milestone: true,
+    pos: { x: 10.4, z: 4.6 }, requires: [{ id: 'cashier', level: 1 }], milestone: true,
   },
   {
     id: 'eggs.machine', icon: '⚙️', label: 'سير للبيض', msg: 'سير البيض شغال لوحده ⚙️',
-    pos: { x: -5.4, z: -0.3 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true,
+    pos: { x: -5.3, z: -0.95 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true,
   },
   // Stage 2: cows
   {
     id: 'milk.unlock', icon: '🐄', label: 'حظيرة البقر', msg: 'فتحت حظيرة البقر 🐄🥛',
-    pos: { x: 6.5, z: 0.2 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true,
+    pos: { x: 10.6, z: 2.2 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true,
   },
   {
     id: 'milk.animals', icon: '🐄', label: 'بقرة جديدة', msg: 'بقرة جديدة في الحظيرة 🐄',
-    pos: { x: 9.8, z: 2.0 }, requires: [{ id: 'milk.unlock', level: 1 }], maxBonus: { by: 'milk.expand', per: 4 },
+    pos: { x: 10.6, z: 2.2 }, requires: [{ id: 'milk.unlock', level: 1 }], maxBonus: { by: 'milk.expand', per: 4 },
   },
   {
     id: 'milk.expand', icon: '🏗️', label: 'كبّر الحظيرة', msg: 'الحظيرة كبرت! مكان لبقر أكتر 🏗️',
-    pos: { x: 9.8, z: 2.0 }, requires: [{ id: 'milk.worker', level: 1 }], requiresMaxed: 'milk.animals', milestone: true,
+    pos: { x: 10.6, z: 2.2 }, requires: [{ id: 'milk.worker', level: 1 }], requiresMaxed: 'milk.animals', milestone: true,
   },
   {
     id: 'milk.worker', icon: '👷', label: 'وظّف عامل لبن', msg: 'العامل بيلم اللبن بدالك 👷',
@@ -81,7 +81,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'milk.machine', icon: '⚙️', label: 'سير للبن', msg: 'سير اللبن شغال لوحده ⚙️',
-    pos: { x: 9.0, z: -0.3 }, requires: [{ id: 'milk.worker', level: 1 }], milestone: true,
+    pos: { x: 9.0, z: -0.95 }, requires: [{ id: 'milk.worker', level: 1 }], milestone: true,
   },
   // Stage 3: farm café (east of the shop)
   {
@@ -124,6 +124,11 @@ export const UPGRADES: readonly UpgradeDef[] = [
   {
     id: 'honey.worker', icon: '🍯', label: 'وظّف عامل عسل', msg: 'عامل العسل بيودّي العسل للكاونتر 🍯',
     pos: { x: 11.0, z: -0.9 }, requires: [{ id: 'honey.unlock', level: 1 }], milestone: true,
+  },
+  {
+    // (on the apiary tile's spot: that one is gone once the apiary is built)
+    id: 'honey.machine', icon: '⚙️', label: 'سير للعسل', msg: 'سير العسل شغال على السير الرئيسي ⚙️',
+    pos: { x: 13.0, z: -0.9 }, requires: [{ id: 'honey.worker', level: 1 }], milestone: true,
   },
   // the butcher's north of the factory yard (reachable once the factory is open): old cows' meat
   {

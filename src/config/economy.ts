@@ -272,7 +272,7 @@ export const ECONOMY = {
    * price, and scenario events come every `eventGap` s instead of SCENARIO_GAP (so a relaxed player sees the whole
    * farm in a day or two and an event every few minutes).
    */
-  easy: { costMult: 0.3, eventGap: { min: 150, max: 240 } },
+  easy: { costMult: 0.27, eventGap: { min: 150, max: 240 } },
 
   /** Animals / machines that generate items into a pickup pile. */
   producers: {
@@ -476,9 +476,10 @@ export const ECONOMY = {
     belt: {
       /**
        * Seconds between items at level 1; each further level divides it by speedUp.
-       * Must beat a worker (~0.8-1.8 items/s depending on HR upgrades): 2/s at level 1, ~5/s at level 4.
+       * A built belt sends its product's workers home, so it carries what they and the old belt did together:
+       * 4/s at level 1, ~10/s at level 4 (a full coop with the feed boost lays ~8/s).
        */
-      interval: 0.5,
+      interval: 0.25,
       speedUp: 1.35,
       /** Travel time along the belt. */
       travel: 2.2,
@@ -518,6 +519,8 @@ export const ECONOMY = {
     'honey.animals': { base: 2500, growth: 1.6, max: 6, step: 1 },
     /** Honey workers: +1 per level. */
     'honey.worker': { base: 12000, growth: 3, max: 2, step: 1 },
+    /** Honey's belt onto the east main belt (level 1 builds it, later levels speed it up). */
+    'honey.machine': { base: 15000, growth: 2.5, max: 4, step: 1 },
     /** The butcher's north of the factory yard (single level): old cows go there, a calf takes their place. */
     'meat.unlock': { base: 60000, growth: 1, max: 1, step: 1 },
     /** Corn cable line (pile by the grain stall -> shop counter, over the coop): level 1 builds it, later levels speed it up. */

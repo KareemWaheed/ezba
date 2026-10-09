@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && tsx tools/layoutcheck.ts && vite build",
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit",
+    "beltcheck": "tsx tools/beltcheck.ts",
     "simulate": "tsx tools/simulate.ts",
     "simulate:check": "tsx tools/simulate.ts --check",
     "simulate:easy": "tsx tools/simulate.ts --easy --check",

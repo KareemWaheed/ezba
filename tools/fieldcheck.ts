@@ -22,7 +22,8 @@ const tick = (w: SimWorld, s: number, drive?: () => void): void => {
 };
 
 // a farm with the corn field and a corn worker, no tractor drivers
-const w = new SimWorld(7), bot = new Bot(w, 'active');
+// (no corn cable line: it would send the corn worker home)
+const w = new SimWorld(7), bot = new Bot(w, 'active', (id) => id === 'corn.machine');
 for (let i = 0; i < 30 * 60 * 90 && w.upgrades.level('corn.worker') < 1; i++) { w.money = Math.max(w.money, 1e9); bot.update(DT); w.tick(DT); w.events.drain(() => {}); }
 const corn = w.stations.find((s) => s.def.product === 'corn')!;
 ok(corn.open && w.upgrades.level('corn.worker') >= 1 && w.field.drivers.length === 0, 'test farm: corn field + corn worker, no drivers');
@@ -209,6 +210,23 @@ ok(w2.stations.find((s) => s.def.product === 'corn')!.pile === corn.pile, 'a sav
   const x2 = new SimWorld(1);
   restore(x2, migrate(JSON.parse(JSON.stringify(serialize(x, Date.now()))))!);
   ok(x2.field.plots.find((p) => p.def.id === 'wheat2')!.open, 'the new land stays after a reload');
+}
+
+// field hands and a hungry bakery, no tractors (playtest: "the bakery and the silo never get wheat"): one hand
+// goes to the wheat, the other stays on the corn
+{
+  const h = new SimWorld(5);
+  const lv: Record<string, number> = { 'eggs.animals': 4, 'milk.unlock': 1, 'cafe.unlock': 1, 'field.unlock': 1, 'field.wheat': 1, 'field.hand': 2, 'factory.unlock': 1 };
+  for (const [k, v] of Object.entries(lv)) (h.upgrades.levels as Record<string, number>)[k] = v;
+  h.upgrades.apply(); h.upgrades.refresh();
+  const bakery = h.factory.machine('bakery')!;
+  let wheatCut = 0, cornCut = 0;
+  for (let i = 0; i < 240 / DT; i++) {
+    h.player.x = 8; h.player.z = 8; h.input.x = h.input.z = 0; h.tick(DT);
+    h.events.drain((e) => { if (e.type === 'cut') { if (e.product === 'wheat') wheatCut++; else cornCut++; } });
+  }
+  ok(h.field.drivers.length === 0 && wheatCut > 0 && cornCut > 0, `with no tractors, the hands cut wheat for the bakery and corn too (${wheatCut} wheat, ${cornCut} corn)`);
+  ok(bakery.conv.input.wheat + h.factory.silo > 0, `the wheat reaches the bakery (${bakery.conv.input.wheat} in the bakery, ${h.factory.silo} in the silo)`);
 }
 
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }

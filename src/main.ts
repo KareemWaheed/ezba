@@ -132,7 +132,9 @@ function showRefund(): void {
   modal.open(`
     <div class="m-icon">💰</div>
     <div class="m-title">رجّعنالك فلوس!</div>
-    <div>رخّصنا أسعار شوية ترقيات، وانت كنت اشتريتها بالسعر القديم، فرجّعنالك الفرق:</div>
+    <div>${lines.every((l) => l.retired) ? 'السيور بقت بتشتغل لوحدها على السير الرئيسي، فعمال المنتجات اللي ليها سير روّحوا، ورجّعنالك تمنهم:'
+      : lines.some((l) => l.retired) ? 'رخّصنا أسعار شوية ترقيات، والسيور بقت بتشتغل بدل العمال، فرجّعنالك:'
+      : 'رخّصنا أسعار شوية ترقيات، وانت كنت اشتريتها بالسعر القديم، فرجّعنالك الفرق:'}</div>
     <div class="r-list">${lines.map((l) => {
       const d = UPGRADE_BY_ID.get(l.id);
       return `<div class="r-row"><span>${d?.icon ?? '⬆️'} ${d?.label ?? l.id}</span><b>${ltr(`+${fmtMoney(l.amount)}`)}</b></div>`;
@@ -321,6 +323,21 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       const co = ECONOMY.river.trucks.companies[e.id]?.name ?? '';
       if (e.n === 1) { sfx.sparkle(); toast.show(sim.upgrades.level('river.worker') > 0 ? `🚚 عربية ${co} جاية تاخد ${ltr(String(e.value))} 🐟` : `🚚 عربية ${co} عايزة ${ltr(String(e.value))} 🐟! حمّلها عند النهر`); }
       else if (e.n === 2 || (e.n === 3 && e.value > 0 && sim.river.truck && sim.river.truck.left > 0)) { sfx.kaching(); toast.show(`🐟 ${co} اشترت السمك ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
+      break;
+    }
+    case 'retired': {
+      sfx.kaching();
+      toast.show(`⚙️ السير شغال بدل العمال: روّحوا ورجعلك تمنهم ${ltr(`+${fmtMoney(e.value)}`)} 💰`);
+      break;
+    }
+    case 'factoryHint': {
+      // (corn at the bakery...: what this machine takes, and where the carried thing goes instead)
+      const m = sim.factory.machines[e.id];
+      if (!m) break;
+      const takes = Object.keys(m.conv.input).map((k) => ITEM_ICON[k as ItemId]).join(' و ');
+      const it = e.product as ItemId, ic = ITEM_ICON[it];
+      const where = sim.stations.some((s) => s.def.product === it) ? 'بيتباع على الكاونتر' : 'مش بيدخل هنا';
+      toast.show(`${m.def.icon} ${m.def.name} بياخد ${takes} بس. ${ic} ${where}`);
       break;
     }
     case 'trader': {

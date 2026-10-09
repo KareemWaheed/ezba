@@ -3,6 +3,8 @@ import { ECONOMY } from '../config/economy';
 import { LAYOUT } from '../config/layout';
 import type { SimWorld } from '../sim/world';
 import type { Belt } from '../sim/staff';
+import { BELT_Y, SORTER_Y, type PathPoint } from '../config/stations';
+import { CanvasSprite, FONT, rr } from './canvas';
 import { CharacterView } from './character';
 import { hatGeo } from './accessories';
 import { CarrierView, easeOutBack } from './stacks';
@@ -54,57 +56,149 @@ class BeltView {
   }
 }
 
-/**
- * Cable line (the corn's belt): a tower by the pile, cables over the coop to a tower behind the counter's end;
- * bundles ride up, along the cable, and down onto the counter.
- */
-const SKY_H = 3.7;
-class SkyBeltView {
-  readonly mesh: THREE.Group;
-  private A = new THREE.Vector3();
-  private B = new THREE.Vector3();
-  private end = new THREE.Vector3();
+const _sky = new THREE.Vector3();
 
-  constructor(scene: THREE.Scene, belt: Belt) {
-    const r = belt.route, sky = r.sky!;
-    this.A.set(sky.a.x, SKY_H, sky.a.z);
-    this.B.set(sky.tower.x, SKY_H, sky.tower.z);
-    this.end.set(r.bx, 1.15, r.bz);
-    this.mesh = new THREE.Group();
-    const dx = this.B.x - this.A.x, dz = this.B.z - this.A.z, L = Math.hypot(dx, dz), yaw = Math.atan2(dx, dz);
-    // towers: a mast, a cross arm with the pulleys, a little sign of the product on top
-    for (const t of [this.A, this.B]) {
-      const tower = new THREE.Mesh(merge([
-        part(PRIM.box, 0xc9a227, 0, 0.12, 0, 0, 0, 0, 0.7, 0.24, 0.7),
-        part(PRIM.box, 0xd94f45, 0, SKY_H / 2, 0, 0, 0, 0, 0.18, SKY_H, 0.18),
-        part(PRIM.box, 0xd94f45, 0, SKY_H + 0.12, 0, 0, 0, 0, 0.9, 0.12, 0.16),
-        part(PRIM.cyl, 0x2e3238, -0.3, SKY_H + 0.12, 0, 0, 0, Math.PI / 2, 0.16, 0.2, 0.16),
-        part(PRIM.cyl, 0x2e3238, 0.3, SKY_H + 0.12, 0, 0, 0, Math.PI / 2, 0.16, 0.2, 0.16),
-      ]), MAT);
-      tower.position.set(t.x, 0, t.z);
-      tower.rotation.y = yaw + Math.PI / 2;
-      this.mesh.add(tower);
-    }
-    // two cables (out and back)
-    const cables = new THREE.Mesh(merge([
-      part(PRIM.box, 0x2e3238, -0.3, SKY_H + 0.12, 0, 0, 0, 0, 0.04, 0.04, L),
-      part(PRIM.box, 0x2e3238, 0.3, SKY_H + 0.12, 0, 0, 0, 0, 0.04, 0.04, L),
-    ]), MAT);
-    cables.position.set((this.A.x + this.B.x) / 2, 0, (this.A.z + this.B.z) / 2);
-    cables.rotation.y = yaw;
-    this.mesh.add(cables);
-    scene.add(this.mesh);
+/** A ground belt from a to b (y = belt top), as a mesh. */
+function groundBelt(ax: number, az: number, bx: number, bz: number): THREE.Mesh {
+  const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz);
+  const parts = [part(PRIM.box, 0x4a4f57, 0, 0.08, 0, 0, 0, 0, 0.8, 0.12, L + 0.8)];
+  for (let s = -L / 2; s < L / 2 + 0.3; s += 0.45) parts.push(part(PRIM.box, 0x777e88, 0, 0.15, s, 0, 0, 0, 0.82, 0.03, 0.12));
+  // side rails in the farm's yellow: the main belts read as one line
+  for (const e of [-0.42, 0.42]) parts.push(part(PRIM.box, 0xc9a227, e, 0.17, 0, 0, 0, 0, 0.06, 0.08, L + 0.8));
+  const m = new THREE.Mesh(merge(parts), MAT);
+  m.position.set((ax + bx) / 2, 0, (az + bz) / 2);
+  m.rotation.y = Math.atan2(dx, dz);
+  return m;
+}
+
+/** A short sloped belt from a to b (off a pile onto the main belt, up into a sorter). */
+function rampBelt(a: PathPoint, b: PathPoint): THREE.Mesh {
+  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, H = Math.hypot(dx, dz), L = Math.hypot(H, dy);
+  const parts = [part(PRIM.box, 0x4a4f57, 0, -0.1, 0, 0, 0, 0, 0.6, 0.1, L)];
+  for (const e of [-0.32, 0.32]) parts.push(part(PRIM.box, 0xc9a227, e, -0.04, 0, 0, 0, 0, 0.05, 0.07, L));
+  const m = new THREE.Mesh(merge(parts), MAT);
+  m.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  m.rotation.set(-Math.atan2(dy, H), Math.atan2(dx, dz), 0, 'YXZ');
+  return m;
+}
+
+/** A cable-line mast from the ground up to h, with its pulley arm across `yaw`. */
+function mast(x: number, z: number, h: number, yaw: number): THREE.Mesh {
+  const m = new THREE.Mesh(merge([
+    part(PRIM.box, 0xc9a227, 0, 0.12, 0, 0, 0, 0, 0.7, 0.24, 0.7),
+    part(PRIM.box, 0xd94f45, 0, h / 2, 0, 0, 0, 0, 0.18, h, 0.18),
+    part(PRIM.box, 0xd94f45, 0, h + 0.12, 0, 0, 0, 0, 0.9, 0.12, 0.16),
+    part(PRIM.cyl, 0x2e3238, -0.3, h + 0.12, 0, 0, 0, Math.PI / 2, 0.16, 0.2, 0.16),
+    part(PRIM.cyl, 0x2e3238, 0.3, h + 0.12, 0, 0, 0, Math.PI / 2, 0.16, 0.2, 0.16),
+  ]), MAT);
+  m.position.set(x, 0, z);
+  m.rotation.y = yaw + Math.PI / 2;
+  return m;
+}
+
+/** A sorter's chute: a grey slide from the gantry's side down onto one counter slot. */
+function chute(a: PathPoint, b: PathPoint): THREE.Mesh {
+  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, H = Math.hypot(dx, dz), L = Math.hypot(H, dy);
+  const m = new THREE.Mesh(merge([
+    part(PRIM.box, 0x777e88, 0, -0.08, 0, 0, 0, 0, 0.5, 0.05, L),
+    ...[-0.25, 0.25].map((e) => part(PRIM.box, 0x5d636c, e, -0.02, 0, 0, 0, 0, 0.04, 0.12, L)),
+  ]), MAT);
+  m.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  m.rotation.set(-Math.atan2(dy, H), Math.atan2(dx, dz), 0, 'YXZ');
+  return m;
+}
+
+/**
+ * The sorter (الفرّازة) at a counter end: a gantry on four thin legs over the walkway (people pass under it), the
+ * machine up top with its hopper; chutes (one per slot) run down onto the counter.
+ */
+function sorter(b: { x0: number; x1: number; z0: number; z1: number }): THREE.Group {
+  const g = new THREE.Group(), cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2, w = b.x1 - b.x0, d = b.z1 - b.z0;
+  const y = SORTER_Y, legs = [[b.x0 + 0.1, b.z0 + 0.1], [b.x1 - 0.1, b.z0 + 0.1], [b.x0 + 0.1, b.z1 - 0.1], [b.x1 - 0.1, b.z1 - 0.1]];
+  g.add(new THREE.Mesh(merge([
+    ...legs.map(([x, z]) => part(PRIM.box, 0x2f7a3c, x, (y - 0.3) / 2, z, 0, 0, 0, 0.1, y - 0.3, 0.1)),
+    part(PRIM.box, 0x3f9d4f, cx, y, cz, 0, 0, 0, w, 0.6, d),
+    part(PRIM.box, 0x2f7a3c, cx, y + 0.32, cz, 0, 0, 0, w + 0.06, 0.06, d + 0.06),
+    // hopper on top, two lights (each slot's chute is drawn with its belt)
+    part(PRIM.cone, 0xc9a227, cx, y + 0.75, cz, Math.PI, 0, 0, 0.55, 0.7, 0.55),
+    part(PRIM.sph, 0xff4d4d, cx - 0.4, y, b.z1 + 0.01, 0, 0, 0, 0.08, 0.08, 0.08),
+    part(PRIM.sph, 0x4dff7a, cx + 0.4, y, b.z1 + 0.01, 0, 0, 0, 0.08, 0.08, 0.08),
+  ]), MAT));
+  const sign = new CanvasSprite(260, 80, 1.6);
+  sign.draw((c, cw, ch) => {
+    c.font = `800 40px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl';
+    c.fillStyle = 'rgba(47,122,60,0.92)'; rr(c, 6, 6, cw - 12, ch - 12, 20); c.fill();
+    c.fillStyle = '#fff'; c.fillText('🔀 الفرّازة', cw / 2, ch / 2 + 2);
+  });
+  sign.sprite.position.set(cx, y + 1.5, cz);
+  g.add(sign.sprite);
+  return g;
+}
+
+/**
+ * The main belts (LAYOUT.trunk): every station belt's path, drawn piece by piece; a piece several products share
+ * (the main belt, the way down to the sorter) is drawn once. Ground pieces are belts, upright ones masts, high ones
+ * cables; the sorter is drawn when the first belt reaching it is.
+ */
+class TrunkView {
+  private drawn = new Set<string>();
+  /** Per belt: its path and the distance along it at each point (for placing items). */
+  readonly paths = new Map<number, { p: readonly PathPoint[]; s: number[] }>();
+
+  constructor(private scene: THREE.Scene, private pop: (o: THREE.Object3D, animate: boolean) => void) {}
+
+  private once(key: string, make: () => THREE.Object3D, animate: boolean): void {
+    if (this.drawn.has(key)) return;
+    this.drawn.add(key);
+    const o = make();
+    this.scene.add(o);
+    this.pop(o, animate);
   }
 
-  /** Where a bundle rides at k (0..1): up the first tower, along the cable, down onto the counter. */
-  at(k: number, out: THREE.Vector3): THREE.Vector3 {
-    if (k < 0.1) return out.set(this.A.x, 0.5 + (SKY_H - 0.85) * (k / 0.1), this.A.z);
-    if (k > 0.9) return out.copy(this.B).setY(SKY_H - 0.35).lerp(this.end, (k - 0.9) / 0.1);
-    const u = (k - 0.1) / 0.8;
-    return out.copy(this.A).lerp(this.B, u).setY(SKY_H - 0.35 - 0.25 * Math.sin(Math.PI * u));
+  add(belt: Belt, animate: boolean): void {
+    const p = belt.route.path!, s = [0];
+    for (let i = 1; i < p.length; i++) s.push(s[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y, p[i].z - p[i - 1].z));
+    this.paths.set(belt.id, { p, s });
+    const r = (v: number) => v.toFixed(2);
+    // (the last piece, from the sorter onto the slot, is the sorter's chute)
+    for (let i = 1; i < p.length - 1; i++) {
+      const a = p[i - 1], b = p[i], key = `${r(a.x)},${r(a.y)},${r(a.z)}>${r(b.x)},${r(b.y)},${r(b.z)}`;
+      const flat = Math.abs(a.y - BELT_Y) < 0.01 && Math.abs(b.y - BELT_Y) < 0.01;
+      const upright = Math.hypot(b.x - a.x, b.z - a.z) < 0.01;
+      if (flat) this.once(key, () => groundBelt(a.x, a.z, b.x, b.z), animate);
+      else if (upright) this.once(`mast ${r(a.x)},${r(a.z)}`, () => mast(a.x, a.z, Math.max(a.y, b.y) + 0.35, Math.atan2(p[Math.min(i + 1, p.length - 1)].x - b.x, p[Math.min(i + 1, p.length - 1)].z - b.z)), animate);
+      else if (a.y > 2 && b.y > 2) {
+        this.once(key, () => {
+          const dx = b.x - a.x, dz = b.z - a.z, L = Math.hypot(dx, dz), y = a.y + 0.47;
+          const m = new THREE.Mesh(merge([
+            part(PRIM.box, 0x2e3238, -0.3, y, 0, 0, 0, 0, 0.04, 0.04, L),
+            part(PRIM.box, 0x2e3238, 0.3, y, 0, 0, 0, 0, 0.04, 0.04, L),
+          ]), MAT);
+          m.position.set((a.x + b.x) / 2, 0, (a.z + b.z) / 2);
+          m.rotation.y = Math.atan2(dx, dz);
+          return m;
+        }, animate);
+        // the field end's mast
+        this.once(`mast ${r(a.x)},${r(a.z)}`, () => mast(a.x, a.z, a.y + 0.35, Math.atan2(b.x - a.x, b.z - a.z)), animate);
+      } else this.once(key, () => rampBelt(a, b), animate);
+    }
+    const west = belt.route.bx < 0, T = LAYOUT.trunk, sb = west ? T.westSorter : T.eastSorter;
+    this.once(west ? 'westSorter' : 'eastSorter', () => sorter(sb), animate);
+    // this slot's chute: from the gantry's counter side down onto the slot
+    const slot = p[p.length - 1], edge = west ? sb.x1 : sb.x0;
+    this.once(`chute ${r(slot.x)}`, () => chute({ x: edge, y: SORTER_Y - 0.25, z: slot.z }, { x: slot.x, y: slot.y + 0.1, z: slot.z }), animate);
+  }
+
+  /** Where an item rides at k (0..1) of its belt's path. */
+  at(id: number, k: number, out: THREE.Vector3): THREE.Vector3 {
+    const { p, s } = this.paths.get(id)!, d = k * s[s.length - 1];
+    let i = 1;
+    while (i < s.length - 1 && s[i] < d) i++;
+    const u = s[i] > s[i - 1] ? Math.min(1, (d - s[i - 1]) / (s[i] - s[i - 1])) : 1;
+    const a = p[i - 1], b = p[i];
+    return out.set(a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u, a.z + (b.z - a.z) * u);
   }
 }
-const _sky = new THREE.Vector3();
 
 /** Workers, the cashier and belts. */
 export class StaffView {
@@ -114,10 +208,12 @@ export class StaffView {
   private feeders: CharacterView[] = [];
   private lanes: THREE.Object3D[] = [];
   private belts = new Map<number, BeltView>();
-  private skies = new Map<number, SkyBeltView>();
+  private trunk: TrunkView;
   private pops: Popper[] = [];
 
-  constructor(private scene: THREE.Scene) {}
+  constructor(private scene: THREE.Scene) {
+    this.trunk = new TrunkView(scene, (o, a) => this.pop(o, a));
+  }
 
   private pop(obj: THREE.Object3D, animate: boolean): void {
     if (!animate) return;
@@ -139,6 +235,8 @@ export class StaffView {
       v.char.update(w.x, w.z, w.rot, w.speed, dt, w.carry.n > 0);
       v.stack.update(w.carry.items, Math.min(1, w.speed / ECONOMY.staff.worker.speed), dt);
     });
+    // (workers sent home once their product's belt is built)
+    this.workers.forEach((v, i) => { v.char.root.visible = i < staff.workers.length; });
 
     // mechanics: blue overalls and a yellow hard hat
     while (this.mechanics.length < staff.mechanics.length) {
@@ -179,12 +277,11 @@ export class StaffView {
 
     for (const belt of staff.belts) {
       if (belt.level <= 0) continue;
-      if (belt.route.sky) {
-        let s = this.skies.get(belt.id);
-        if (!s) { s = new SkyBeltView(this.scene, belt); this.skies.set(belt.id, s); this.pop(s.mesh, animate); }
+      if (belt.route.path) {
+        if (!this.trunk.paths.has(belt.id)) this.trunk.add(belt, animate);
         for (const it of belt.items) {
           if (!it.active) continue;
-          s.at(it.t, _sky);
+          this.trunk.at(belt.id, it.t, _sky);
           flyers.put(it.item, _sky.x, _sky.y, _sky.z, 0, 0.8);
         }
         continue;

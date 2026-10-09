@@ -145,6 +145,8 @@ export class FactorySystem {
   /** Wheat waiting in the silo beside the bakery. */
   silo = 0;
   private dropT = 0;
+  /** Machine whose input the player stood at last tick (the "it doesn't take that" hint fires on arrival). */
+  private atInput = -1;
   private pickT = 0;
   private supply = new SupplyJob(this);
   private porter = new PorterJob(this);
@@ -197,10 +199,19 @@ export class FactorySystem {
     const w = this.w, p = w.player, c = w.carry, cfg = ECONOMY.player, R = ECONOMY.factory.zone;
     this.dropT -= dt;
     this.pickT -= dt;
-    for (const m of this.machines) {
+    let at = -1;
+    for (const [mi, m] of this.machines.entries()) {
       if (!m.open) continue;
       const d = m.def;
-      if (this.dropT <= 0 && dist(p.x, p.z, d.input.x, d.input.z) < R) {
+      const here = dist(p.x, p.z, d.input.x, d.input.z) < R;
+      if (here) {
+        at = mi;
+        // arrived carrying only things this machine doesn't use (corn at the bakery...): say what it takes
+        if (this.atInput !== mi && c.n > 0 && !c.items.some((it) => it in m.conv.input)) {
+          w.events.emit('factoryHint', c.items[c.n - 1], d.input.x, d.input.z, 0, 0, mi);
+        }
+      }
+      if (this.dropT <= 0 && here) {
         for (let i = c.n - 1; i >= 0; i--) {
           const it = c.items[i];
           if (!m.conv.wants(it)) continue;
@@ -220,6 +231,7 @@ export class FactorySystem {
         }
       }
     }
+    this.atInput = at;
   }
 
   /** Wheat sold at the grain stall: keep what the silo has room for; returns how many were kept. */

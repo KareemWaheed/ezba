@@ -110,7 +110,8 @@ class SupplyJob implements WorkerJob {
       if (!s || !m || !m.conv.wants(s.def.product)) continue;
       if (this.fromCounter[slot]) {
         if (w.counterSpare(s) > 0) { s.counter--; return s.def.product; }
-      } else if (s.pile > 0 && !w.shopShort(s)) { s.pile--; return s.def.product; }
+      // (the pile is left for the shop's line only when a worker or a belt will carry it there)
+      } else if (s.pile > 0 && !(w.shopShort(s) && w.staff.carries(s))) { s.pile--; return s.def.product; }
     }
     return null;
   }

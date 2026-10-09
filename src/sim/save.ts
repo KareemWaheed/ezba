@@ -60,6 +60,8 @@ export interface SaveData {
   legacy?: number;
   /** Easy mode (ECONOMY.easy). */
   easy?: boolean;
+  /** 1 = saved after belts started replacing workers (older saves get the workers of their belts refunded once). */
+  rt?: number;
   /** Upgrade price version the levels were bought at (config/priceHistory.ts; absent = before refunds existed). */
   pv?: number;
   /** VIP cooldown left (s). */
@@ -103,7 +105,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     v: SAVE_VERSION, mode: w.mode, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
-    rating: w.service.rating, legacy: w.legacy, ...(w.easy ? { easy: true } : {}), pv: PRICE_VERSION, vipT: w.customers.vipT,
+    rating: w.service.rating, legacy: w.legacy, rt: 1, ...(w.easy ? { easy: true } : {}), pv: PRICE_VERSION, vipT: w.customers.vipT,
     market: marketSave(w),
     trust: { ...w.contracts.trust },
     ...(w.scenario.phase === 'idle' ? { eventT: Math.round(w.scenario.t) } : {}),
@@ -269,6 +271,8 @@ export function restore(w: SimWorld, s: SaveData): void {
   // upgrades that got cheaper since this save was priced: the difference comes back (main.ts says so)
   w.refunds = refundPriceDrops(w, Math.floor(num(s.pv)));
   up.apply();
+  // a save from before belts replaced workers: the workers of belts it already has go home, their cost comes back
+  if (s.rt !== 1) up.retireWorkers();
   // (pen animals aren't saved: the growing calf, if any, gets its age back)
   w.butcher.restoreCalf(num(s.butcher?.calf, -1));
   w.carry.items.length = 0;
