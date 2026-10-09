@@ -10,6 +10,7 @@ import jsQR from 'jsqr';
 import { SimWorld } from '../src/sim/world';
 import { serialize, restore } from '../src/sim/save';
 import { ECONOMY, type UpgradeId } from '../src/config/economy';
+import { SCENARIO_GAP } from '../src/config/scenarios';
 import { textCode, qrCode, readCode, toBase45, fromBase45 } from '../src/transfer';
 import { exportCode } from '../src/storage';
 
@@ -34,15 +35,20 @@ ok(fromBase45('GGW') === null, 'base45 rejects an out-of-range triple');
   const back = new SimWorld(7);
   restore(back, JSON.parse(JSON.stringify(serialize(e, Date.now()))));
   const fresh = new SimWorld(7);
-  restore(fresh, JSON.parse(JSON.stringify(serialize(n, Date.now()))));
+  // (an old save: written before easy mode, no `easy` field)
+  const oldSave = serialize(n, Date.now());
+  delete oldSave.easy;
+  restore(fresh, JSON.parse(JSON.stringify(oldSave)));
   ok(back.easy && !fresh.easy, 'easy mode is saved (and an old save stays normal)');
   const G = ECONOMY.easy.eventGap;
   let gaps = 0, inRange = 0;
   for (let i = 0; i < 40; i++) { const t = (e.scenario as unknown as { gap(): number }).gap(); gaps++; if (t >= G.min && t <= G.max) inRange++; }
   ok(inRange === gaps && e.scenario.t <= G.max, `events every ${G.min}-${G.max} s in easy mode (next in ${Math.round(e.scenario.t)} s)`);
+  const tE = e.scenario.t;
   const tile = e.upgrades.tiles.find((t) => t.def.id === 'eggs.animals');
   e.setEasy(false);
   ok(e.upgrades.cost('eggs.animals') === n.upgrades.cost('eggs.animals') && !!tile, 'switching back restores the normal prices');
+  ok(Math.abs(e.scenario.t - tE * SCENARIO_GAP.max / G.max) < 1e-6 && e.scenario.t >= SCENARIO_GAP.min * (G.min / G.max), `...and the next event moves back out (${Math.round(tE)} -> ${Math.round(e.scenario.t)} s)`);
 }
 
 // a late-game farm: every track maxed, money, stats, a full album page's worth of state

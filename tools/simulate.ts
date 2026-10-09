@@ -34,8 +34,7 @@ function leftIds(w: SimWorld): string[] {
 
 function run(profile: BotProfile): RunResult {
   const w = new SimWorld(PLAY.seed);
-  w.easy = easy;
-  w.upgrades.refresh();
+  w.setEasy(easy);
   let doneMin: number | undefined, doneDay: number | undefined, events = 0;
   const bot = new Bot(w, profile);
   const purchases: Purchase[] = [];

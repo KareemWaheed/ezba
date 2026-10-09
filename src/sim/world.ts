@@ -30,6 +30,7 @@ import { LEGACY } from '../config/legacy';
 import { PATHS, type GameMode, type PathDef } from '../config/paths';
 import { MARKET } from '../config/market';
 import { UPGRADES } from '../config/upgrades';
+import { SCENARIO_GAP } from '../config/scenarios';
 
 /** Radii of the walk-in zones (units). */
 export const ZONE = { pile: 1.35, drop: 1.25, cash: 1.3 } as const;
@@ -307,11 +308,16 @@ export class SimWorld {
     this.market.interact(dt);
   }
 
-  /** Switch easy mode on/off mid-game: tile prices change at once; a far-off next event comes sooner. */
+  /**
+   * Switch easy mode on/off (also right after creating a world): tile prices change at once, and a pending
+   * event countdown is rescaled to the new mode's gap (sooner going easy, later going back).
+   */
   setEasy(on: boolean): void {
+    if (on === this.easy) return;
+    const from = this.easy ? ECONOMY.easy.eventGap : SCENARIO_GAP, to = on ? ECONOMY.easy.eventGap : SCENARIO_GAP;
     this.easy = on;
     this.upgrades.refresh();
-    if (on && this.scenario.phase === 'idle') this.scenario.t = Math.min(this.scenario.t, ECONOMY.easy.eventGap.max);
+    if (this.scenario.phase === 'idle') this.scenario.t *= to.max / from.max;
   }
 
   /** Make a box solid once (something built on ground the player can already reach). */
