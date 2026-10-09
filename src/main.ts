@@ -385,7 +385,7 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       if (e.n) { sfx.fanfare(); toast.show(`الزحمة عدّت من غير زعل! ${ltr(`+${e.value}`)} 🎉`); }
       else toast.show('الزحمة خلصت، بس في زباين زعلوا 😕');
       break;
-    case 'break': sfx.clunk(); toast.show('السير عطل! روح صلّحه 🔧'); break;
+    case 'break': sfx.clunk(); toast.show(sim.staff.mechanics.length ? 'السير عطل! فني الصيانة رايح يصلّحه 👷' : 'السير عطل! روح صلّحه 🔧'); break;
     case 'fixed': sfx.fixed(); break;
     case 'feed': sfx.drop(); break;
     case 'golden': sfx.sparkle(); toast.show('في حيوان دهبي هرب! امسكه ✨'); break;

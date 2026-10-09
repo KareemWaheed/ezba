@@ -344,3 +344,8 @@ This file records the decisions made on top of it.
   (30% and half-rate later hours pushed the café / corn field / automation pacing targets early). Only the first
   hour is simulated tick by tick; the rest is extrapolated at that run's second-half rate (a phone can't tick a
   whole day on reopen). No cap at all would let a week away skip most of the game. `npm run awaycheck`.
+- Mechanic (playtest: "an HR job, a bit pricey, someone who fixes the belts"): `hr.mechanic` (فني صيانة, 150k
+  then 375k, up to 2; in the HR yard after maintenance level 2). Blue overalls, hard hat: waits by the office,
+  walks (through the yard's gate) to the nearest jam no other mechanic has taken and fixes it in 4 s (the
+  player: 2 s); works during time away too. The guide arrow skips jams a mechanic is on. At 60k after maint 1
+  automation got too strong early (active/auto 1.49x < 1.5x); at 150k after maint 2 it's 1.60x. `npm run awaycheck`.

@@ -35,5 +35,23 @@ const t0 = Date.now(), r24 = simulateAway(farm(2), 30 * H), ms = Date.now() - t0
 ok(r24.seconds === 24 * H && r24.earned > r8.earned * 2, `with the overseer a day counts (${r24.earned})`);
 ok(ms < 8000, `a day away is quick to work out (${ms} ms incl. building the farm)`);
 
+// mechanics (hr.mechanic): walk out of the HR yard to a jam and fix it, the player far away; also while away
+{
+  const w = farm();
+  w.upgrades.levels['hr.office'] = 1; w.upgrades.levels['maint'] = 1; w.upgrades.levels['hr.mechanic'] = 2;
+  w.upgrades.apply();
+  ok(w.staff.mechanics.length === 2, 'two mechanics with level 2');
+  const [a, b] = w.staff.belts.filter((x) => x.running);
+  a.broken = true; b.broken = true;
+  let t = 0;
+  while ((a.broken || b.broken) && t < 60) { w.player.x = 8; w.player.z = 8; w.input.x = w.input.z = 0; w.tick(1 / 30); w.events.drain(() => {}); t += 1 / 30; }
+  ok(!a.broken && !b.broken, `they fix both jams on their own (${t.toFixed(1)} s)`);
+  const fixes = w.stats.fixes;
+  ok(fixes === 0, 'the player fixed none of them');
+  // time away: jams don't pile up
+  simulateAway(w, H);
+  ok(w.staff.belts.filter((x) => x.running && x.broken).length === 0 || w.staff.mechanics.some((m) => m.target), 'after an hour away no jam is left waiting for the player');
+}
+
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }
 console.log('\nall away checks passed');

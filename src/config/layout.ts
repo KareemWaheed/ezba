@@ -43,6 +43,8 @@ export const LAYOUT = {
     gate: { z0: 5.0, z1: 7.0 },
     building: { x0: -18.4, x1: -11.4, z0: 2.1, z1: 3.9 } as Box,
     unlockedX0: -18.5,
+    /** Where hired mechanics wait between jobs (by the office door). */
+    mechanics: { x: -14.9, z: 4.4 },
   },
   /**
    * Event square (ساحة الاحتفالات): paved ground south of the yard where special visits happen, so

@@ -396,6 +396,9 @@ export const ECONOMY = {
     /** Seconds the player must stand next to a jammed machine. */
     fixTime: 2,
     fixRadius: 1.6,
+    /** Hired mechanics (hr.mechanic): walk to the nearest jam and fix it in `mechanicFixTime` s. */
+    mechanicSpeed: 2.8,
+    mechanicFixTime: 4,
   },
 
   /** Golden animal: escapes into the yard now and then; catch it before it runs off. */
@@ -491,6 +494,8 @@ export const ECONOMY = {
     'milk.machine': { base: 6000, growth: 2.5, max: 4, step: 1 },
     /** Maintenance: breakdowns.mean x (1 + step x level). Never reaches zero breakdowns. */
     maint: { base: 3000, growth: 2, max: 4, step: 0.6 },
+    /** Mechanics (+1 per level): fix jammed belts and machines on their own, also during time away. */
+    'hr.mechanic': { base: 150000, growth: 2.5, max: 2, step: 1 },
     /** Rush bonus share +step per level. */
     'rush.reward': { base: 2500, growth: 2, max: 4, step: 0.5 },
     /** Rush warning +step seconds per level. */
