@@ -78,7 +78,7 @@ ok(ms < 8000, `a day away is quick to work out (${ms} ms)`);
   ok(w.stats.feeds === feeds0, "they don't count as the player's feeds");
   // time away: the troughs stay full
   simulateAway(w, H);
-  ok(troughs.every((s) => s.boostT > 0 || w.staff.feeders[0].target >= 0), 'after an hour away the troughs are still being kept full');
+  ok(troughs.every((s) => s.boostT > 0 || w.staff.feeders.some((f) => f.target === s.index)), 'after an hour away the troughs are still being kept full');
 }
 
 // accountant (hr.accountant): the cash piles go into the player's money on their own

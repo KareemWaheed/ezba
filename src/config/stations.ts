@@ -50,7 +50,7 @@ export const STATIONS: readonly StationDef[] = [
   },
   {
     id: 'milk', product: 'milk', producer: 'cow', area: LAYOUT.pen, unlockTrack: 'milk.unlock',
-    animalTrack: 'milk.animals', workerTrack: 'milk.worker', machineTrack: 'milk.machine', expand: { track: 'milk.expand', dx0: 0, dx1: 4 },
+    animalTrack: 'milk.animals', workerTrack: 'milk.worker', machineTrack: 'milk.machine', expand: { track: 'milk.expand', dx0: 0, dx1: 2 }, // (2 m a level: the apiary is east of the grown pen)
     pile: { x: 6.5, z: -0.8, cols: 2, rows: 2 },
     trough: { x: 4.4, z: -1.5 },
     counter: { x: 5.8, z: 4, dropX: 5.8, dropZ: 2.9 },

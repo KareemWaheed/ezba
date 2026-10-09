@@ -93,7 +93,10 @@ export class Station {
     const interval = this.boostT > 0 ? cfg.interval / ECONOMY.feed.mult : cfg.interval;
     if (this.boostT > 0) this.boostT = Math.max(0, this.boostT - dt);
     for (const a of this.animals) {
-      if (a.leaving) continue;
+      if (a.leaving) {
+        a.hop = Math.max(0, a.hop - dt * 3);
+        continue;
+      }
       a.age += dt;
       if (a.pause > 0) { a.pause -= dt; a.speed = 0; }
       else if (moveToward(a, a.tx, a.tz, cfg.wanderSpeed, dt, 0.1)) {

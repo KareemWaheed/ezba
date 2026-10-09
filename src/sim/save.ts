@@ -49,7 +49,8 @@ export interface SaveData {
   };
   album?: { seen: string[]; paid: string[] };
   river?: { pile: number; cash: number; bills: number; untied: number };
-  butcher?: { stock: number; cash: number; bills: number };
+  /** `chop`: seconds of chopping left (a cow still on its way is saved as just arrived). */
+  butcher?: { stock: number; cash: number; bills: number; chop?: number };
   /** Incubator (chicks in the crate / hatching, chicks hatched so far, golden hens) and records set per product. */
   surplus?: { crate: number; hatching: number; hatchT: number; hatched: number; golden: number; records: Record<string, number> };
   /** Factory machine buffers and the wheat silo. */
@@ -119,7 +120,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     field: { cash: w.field.cash.value + w.field.dockWheat * Math.round(priceOf('wheat') * w.priceMult), bills: Math.min(40, w.field.cash.bills + w.field.dockWheat), hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
     surplus: { crate: w.surplus.crate, hatching: w.surplus.hatching, hatchT: w.surplus.hatchT, hatched: w.surplus.hatched, golden: w.surplus.golden, records: { ...w.surplus.records } },
-    butcher: { stock: w.butcher.stock, cash: w.butcher.cash.value, bills: w.butcher.cash.bills },
+    butcher: { stock: w.butcher.stock, cash: w.butcher.cash.value, bills: w.butcher.cash.bills, chop: w.butcher.cow ? ECONOMY.butcher.chopTime : w.butcher.chopT },
     river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },
     factory: { silo: w.factory.silo, machines: Object.fromEntries(w.factory.machines.map((m) => [m.def.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])) },
     daily: { day: w.daily.day, tasks: w.daily.tasks.map((t) => ({ ...t })) },
@@ -217,6 +218,7 @@ export function restore(w: SimWorld, s: SaveData): void {
   w.butcher.stock = Math.max(0, Math.floor(num(s.butcher?.stock)));
   w.butcher.cash.value = num(s.butcher?.cash);
   w.butcher.cash.bills = Math.floor(num(s.butcher?.bills));
+  w.butcher.chopT = Math.max(0, Math.min(ECONOMY.butcher.chopTime, num(s.butcher?.chop)));
   for (const m of w.factory.machines) {
     const d = s.factory?.machines?.[m.def.id];
     if (!d) continue;

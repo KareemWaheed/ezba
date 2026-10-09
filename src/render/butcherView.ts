@@ -44,16 +44,13 @@ export class ButcherView {
   private shop = new THREE.Mesh(SHOP_GEO, MAT);
   private packs = new THREE.InstancedMesh(PACK_GEO, MAT, PACKS_MAX);
   private cash: InstancedStack;
+  private sign = new CanvasSprite(300, 80, 2.2);
   private shown = -1;
   private time = 0;
 
   constructor(scene: THREE.Scene) {
-    const sign = new CanvasSprite(300, 80, 2.2);
-    sign.draw((c, cw, ch) => {
-      c.font = `800 44px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl';
-      c.fillStyle = 'rgba(179,38,30,0.92)'; rr(c, 6, 6, cw - 12, ch - 12, 22); c.fill();
-      c.fillStyle = '#fff'; c.fillText('🥩 الجزارة', cw / 2, ch / 2 + 2);
-    });
+    const sign = this.sign;
+    this.invalidate();
     sign.sprite.position.set(CX, 3.3, CZ);
     const cm = groundMarker('', 1.4, 'rgba(94,198,208,0.35)', '#5ec6d0');
     cm.position.set(L.cash.x, 0, L.cash.z);
@@ -63,6 +60,15 @@ export class ButcherView {
     this.group.add(this.shop, new THREE.Mesh(AWNING_GEO, MAT), sign.sprite, cm, this.cash.group, this.packs);
     this.group.visible = false;
     scene.add(this.group);
+  }
+
+  /** (Re)draw the sign (again once the web font has loaded). */
+  invalidate(): void {
+    this.sign.draw((c, cw, ch) => {
+      c.font = `800 44px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl';
+      c.fillStyle = 'rgba(179,38,30,0.92)'; rr(c, 6, 6, cw - 12, ch - 12, 22); c.fill();
+      c.fillStyle = '#fff'; c.fillText('🥩 الجزارة', cw / 2, ch / 2 + 2);
+    });
   }
 
   sync(sim: SimWorld, dt: number): void {

@@ -261,6 +261,7 @@ export class FarmView {
     this.cafe.invalidate();
     this.market.invalidate();
     this.surplus.invalidate();
+    this.butcher.invalidate();
     this.tiles.invalidate();
     for (const s of this.stations) s.invalidateLabel();
   }

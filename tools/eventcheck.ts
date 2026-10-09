@@ -38,9 +38,11 @@ const ok = (cond: boolean, msg: string): void => {
 /**
  * A farm with most areas open: the active bot with plenty of money buys `n` upgrade levels. The
  * supermarket stays closed: these checks are about the events, and its shoppers would change the
- * world's random sequence (the store has its own checks in tools/marketcheck.ts). Field hands, the
- * incubator, the trader deal, the apiary and the 4th/5th lanes stay out too: the farm the event timings were tuned on had none (they have
- * their own checks in fieldcheck and surpluscheck).
+ * world's random sequence (the store has its own checks in tools/marketcheck.ts). Field hands, the field
+ * extension and the corn line, the surplus yard (with the incubator and the trader deal), the HR feeder, the
+ * apiary, the butcher's and the 4th/5th lanes and cashiers stay out too: the farm the event timings were tuned
+ * on had none. They have their own checks: fieldcheck (field), surpluscheck (yard, apiary, lanes, butcher's),
+ * awaycheck (feeder).
  */
 function grownSave(n = 160, seed = 7): SaveData {
   const w = new SimWorld(seed), bot = new Bot(w, 'active', (id) => id.startsWith('market.') || ['field.hand', 'field.handSkill', 'field.expand', 'corn.machine', 'surplus.yard', 'hr.feeder', 'honey.unlock', 'honey.animals', 'honey.worker', 'meat.unlock', 'eggs.incubator', 'trader.deal'].includes(id)

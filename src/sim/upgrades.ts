@@ -147,7 +147,8 @@ export class UpgradeSystem {
       const track = s.def.animalTrack;
       if (!s.open || !track || !s.def.producer) continue;
       const want = ECONOMY.producers[s.def.producer].start + this.level(track) * U[track].step;
-      while (s.animals.length < want) s.addAnimal(w.rng);
+      // (a cow on its way to the butcher's isn't in the pen any more)
+      while (s.animals.filter((a) => !a.leaving).length < want) s.addAnimal(w.rng);
     }
     // (before staff.sync, so new stockers get the HR carry bonus right away)
     w.market.sync();

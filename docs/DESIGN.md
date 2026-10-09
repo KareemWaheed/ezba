@@ -398,3 +398,7 @@ This file records the decisions made on top of it.
   level at minute 142 (day 2), the efficient one at minute 101 (not inside the first hour); 45 events in 4 h of play
   (about twice as many as normal); active/auto stays 1.55x.
   `npm run transfercheck` covers prices, the save and the switch.
+- Review fixes (Cubic on the honey/butcher commits): the cow pen grows 2 m a level (was 4: at level 2 it ran into
+  the apiary; cows per level unchanged, so old saves at level 2 just get a smaller pen). A cow on its way to the
+  butcher's no longer counts as a pen animal (a cow bought during the walk was lost), a save mid-walk keeps it (in
+  at the butcher's on load), a leaving cow stops hopping, and the butcher's sign redraws once the web font loads.

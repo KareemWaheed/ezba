@@ -18,7 +18,10 @@ export const LAYOUT = {
   /** Fenced animal areas. */
   coop: { x0: -7, x1: 0, z0: -9.4, z1: -2 } as Box,
   pen: { x0: 3, x1: 10, z0: -9.4, z1: -2 } as Box,
-  /** The apiary east of the cow pen: a 1.5 m walk between it and the grown pen; flush with the walkable edge east. */
+  /**
+   * The apiary east of the cow pen: a 1.5 m walk between it and the fully grown pen (x1 14: `milk.expand` grows it
+   * 2 m a level); flush with the walkable edge east.
+   */
   apiary: { x0: 15.6, x1: 19.6, z0: -9.4, z1: -2 } as Box,
   /**
    * Shop front. Products are stocked at the two ends of the counter (see stations.ts) so workers and
@@ -135,7 +138,7 @@ export const LAYOUT = {
   /** Sell counter body. */
   counter: { x0: -7.6, x1: 7.6, z0: 3.55, z1: 4.45 } as Box,
 
-  /** Decorative trees around the edge (x, z); kept clear of the wholesale trader's road (z 12.2, west of the yard). */
+  /** Decorative trees around the edge (x, z); kept clear of the wholesale trader's road (z 12.6, west of the surplus yard). */
   trees: [
     [-18.5, -11], [-17.5, -5], [-23.6, 2.5], [-23.2, 9], [-15.5, 18.6], [-18.5, 18.8], [-21.2, 19.2], [-14, -1], [31, -12.5], [31, -3], [31.5, 4],
     [31.5, 11], [-12.5, 27.5], [10.5, 28.5], [-15.2, 21.0], [11.3, 24.8], [-2, 30], [6, 31],

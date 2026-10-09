@@ -193,15 +193,16 @@ const untilParked = (w: SimWorld, max: number) => {
   ok(h.open && h.animals.length === ECONOMY.producers.bee.start, `the apiary opens with ${h.animals.length} hives`);
   const sold0 = w.stats.sold;
   let made = 0, bought = 0;
+  const lanesUsed = new Set<number>();
   for (let i = 0; i < 240 * 30; i++) {
     w.player.x = 8; w.player.z = 8; w.input.x = w.input.z = 0; w.tick(1 / 30);
     w.events.drain((e) => { if (e.type === 'produce' && e.product === 'honey') made++; if (e.type === 'sell' && e.product === 'honey') bought++; });
+    for (const c of w.customers.list) lanesUsed.add(c.lane);
   }
   ok(made > 50, `hives make honey (${made} jars in 4 min)`);
   ok(bought > 10 && w.stats.sold > sold0, `shoppers buy it off the counter (${bought} jars)`);
   ok(w.lanes === 5 && w.cashiers === 5, `five lanes, five cashiers (${w.lanes}/${w.cashiers})`);
-  const lanesUsed = new Set(w.customers.list.map((c) => c.lane));
-  ok(lanesUsed.size >= 4, `shoppers use the new lanes (${[...lanesUsed].sort().join(',')})`);
+  ok(lanesUsed.size === w.lanes, `shoppers use the new lanes (${[...lanesUsed].sort().join(',')})`);
 }
 
 // the butcher's: an old cow walks there, a calf takes its place, the meat sells at the window, money waits there
@@ -219,8 +220,13 @@ const untilParked = (w: SimWorld, max: number) => {
   const calf = pen.animals.find((a) => a.age < B.calfAge), t0 = calf?.t ?? -1;
   const calves = () => pen.animals.filter((a) => a.age < B.calfAge).length;
   ok(!!w.butcher.cow && calves() === 1 && pen.animals.length === cows + 1, `an old cow leaves, a calf is in the pen (${calves()} calf, ${pen.animals.length} incl. the leaving cow)`);
+  // a save while the cow is on its way: it's in at the butcher's on load (the chopping isn't lost)
+  const mid = new SimWorld(9); restore(mid, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
+  ok(mid.butcher.chopT === B.chopTime, `a save mid-walk keeps the cow (chopping on load: ${mid.butcher.chopT} s)`);
+  // a cow bought while one is on its way still joins the herd
+  w.upgrades.levels['milk.animals']++; w.upgrades.apply();
   tick(30);
-  ok(w.butcher.cows === 1 && pen.animals.length === cows, `the cow got to the butcher's, the herd is whole again (${pen.animals.length})`);
+  ok(w.butcher.cows === 1 && pen.animals.length === cows + 1, `the cow got to the butcher's, the herd is whole again with the new cow (${pen.animals.length})`);
   ok(!w.butcher.cow && calves() === 1, 'no second cow while the calf grows');
   ok(!!calf && calf.t === t0, `the calf gives no milk yet (${calf?.age.toFixed(0)} s old)`);
   ok(w.butcher.cash.value > 0 && msgs.includes(2) && msgs.includes(3), `meat sells at the window (${Math.round(w.butcher.cash.value)} waiting)`);
