@@ -38,10 +38,11 @@ export const LAYOUT = {
    * east wall lets the player in.
    */
   hrYard: {
-    box: { x0: -17, x1: -10.4, z0: 1.5, z1: 10.5 } as Box,
+    // (widened 2.2 m west for a third row of staff tiles: the overseer)
+    box: { x0: -19.2, x1: -10.4, z0: 1.5, z1: 10.5 } as Box,
     gate: { z0: 5.0, z1: 7.0 },
-    building: { x0: -16.2, x1: -11.4, z0: 2.1, z1: 3.9 } as Box,
-    unlockedX0: -16.3,
+    building: { x0: -18.4, x1: -11.4, z0: 2.1, z1: 3.9 } as Box,
+    unlockedX0: -18.5,
   },
   /**
    * Event square (ساحة الاحتفالات): paved ground south of the yard where special visits happen, so
@@ -112,7 +113,7 @@ export const LAYOUT = {
 
   /** Decorative trees around the edge (x, z); kept clear of the wholesale trader's road (z 12.2, west of the yard). */
   trees: [
-    [-18.5, -11], [-17.5, -5], [-19.5, 2.5], [-19, 9], [-10, 15], [-13, 14.8], [-16.5, 15.0], [-14, -1], [31, -12.5], [31, -3], [31.5, 4],
+    [-18.5, -11], [-17.5, -5], [-21.6, 2.5], [-21.2, 9], [-10, 15], [-13, 14.8], [-16.5, 15.0], [-14, -1], [31, -12.5], [31, -3], [31.5, 4],
     [31.5, 11], [-12.5, 27.5], [10.5, 28.5], [-13, 19.5], [11.3, 24.8], [-2, 30], [6, 31],
   ] as const,
   hay: [[19.6, -7.6], [19.6, -6.0], [19.6, -4.4], [20.8, -6.8]] as const,

@@ -309,7 +309,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'away.cap', icon: '🧔', label: 'ناظر العزبة', msg: 'الناظر بيشغّل العزبة وانت غايب وقت أطول ⏰',
-    pos: { x: -1.2, z: 12.6 }, requires: [{ id: 'cafe.unlock', level: 1 }],
+    pos: { x: -17.1, z: 6.8 }, requires: [{ id: 'hr.office', level: 1 }, { id: 'cafe.unlock', level: 1 }],
   },
   {
     id: 'rush.warning', icon: '📣', label: 'إنذار بدري', msg: 'هتعرف بالزحمة بدري ⏰',
