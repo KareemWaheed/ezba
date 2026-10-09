@@ -53,5 +53,26 @@ ok(ms < 8000, `a day away is quick to work out (${ms} ms incl. building the farm
   ok(w.staff.belts.filter((x) => x.running && x.broken).length === 0 || w.staff.mechanics.some((m) => m.target), 'after an hour away no jam is left waiting for the player');
 }
 
+// accountant (hr.accountant): the cash piles go into the player's money on their own
+{
+  const w = farm();
+  w.upgrades.levels['hr.office'] = 1; w.upgrades.levels['cafe.unlock'] = 1; w.upgrades.levels['hr.accountant'] = 1;
+  w.upgrades.apply();
+  w.cash.value = 500; w.cafe.cash.value = 300; w.field.cash.value = 200;
+  const m0 = w.money;
+  for (let i = 0; i < 35 * 30; i++) { w.player.x = -15; w.player.z = 6; w.input.x = w.input.z = 0; w.tick(1 / 30); w.events.drain(() => {}); }
+  ok(w.money - m0 >= 1000 && w.cafe.cash.value === 0 && w.field.cash.value === 0, `the accountant collects the cash piles (${Math.round(w.money - m0)} in 35 s, player in the HR yard)`);
+}
+
+// customer service (hr.service): shop customers wait longer
+{
+  const a = farm(), b = farm();
+  b.upgrades.levels['hr.office'] = 1; b.upgrades.levels['hr.service'] = 3;
+  b.upgrades.apply();
+  for (let i = 0; i < 30 * 30; i++) { a.tick(1 / 30); b.tick(1 / 30); a.events.drain(() => {}); b.events.drain(() => {}); }
+  const pm = (w: SimWorld) => Math.max(...w.customers.list.map((c) => c.patienceMax));
+  ok(pm(b) > pm(a) * 1.3, `customers are more patient with customer service (max patience ${pm(a).toFixed(0)} -> ${pm(b).toFixed(0)} s)`);
+}
+
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }
 console.log('\nall away checks passed');

@@ -263,6 +263,8 @@ export class StaffSystem {
   /** Everything the jam/fix logic looks at. */
   readonly machines: Breakable[] = [];
   readonly mechanics: Mechanic[] = [];
+  /** Accountant: seconds until the next round of the cash piles. */
+  private accountT = 0;
   private way = { x: 0, z: 0 };
 
   constructor(private w: SimWorld) {
@@ -296,6 +298,22 @@ export class StaffSystem {
     // kitchen helpers and shelf stockers (with a trolley) carry more than farm workers; HR capacity adds on top
     const base = (key: string) => key === 'cafe.supply' ? ECONOMY.cafe.helperCapacity : key.startsWith('market.stock') ? ECONOMY.supermarket.stockerCapacity : ECONOMY.staff.worker.capacity;
     for (const x of this.workers) x.carry.cap = cap - ECONOMY.staff.worker.capacity + base(x.job.key);
+  }
+
+  /** Accountant (hr.accountant): every so often the cash piles go straight into the player's money. */
+  private updateAccountant(dt: number): void {
+    const w = this.w, lv = w.upgrades.level('hr.accountant');
+    // (not while away: time away pays its own sum)
+    if (lv <= 0 || w.away) return;
+    if ((this.accountT -= dt) > 0) return;
+    this.accountT = ECONOMY.upgrades['hr.accountant'].step * (lv >= 2 ? 0.4 : 1);
+    let v = 0;
+    // (the farm's piles; the supermarket has its own checkout staff)
+    for (const c of [w.cash, w.cafe.cash, w.field.cash, w.river.cash]) { v += c.value; c.value = 0; c.bills = 0; }
+    if (v <= 0) return;
+    w.money += v;
+    w.stats.earned += v;
+    w.events.emit('accountant', '', LAYOUT.shop.cash.x, LAYOUT.shop.cash.z, v);
   }
 
   /** A mechanic is on its way to (or fixing) this jam. */
@@ -345,6 +363,7 @@ export class StaffSystem {
     for (const x of this.workers) x.update(w, dt, speedMult);
     if (!w.scenario.powerCut) for (const b of this.belts) b.update(dt);
     this.updateMechanics(dt, speedMult);
+    this.updateAccountant(dt);
     // schedule and trigger jams for every running machine
     for (const m of this.machines) {
       if (!m.running || m.broken) continue;

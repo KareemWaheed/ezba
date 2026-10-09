@@ -496,6 +496,10 @@ export const ECONOMY = {
     maint: { base: 3000, growth: 2, max: 4, step: 0.6 },
     /** Mechanics (+1 per level): fix jammed belts and machines on their own, also during time away. */
     'hr.mechanic': { base: 150000, growth: 2.5, max: 2, step: 1 },
+    /** Accountant: collects the farm's cash piles (shop, café, grain stall, fish stall) every `step` s (level 1), x0.4 at level 2. */
+    'hr.accountant': { base: 40000, growth: 3, max: 2, step: 30 },
+    /** Customer service: shop customers' patience +step per level. */
+    'hr.service': { base: 20000, growth: 2.5, max: 3, step: 0.15 },
     /** Rush bonus share +step per level. */
     'rush.reward': { base: 2500, growth: 2, max: 4, step: 0.5 },
     /** Rush warning +step seconds per level. */

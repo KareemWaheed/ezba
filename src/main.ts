@@ -400,6 +400,12 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       toast.show(UPGRADES[e.id].msg);
       save();
       break;
+    case 'accountant': {
+      sfx.coin();
+      const s = toScreen(sim.player.x, 2.6, sim.player.z);
+      hud.float(`🧾 +${e.value}`, s.x, s.y);
+      break;
+    }
     case 'collect': {
       sfx.kaching();
       const s = toScreen(sim.player.x, 2.6, sim.player.z);
