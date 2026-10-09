@@ -71,7 +71,7 @@ ok(ms < 8000, `a day away is quick to work out (${ms} ms)`);
   w.cash.value = 0; w.field.cash.value = 0; w.cafe.cash.value = 0;
   let collected = 0;
   w.away = true;
-  for (let i = 0; i < 60 * 2; i++) { w.tick(0.5); w.events.drain((e) => { if (e.type === 'accountant') collected += e.value; }); }
+  for (let i = 0; i < 60 * 2; i++) { w.advance(0.5); w.events.drain((e) => { if (e.type === 'accountant') collected += e.value; }); }
   w.away = false;
   ok(collected === 0, 'and not during time away');
 }
