@@ -161,6 +161,7 @@ export class UpgradeSystem {
     w.river.sync();
     if (w.river.open) { w.bounds.z0 = RIVER.unlockedZ0; w.addSolid('fishStall', RIVER.stall.box); }
     if (this.level('eggs.incubator') > 0) w.addSolid('incubator', LAYOUT.surplus.incubator.box);
+    if (this.level('meat.unlock') > 0) w.addSolid('butcher', { ...LAYOUT.butcher.box, z1: LAYOUT.butcher.box.z1 + 0.5 }); // (with the window counter)
     const grill = FACTORY.machines.find((m) => m.id === 'grill');
     if (grill && this.level(grill.unlockTrack) > 0) w.addSolid('grill', grill.box);
     w.contracts.sync();

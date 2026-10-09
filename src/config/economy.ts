@@ -258,6 +258,15 @@ export const ECONOMY = {
     helperCapacity: 6,
   },
 
+  /**
+   * The butcher's (الجزارة, `meat.unlock`): a cow is ready once it has lived `readyAge` s in the pen (ages are
+   * shuffled when cows appear, so they don't all go at once). One at a time, and only while no calf is growing:
+   * the cow walks there (`walkSpeed`), a calf takes its place in the pen (no milk for `calfAge` s), `chopTime` s
+   * later `packs` packs of meat are on the window; one sells every `sellEvery` s for `price` x price growth and
+   * the money piles up at the window. Meat never goes on the shop counter.
+   */
+  butcher: { readyAge: 600, calfAge: 60, walkSpeed: 1.6, chopTime: 6, packs: 12, price: 60, sellEvery: 2.5 },
+
   /** Animals / machines that generate items into a pickup pile. */
   producers: {
     chicken: {
@@ -502,6 +511,8 @@ export const ECONOMY = {
     'honey.animals': { base: 2500, growth: 1.6, max: 6, step: 1 },
     /** Honey workers: +1 per level. */
     'honey.worker': { base: 12000, growth: 3, max: 2, step: 1 },
+    /** The butcher's north of the factory yard (single level): old cows go there, a calf takes their place. */
+    'meat.unlock': { base: 60000, growth: 1, max: 1, step: 1 },
     /** Corn cable line (pile by the grain stall -> shop counter, over the coop): level 1 builds it, later levels speed it up. */
     'corn.machine': { base: 25000, growth: 2.5, max: 4, step: 1 },
     /** Milk belt: level 1 builds it, later levels speed it up. */

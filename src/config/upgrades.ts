@@ -125,6 +125,11 @@ export const UPGRADES: readonly UpgradeDef[] = [
     id: 'honey.worker', icon: '🍯', label: 'وظّف عامل عسل', msg: 'عامل العسل بيودّي العسل للكاونتر 🍯',
     pos: { x: 11.0, z: -0.9 }, requires: [{ id: 'honey.unlock', level: 1 }], milestone: true,
   },
+  // the butcher's north of the factory yard (reachable once the factory is open): old cows' meat
+  {
+    id: 'meat.unlock', icon: '🥩', label: 'الجزارة', msg: 'فتحت الجزارة! البقرة الكبيرة بتروح للجزار وعجل بياخد مكانها، واللحمة بتتباع في الشباك 🥩',
+    pos: { x: 22.6, z: -4.4 }, requires: [{ id: 'factory.unlock', level: 1 }, { id: 'milk.unlock', level: 1 }], milestone: true,
+  },
   // Stage 4: crop fields north of the pens
   {
     id: 'field.unlock', icon: '🌽', label: 'غيط الدرة', msg: 'فتحت غيط الدرة! امشي فيه واحصد 🌽',

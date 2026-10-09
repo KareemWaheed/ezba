@@ -43,7 +43,7 @@ const ok = (cond: boolean, msg: string): void => {
  * their own checks in fieldcheck and surpluscheck).
  */
 function grownSave(n = 160, seed = 7): SaveData {
-  const w = new SimWorld(seed), bot = new Bot(w, 'active', (id) => id.startsWith('market.') || ['field.hand', 'field.handSkill', 'field.expand', 'corn.machine', 'surplus.yard', 'hr.feeder', 'honey.unlock', 'honey.animals', 'honey.worker', 'eggs.incubator', 'trader.deal'].includes(id)
+  const w = new SimWorld(seed), bot = new Bot(w, 'active', (id) => id.startsWith('market.') || ['field.hand', 'field.handSkill', 'field.expand', 'corn.machine', 'surplus.yard', 'hr.feeder', 'honey.unlock', 'honey.animals', 'honey.worker', 'meat.unlock', 'eggs.incubator', 'trader.deal'].includes(id)
     // (3 lanes and cashiers, as the event timings were tuned on: the 4th and 5th lanes came later)
     || (id === 'shop.lanes' && w.upgrades.level('shop.lanes') >= 2) || (id === 'cashier' && w.upgrades.level('cashier') >= 3));
   for (let i = 0; i < 30 * 60 * 60 && w.upgrades.bought < n; i++) {

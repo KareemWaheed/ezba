@@ -15,6 +15,10 @@ export interface Animal {
   t: number;
   /** 1 right after producing, decays to 0 (drives the hop animation). */
   hop: number;
+  /** Seconds in the pen (a cow is ready for the butcher's at ECONOMY.butcher.readyAge; a calf grows until calfAge). */
+  age: number;
+  /** On its way to the butcher's (sim/butcher.ts moves it; it neither wanders nor produces). */
+  leaving: boolean;
 }
 
 /** Barns stand inside each pen along the back fence; animals stay in front of this strip. */
@@ -63,7 +67,13 @@ export class Station {
   addAnimal(rng: Rng): Animal {
     const a = this.area;
     const x = rng.range(a.x0 + 0.6, a.x1 - 0.6), z = rng.range(a.z0 + BACK, a.z1 - 0.6);
-    const animal: Animal = { x, z, rot: rng.range(0, 6.28), speed: 0, tx: x, tz: z, pause: rng.range(0, 2), t: rng.range(0, 2), hop: 0 };
+    // (grown, of mixed ages: ages aren't saved, and cows shouldn't all be ready for the butcher's at once;
+    // spread by count, not drawn from rng, so adding ages didn't shift every seeded run)
+    const B = ECONOMY.butcher, spread = (this.animals.length * 0.618) % 1;
+    const animal: Animal = {
+      x, z, rot: rng.range(0, 6.28), speed: 0, tx: x, tz: z, pause: rng.range(0, 2), t: rng.range(0, 2), hop: 0,
+      age: B.calfAge + spread * (B.readyAge - B.calfAge), leaving: false,
+    };
     this.animals.push(animal);
     return animal;
   }
@@ -83,13 +93,16 @@ export class Station {
     const interval = this.boostT > 0 ? cfg.interval / ECONOMY.feed.mult : cfg.interval;
     if (this.boostT > 0) this.boostT = Math.max(0, this.boostT - dt);
     for (const a of this.animals) {
+      if (a.leaving) continue;
+      a.age += dt;
       if (a.pause > 0) { a.pause -= dt; a.speed = 0; }
       else if (moveToward(a, a.tx, a.tz, cfg.wanderSpeed, dt, 0.1)) {
         a.pause = rng.range(0.5, 2.5);
         a.tx = rng.range(area.x0 + 0.7, area.x1 - 0.7);
         a.tz = rng.range(area.z0 + BACK, area.z1 - 0.7);
       }
-      if (!this.paused) a.t += dt;
+      // (a calf gives no milk yet)
+      if (!this.paused && a.age >= ECONOMY.butcher.calfAge) a.t += dt;
       if (a.t >= interval) {
         if (!this.pileFull) {
           a.t -= interval;

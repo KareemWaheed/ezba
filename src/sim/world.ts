@@ -21,6 +21,7 @@ import { FieldSystem } from './field';
 import { AlbumSystem, DailySystem } from './meta';
 import { FactorySystem } from './factory';
 import { RiverSystem } from './river';
+import { ButcherSystem } from './butcher';
 import { MarketSystem } from './market';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
@@ -55,6 +56,8 @@ export class SimWorld {
   readonly field: FieldSystem;
   readonly factory: FactorySystem;
   readonly river: RiverSystem;
+  /** The butcher's: old cows' meat, sold at its window. */
+  readonly butcher: ButcherSystem;
   readonly market: MarketSystem;
   readonly album: AlbumSystem;
   readonly daily: DailySystem;
@@ -113,6 +116,7 @@ export class SimWorld {
     this.field = new FieldSystem(this);
     this.factory = new FactorySystem(this);
     this.river = new RiverSystem(this);
+    this.butcher = new ButcherSystem(this);
     this.market = new MarketSystem(this);
     this.album = new AlbumSystem(this);
     this.daily = new DailySystem(this);
@@ -197,6 +201,7 @@ export class SimWorld {
     this.time += dt;
     if (!this.away) updatePlayer(this.player, this.input.x, this.input.z, dt, this.solids, this.bounds);
     for (const s of this.stations) s.update(dt, this.rng, this.events);
+    this.butcher.update(dt);
     if (!this.away) this.interact(dt);
     this.staff.update(dt);
     this.rush.update(dt);
@@ -296,6 +301,7 @@ export class SimWorld {
     this.field.interact(dt);
     this.factory.interact(dt);
     this.river.interact(dt);
+    this.butcher.interact();
     this.market.interact(dt);
   }
 

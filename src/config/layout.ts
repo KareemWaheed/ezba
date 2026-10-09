@@ -112,6 +112,18 @@ export const LAYOUT = {
     incubator: { box: { x0: -14.2, x1: -12.8, z0: 11.4, z1: 12.3 } as Box, crate: { x: -13.5, z: 13.2 } },
     record: { x: -18.4, z: 16.4 },
   },
+  /**
+   * The butcher's (الجزارة, `meat.unlock`) north of the factory yard, east of the apiary, its window facing the
+   * camera. Old cows leave the pen at its front, walk east along `laneZ` past the apiary, north along `laneX`,
+   * and in at the side door. Meat sells at the window; the money piles up at `cash`.
+   */
+  butcher: {
+    box: { x0: 21.4, x1: 24.8, z0: -8.9, z1: -7.5 } as Box,
+    laneZ: -1.25,
+    laneX: 20.5,
+    door: { x: 21.4, z: -8.2 },
+    cash: { x: 23.9, z: -6.2 },
+  },
   /** Loading dock for company trucks (bottom right). The player loads at `load`; trucks park at `bay`. */
   dock: {
     load: { x: 8.4, z: 10.4 },
@@ -128,8 +140,8 @@ export const LAYOUT = {
     [-18.5, -11], [-17.5, -5], [-23.6, 2.5], [-23.2, 9], [-15.5, 18.6], [-18.5, 18.8], [-21.2, 19.2], [-14, -1], [31, -12.5], [31, -3], [31.5, 4],
     [31.5, 11], [-12.5, 27.5], [10.5, 28.5], [-15.2, 21.0], [11.3, 24.8], [-2, 30], [6, 31],
   ] as const,
-  // (east of the apiary, with room to walk between: a narrow gap there trapped the walker)
-  hay: [[22.4, -7.6], [22.4, -6.0], [22.4, -4.4], [23.6, -6.8]] as const,
+  // (east of the butcher's, with room to walk between: a narrow gap by the apiary trapped the walker)
+  hay: [[27.0, -8.4], [27.0, -6.8], [27.0, -5.2], [28.2, -7.6]] as const,
 } as const;
 
 /** Walls (0.3 thick) around a yard, with a gate in the east wall and, optionally, a road gap in the west wall. */

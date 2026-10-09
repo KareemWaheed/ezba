@@ -204,5 +204,34 @@ const untilParked = (w: SimWorld, max: number) => {
   ok(lanesUsed.size >= 4, `shoppers use the new lanes (${[...lanesUsed].sort().join(',')})`);
 }
 
+// the butcher's: an old cow walks there, a calf takes its place, the meat sells at the window, money waits there
+{
+  const B = ECONOMY.butcher;
+  const w = farm({ 'milk.unlock': 1, 'milk.animals': 3, 'field.unlock': 1, 'field.wheat': 1, 'cafe.unlock': 1, 'factory.unlock': 1 });
+  const pen = w.stations.find((s) => s.def.producer === 'cow')!, cows = pen.animals.length;
+  for (const a of pen.animals) a.age = B.readyAge + 5;
+  run(w, 5, away);
+  ok(!w.butcher.cow && pen.animals.length === cows, `no butcher's, no cow leaves (${pen.animals.length} cows)`);
+  w.upgrades.levels['meat.unlock'] = 1; w.upgrades.apply(); w.upgrades.refresh();
+  const msgs: number[] = [];
+  const tick = (s: number) => { for (let i = 0; i < s / DT; i++) { w.player.x = away.x; w.player.z = away.z; w.tick(DT); w.events.drain((e) => { if (e.type === 'butcher') msgs.push(e.n); }); } };
+  tick(1);
+  const calf = pen.animals.find((a) => a.age < B.calfAge), t0 = calf?.t ?? -1;
+  const calves = () => pen.animals.filter((a) => a.age < B.calfAge).length;
+  ok(!!w.butcher.cow && calves() === 1 && pen.animals.length === cows + 1, `an old cow leaves, a calf is in the pen (${calves()} calf, ${pen.animals.length} incl. the leaving cow)`);
+  tick(30);
+  ok(w.butcher.cows === 1 && pen.animals.length === cows, `the cow got to the butcher's, the herd is whole again (${pen.animals.length})`);
+  ok(!w.butcher.cow && calves() === 1, 'no second cow while the calf grows');
+  ok(!!calf && calf.t === t0, `the calf gives no milk yet (${calf?.age.toFixed(0)} s old)`);
+  ok(w.butcher.cash.value > 0 && msgs.includes(2) && msgs.includes(3), `meat sells at the window (${Math.round(w.butcher.cash.value)} waiting)`);
+  tick(B.calfAge);
+  ok(w.butcher.cows === 2 || !!w.butcher.cow, `once the calf is grown, the next old cow goes (${w.butcher.cows} in so far)`);
+  const m0 = w.money, v = w.butcher.cash.value;
+  run(w, 0.5, LAYOUT.butcher.cash);
+  ok(w.money - m0 >= v && w.butcher.cash.value === 0, `the player collects the window money (+${Math.round(w.money - m0)})`);
+  const back = new SimWorld(9); restore(back, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now())))));
+  ok(back.butcher.open && back.butcher.stock === w.butcher.stock, `the butcher's and its stock are saved (${back.butcher.stock} packs)`);
+}
+
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }
 console.log('\nall surplus checks passed');

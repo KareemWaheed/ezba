@@ -349,7 +349,7 @@ export class StaffSystem {
     this.accountT = ECONOMY.upgrades['hr.accountant'].step * (lv >= 2 ? 0.4 : 1);
     let v = 0;
     // (the farm's piles; the supermarket has its own checkout staff)
-    for (const c of [w.cash, w.cafe.cash, w.field.cash, w.river.cash]) { v += c.value; c.value = 0; c.bills = 0; }
+    for (const c of [w.cash, w.cafe.cash, w.field.cash, w.river.cash, w.butcher.cash]) { v += c.value; c.value = 0; c.bills = 0; }
     if (v <= 0) return;
     w.money += v;
     w.stats.earned += v;

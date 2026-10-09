@@ -381,3 +381,12 @@ This file records the decisions made on top of it.
   egg/milk/corn slots and a few tiles moved. Shoppers used to be held to the first 3 lanes (fixed-size arrays in
   `customers.ts`). The derby's "hot" mark dropped to 0.65 so it still clashes when left alone with the new layout.
   eventcheck's grown farm keeps 3 lanes and cashiers (its timings were tuned on that). `npm run surpluscheck`.
+- The butcher's (playtest: "cows that grow old could be slaughtered and we sell meat"): `meat.unlock` (الجزارة,
+  60k, milestone, after the factory, whose opening makes the ground north of its yard reachable). A cow is ready
+  after 10 min in the pen (ages aren't saved; cows appear with spread-out ages, spread by count so seeded runs
+  didn't shift). One at a time, and only while no calf is growing: the oldest ready cow walks out of the pen front,
+  east past the apiary and in at the shop's side door; a calf takes its place right away (smaller, grows for 60 s,
+  no milk until grown), so the herd never shrinks. 6 s later 12 packs of meat are on the window; one sells every
+  2.5 s (60 each x price growth) and the money piles up in front of the window (player or accountant collects it;
+  counted in time away). Meat never goes on the shop counter (no room left there, and a butcher sells his own).
+  Hay bales moved east to make room. `npm run surpluscheck`.

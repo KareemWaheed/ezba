@@ -327,6 +327,12 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       else if (e.n === 2) { sfx.kaching(); toast.show(`🤝 بعت ${ltr(e.id.toLocaleString('en-US'))} ${ic} للتاجر ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
       break;
     }
+    case 'butcher':
+      // (the first cow of a session gets the explanation; later ones go quietly)
+      if (e.n === 1) { if (sim.butcher.cows === 0) toast.show('🐄 بقرة كبرت وراحت للجزارة، وعجل صغير مكانها في الحظيرة 🐮'); }
+      else if (e.n === 2) { sfx.sparkle(); toast.show(`🥩 اللحمة جاهزة في شباك الجزارة: ${ltr(String(e.value))} كيس`); }
+      else { const s = toScreen(e.x, 2.2, e.z); hud.float(`+${fmtMoney(e.value)}`, s.x, s.y); }
+      break;
     case 'incubator':
       if (e.n === 2) { sfx.kaching(); const s = toScreen(e.x, 1.5, e.z); hud.float(`+${fmtMoney(e.value)}`, s.x, s.y); toast.show(`🐣 بعت ${ltr(String(e.id))} كتكوت ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
       else if (e.n === 3) { sfx.fanfare(); toast.show(`✨ فرخة دهبي طلعت من الحضّانة! البيض بقى أغلى ${ltr(`+${Math.round(e.id * ECONOMY.surplus.incubator.goldenBonus * 100)}%`)} 🐔`); }
