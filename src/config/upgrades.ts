@@ -65,7 +65,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   // Stage 2: cows
   {
     id: 'milk.unlock', icon: '🐄', label: 'حظيرة البقر', msg: 'فتحت حظيرة البقر 🐄🥛',
-    pos: { x: 6.5, z: 0.2 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true,
+    pos: { x: 10.6, z: 2.2 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true,
   },
   {
     id: 'milk.animals', icon: '🐄', label: 'بقرة جديدة', msg: 'بقرة جديدة في الحظيرة 🐄',

@@ -35,8 +35,8 @@ export const LAYOUT = {
     queueGap: 1.15,
     spawn: { x0: -3, x1: -1.5, z: 14.5 },
     exit: { x: 2.8, z: 15.5 },
-    // (south-west of the east sorter)
-    cash: { x: 8.0, z: 6.2 },
+    // (on the player's side, between the main belt and the counter's east slots: close to the lanes)
+    cash: { x: 6.6, z: 1.3 },
   },
   /**
    * The main belts (السير الرئيسي) along the front of the pens, at `z`: each product's belt lifts items off its pile

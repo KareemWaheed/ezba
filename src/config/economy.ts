@@ -477,9 +477,9 @@ export const ECONOMY = {
       /**
        * Seconds between items at level 1; each further level divides it by speedUp.
        * A built belt sends its product's workers home, so it carries what they and the old belt did together:
-       * ~2.9/s at level 1, ~7/s at level 4.
+       * 4/s at level 1, ~10/s at level 4 (a full coop with the feed boost lays ~8/s).
        */
-      interval: 0.35,
+      interval: 0.25,
       speedUp: 1.35,
       /** Travel time along the belt. */
       travel: 2.2,
