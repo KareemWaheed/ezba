@@ -96,20 +96,31 @@ function mast(x: number, z: number, h: number, yaw: number): THREE.Mesh {
   return m;
 }
 
+/** A sorter's chute: a grey slide from the gantry's side down onto one counter slot. */
+function chute(a: PathPoint, b: PathPoint): THREE.Mesh {
+  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, H = Math.hypot(dx, dz), L = Math.hypot(H, dy);
+  const m = new THREE.Mesh(merge([
+    part(PRIM.box, 0x777e88, 0, -0.08, 0, 0, 0, 0, 0.5, 0.05, L),
+    ...[-0.25, 0.25].map((e) => part(PRIM.box, 0x5d636c, e, -0.02, 0, 0, 0, 0, 0.04, 0.12, L)),
+  ]), MAT);
+  m.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  m.rotation.set(-Math.atan2(dy, H), Math.atan2(dx, dz), 0, 'YXZ');
+  return m;
+}
+
 /**
  * The sorter (الفرّازة) at a counter end: a gantry on four thin legs over the walkway (people pass under it), the
- * machine up top with its hopper, and a chute down onto the counter's slots.
+ * machine up top with its hopper; chutes (one per slot) run down onto the counter.
  */
-function sorter(b: { x0: number; x1: number; z0: number; z1: number }, toward: number): THREE.Group {
+function sorter(b: { x0: number; x1: number; z0: number; z1: number }): THREE.Group {
   const g = new THREE.Group(), cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2, w = b.x1 - b.x0, d = b.z1 - b.z0;
   const y = SORTER_Y, legs = [[b.x0 + 0.1, b.z0 + 0.1], [b.x1 - 0.1, b.z0 + 0.1], [b.x0 + 0.1, b.z1 - 0.1], [b.x1 - 0.1, b.z1 - 0.1]];
   g.add(new THREE.Mesh(merge([
     ...legs.map(([x, z]) => part(PRIM.box, 0x2f7a3c, x, (y - 0.3) / 2, z, 0, 0, 0, 0.1, y - 0.3, 0.1)),
     part(PRIM.box, 0x3f9d4f, cx, y, cz, 0, 0, 0, w, 0.6, d),
     part(PRIM.box, 0x2f7a3c, cx, y + 0.32, cz, 0, 0, 0, w + 0.06, 0.06, d + 0.06),
-    // hopper on top, the chute down toward the counter, two lights
+    // hopper on top, two lights (each slot's chute is drawn with its belt)
     part(PRIM.cone, 0xc9a227, cx, y + 0.75, cz, Math.PI, 0, 0, 0.55, 0.7, 0.55),
-    part(PRIM.box, 0x777e88, cx + toward * (w / 2 + 0.35), y - 0.55, cz, 0, 0, toward * 0.9, 0.9, 0.06, 0.7),
     part(PRIM.sph, 0xff4d4d, cx - 0.4, y, b.z1 + 0.01, 0, 0, 0, 0.08, 0.08, 0.08),
     part(PRIM.sph, 0x4dff7a, cx + 0.4, y, b.z1 + 0.01, 0, 0, 0, 0.08, 0.08, 0.08),
   ]), MAT));
@@ -171,8 +182,11 @@ class TrunkView {
         this.once(`mast ${r(a.x)},${r(a.z)}`, () => mast(a.x, a.z, a.y + 0.35, Math.atan2(b.x - a.x, b.z - a.z)), animate);
       } else this.once(key, () => rampBelt(a, b), animate);
     }
-    const west = belt.route.bx < 0, T = LAYOUT.trunk;
-    this.once(west ? 'westSorter' : 'eastSorter', () => sorter(west ? T.westSorter : T.eastSorter, west ? 1 : -1), animate);
+    const west = belt.route.bx < 0, T = LAYOUT.trunk, sb = west ? T.westSorter : T.eastSorter;
+    this.once(west ? 'westSorter' : 'eastSorter', () => sorter(sb), animate);
+    // this slot's chute: from the gantry's counter side down onto the slot
+    const slot = p[p.length - 1], edge = west ? sb.x1 : sb.x0;
+    this.once(`chute ${r(slot.x)}`, () => chute({ x: edge, y: SORTER_Y - 0.25, z: slot.z }, { x: slot.x, y: slot.y + 0.1, z: slot.z }), animate);
   }
 
   /** Where an item rides at k (0..1) of its belt's path. */

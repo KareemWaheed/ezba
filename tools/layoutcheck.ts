@@ -4,7 +4,7 @@
  * Run: npm run layoutcheck
  */
 import { UPGRADES } from '../src/config/upgrades';
-import { STATIONS, beltPath, BELT_Y } from '../src/config/stations';
+import { STATIONS, beltPath } from '../src/config/stations';
 import { LAYOUT, SOLIDS } from '../src/config/layout';
 import { CAFE } from '../src/config/cafe';
 import { FIELDS } from '../src/config/fields';
@@ -79,17 +79,25 @@ for (const d of UPGRADES) {
   }
 }
 
-// the main belts and the sorters (LAYOUT.trunk): no tile on them (unlock tiles are gone before any belt is built)
+// the main belts, their ramps, the cable masts and the sorters (LAYOUT.trunk): no tile on them (unlock tiles are gone
+// before any belt is built; tiles under the cables are fine, the lines run 3 m up)
 {
   // (the drawn rails reach 0.45 from the line)
   const H = TILE / 2, W = 0.45;
   const pieces = new Map<string, { ax: number; az: number; bx: number; bz: number }>();
+  const masts = new Map<string, { x: number; z: number }>();
   for (const st of STATIONS) {
     if (!st.machineTrack) continue;
     const p = beltPath(st);
     for (let i = 1; i < p.length - 1; i++) {
       const a = p[i - 1], b = p[i];
-      if (Math.abs(a.y - BELT_Y) < 0.01 && Math.abs(b.y - BELT_Y) < 0.01) pieces.set(`${a.x},${a.z},${b.x},${b.z}`, { ax: a.x, az: a.z, bx: b.x, bz: b.z });
+      // ground belts and the low ramps off the piles (a ramp up into a sorter is over the sorter's footprint)
+      if (a.y < 1 && b.y < 1) pieces.set(`${a.x},${a.z},${b.x},${b.z}`, { ax: a.x, az: a.z, bx: b.x, bz: b.z });
+    }
+    // masts: where the path goes straight up or down
+    for (let i = 1; i < p.length; i++) {
+      const a = p[i - 1], b = p[i];
+      if (Math.hypot(b.x - a.x, b.z - a.z) < 0.01 && Math.abs(b.y - a.y) > 1) masts.set(`${a.x},${a.z}`, { x: a.x, z: a.z });
     }
   }
   const T = LAYOUT.trunk;
@@ -98,6 +106,9 @@ for (const d of UPGRADES) {
     for (const g of pieces.values()) {
       const x0 = Math.min(g.ax, g.bx) - W, x1 = Math.max(g.ax, g.bx) + W, z0 = Math.min(g.az, g.bz) - W, z1 = Math.max(g.az, g.bz) + W;
       if (t.pos.x + H > x0 && t.pos.x - H < x1 && t.pos.z + H > z0 && t.pos.z - H < z1) { problems.push(`tile on a main belt: ${t.id}`); break; }
+    }
+    for (const m of masts.values()) {
+      if (Math.abs(t.pos.x - m.x) < H + 0.35 && Math.abs(t.pos.z - m.z) < H + 0.35) problems.push(`tile on a cable mast: ${t.id}`);
     }
     for (const b of [T.westSorter, T.eastSorter]) {
       if (t.pos.x + H > b.x0 - 0.2 && t.pos.x - H < b.x1 + 0.2 && t.pos.z + H > b.z0 - 0.2 && t.pos.z - H < b.z1 + 0.2) problems.push(`tile on a sorter: ${t.id}`);
