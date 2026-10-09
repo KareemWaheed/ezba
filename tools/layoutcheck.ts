@@ -4,7 +4,7 @@
  * Run: npm run layoutcheck
  */
 import { UPGRADES } from '../src/config/upgrades';
-import { STATIONS } from '../src/config/stations';
+import { STATIONS, beltPath, BELT_Y } from '../src/config/stations';
 import { LAYOUT, SOLIDS } from '../src/config/layout';
 import { CAFE } from '../src/config/cafe';
 import { FIELDS } from '../src/config/fields';
@@ -76,6 +76,31 @@ for (const d of UPGRADES) {
   for (const p of FIELDS.plots) {
     const b = p.box, R = 0.9;
     if (d.pos.x > b.x0 - R && d.pos.x < b.x1 + R && d.pos.z > b.z0 - R && d.pos.z < b.z1 + R) problems.push(`tile on a field: ${d.id} in ${p.id}`);
+  }
+}
+
+// the main belts and the sorters (LAYOUT.trunk): no tile on them (unlock tiles are gone before any belt is built)
+{
+  const H = TILE / 2, W = 0.4;
+  const pieces = new Map<string, { ax: number; az: number; bx: number; bz: number }>();
+  for (const st of STATIONS) {
+    if (!st.machineTrack) continue;
+    const p = beltPath(st);
+    for (let i = 1; i < p.length - 1; i++) {
+      const a = p[i - 1], b = p[i];
+      if (Math.abs(a.y - BELT_Y) < 0.01 && Math.abs(b.y - BELT_Y) < 0.01) pieces.set(`${a.x},${a.z},${b.x},${b.z}`, { ax: a.x, az: a.z, bx: b.x, bz: b.z });
+    }
+  }
+  const T = LAYOUT.trunk;
+  for (const t of UPGRADES) {
+    if (t.id.endsWith('.unlock')) continue;
+    for (const g of pieces.values()) {
+      const x0 = Math.min(g.ax, g.bx) - W, x1 = Math.max(g.ax, g.bx) + W, z0 = Math.min(g.az, g.bz) - W, z1 = Math.max(g.az, g.bz) + W;
+      if (t.pos.x + H > x0 && t.pos.x - H < x1 && t.pos.z + H > z0 && t.pos.z - H < z1) { problems.push(`tile on a main belt: ${t.id}`); break; }
+    }
+    for (const b of [T.westSorter, T.eastSorter]) {
+      if (t.pos.x + H > b.x0 - 0.2 && t.pos.x - H < b.x1 + 0.2 && t.pos.z + H > b.z0 - 0.2 && t.pos.z - H < b.z1 + 0.2) problems.push(`tile on a sorter: ${t.id}`);
+    }
   }
 }
 

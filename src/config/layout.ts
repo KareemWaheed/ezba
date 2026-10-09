@@ -35,7 +35,24 @@ export const LAYOUT = {
     queueGap: 1.15,
     spawn: { x0: -3, x1: -1.5, z: 14.5 },
     exit: { x: 2.8, z: 15.5 },
-    cash: { x: 8.6, z: 4.2 },
+    // (south-west of the east sorter)
+    cash: { x: 8.0, z: 6.2 },
+  },
+  /**
+   * The main belts (السير الرئيسي) along the front of the pens, at `z`: each product's belt lifts items off its pile
+   * onto the belt of its side, which runs to a junction at the counter's end (`west.x` / `east.x`), turns south down
+   * to the sorter (الفرّازة) standing against that end of the counter, and the sorter drops each item onto its slot.
+   * West: eggs, and the corn's cable line from the field lands on the junction. East: milk and honey.
+   */
+  trunk: {
+    z: 0.4,
+    west: { x: -8.5 },
+    east: { x: 8.5 },
+    /** Where the belt down from the junction ends, on top of the sorter. */
+    sortZ: 3.2,
+    /** The sorters' footprint (solid), against the counter's ends. */
+    westSorter: { x0: -9.3, x1: -7.6, z0: 3.2, z1: 4.8 } as Box,
+    eastSorter: { x0: 7.6, x1: 9.3, z0: 3.2, z1: 4.8 } as Box,
   },
   /**
    * Walled HR yard west of the farm. Locked (shaded, outside the walkable area) until the
@@ -179,6 +196,7 @@ export const SOLIDS: Box[] = [
   FENCES.milk,
   FENCES.honey,
   { ...LAYOUT.counter },
+  // (the sorters stand on reachable ground: they become solid once a belt that ends there is built, SimWorld.addSolid)
   ...hrWalls(),
   ...SURPLUS_WALLS,
   { ...LAYOUT.hrYard.building },

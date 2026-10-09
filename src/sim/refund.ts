@@ -2,7 +2,8 @@ import { ECONOMY, type UpgradeId } from '../config/economy';
 import { PRICE_CHANGES, PRICE_VERSION } from '../config/priceHistory';
 import type { SimWorld } from './world';
 
-export interface RefundLine { id: UpgradeId; amount: number }
+/** `retired`: a product's workers, sent home once its belt was built (what they cost comes back). */
+export interface RefundLine { id: UpgradeId; amount: number; retired?: boolean }
 
 /** The price of a track's level as it was at price version `pv` (the oldest change after it that lists it). */
 function priceAt(w: SimWorld, id: UpgradeId, level: number, pv: number): number {

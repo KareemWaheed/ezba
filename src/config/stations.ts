@@ -30,9 +30,9 @@ export interface StationDef {
   /** Fence moves out by these amounts per level of `track` (bigger pen). */
   expand?: { track: UpgradeId; dx0: number; dx1: number };
   /**
-   * The belt is a cable line in the air instead (the corn's pile is far from the shop, past the coop): from a
-   * tower by the pile (`a`) over the coop to a tower behind the counter's end (`tower`), then down onto the
-   * counter slot. Jams are fixed at `fix` (the counter-end tower; the line's middle is over the coop).
+   * The belt is a cable line in the air instead (the corn's pile is far from the shop, past the coop; the honey's
+   * strip is too narrow): from a tower by the pile (`a`) to a tower on its side's main belt junction (`tower`), then
+   * down onto the belt to the sorter. Jams are fixed at `fix`.
    */
   skyBelt?: { a: { x: number; z: number }; tower: { x: number; z: number }; fix: { x: number; z: number } };
   /** Feeding trough on the front fence (player refills it for a production boost). */
@@ -60,7 +60,7 @@ export const STATIONS: readonly StationDef[] = [
     // corn: the pile sits by the grain stall (drivers and the combine unload there); its counter slot is
     // at the left end of the shop counter
     id: 'corn', product: 'corn', unlockTrack: 'field.unlock', workerTrack: 'corn.worker', machineTrack: 'corn.machine',
-    skyBelt: { a: { x: -5.7, z: -10.2 }, tower: { x: -7.2, z: 4.95 }, fix: { x: -8.1, z: 3.2 } },
+    skyBelt: { a: { x: -5.7, z: -10.2 }, tower: { x: LAYOUT.trunk.west.x, z: LAYOUT.trunk.z }, fix: { x: -7.6, z: 1.3 } },
     pile: { x: -4.4, z: -10.9, cols: 2, rows: 2 },
     counter: { x: -7.0, z: 4, dropX: -7.0, dropZ: 2.9 },
     startsOpen: false,
@@ -68,15 +68,50 @@ export const STATIONS: readonly StationDef[] = [
   {
     // bees: hives east of the cow pen, honey sold at the east end of the counter
     id: 'honey', product: 'honey', producer: 'bee', area: LAYOUT.apiary, unlockTrack: 'honey.unlock',
-    animalTrack: 'honey.animals', workerTrack: 'honey.worker',
+    animalTrack: 'honey.animals', workerTrack: 'honey.worker', machineTrack: 'honey.machine',
+    // (a cable line too: between the apiary and the café there's no room for a ground belt beside the tiles)
+    skyBelt: { a: { x: 18.5, z: -0.5 }, tower: { x: LAYOUT.trunk.east.x, z: LAYOUT.trunk.z }, fix: { x: 18.5, z: 0.0 } },
     pile: { x: 17.3, z: -0.8, cols: 2, rows: 2 },
     counter: { x: 7.0, z: 4, dropX: 7.0, dropZ: 2.9 },
     startsOpen: false,
   },
 ];
 
-/** Belt end points (pile -> counter slot), on the outer side so workers keep the inner path. */
-export function beltEnds(d: StationDef, counterZ0: number): { ax: number; az: number; bx: number; bz: number } {
-  const side = Math.sign(d.counter.x) || -1;
-  return { ax: d.pile.x + side * 1.05, az: d.pile.z + 0.3, bx: d.counter.x + side * 0.35, bz: counterZ0 - 0.15 };
+export interface PathPoint { x: number; y: number; z: number }
+
+/** Height of a ground belt's top, and of the cable line. */
+export const BELT_Y = 0.2, SKY_Y = 3.7;
+
+/**
+ * Where a product's items ride once its belt is built (LAYOUT.trunk): off the pile (or up the corn's cable line and
+ * over to the junction), along the main belt of its side to the junction, down the belt to the sorter, and onto its
+ * counter slot.
+ */
+export function beltPath(d: StationDef): PathPoint[] {
+  const T = LAYOUT.trunk, side = d.counter.x < 0 ? T.west : T.east, slot = { x: d.counter.x, y: 1.15, z: d.counter.z };
+  const down: PathPoint[] = [
+    { x: side.x, y: BELT_Y, z: T.z },
+    { x: side.x, y: BELT_Y, z: T.sortZ },
+    { x: side.x, y: 1.0, z: (T.westSorter.z0 + T.westSorter.z1) / 2 },
+    slot,
+  ];
+  const sky = d.skyBelt;
+  if (sky) {
+    return [
+      { x: sky.a.x, y: 0.5, z: sky.a.z },
+      { x: sky.a.x, y: SKY_Y - 0.35, z: sky.a.z },
+      { x: sky.tower.x, y: SKY_Y - 0.35, z: sky.tower.z },
+      ...down,
+    ];
+  }
+  return [
+    { x: d.pile.x, y: 0.6, z: d.pile.z + 0.4 },
+    { x: d.pile.x, y: BELT_Y, z: T.z },
+    ...down,
+  ];
+}
+
+/** Where a station's belt jams are fixed: by its pile's spot on the main belt (the corn: by its junction tower). */
+export function beltFix(d: StationDef): { x: number; z: number } {
+  return d.skyBelt ? d.skyBelt.fix : { x: d.pile.x, z: LAYOUT.trunk.z + 1.0 };
 }

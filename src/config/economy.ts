@@ -518,6 +518,8 @@ export const ECONOMY = {
     'honey.animals': { base: 2500, growth: 1.6, max: 6, step: 1 },
     /** Honey workers: +1 per level. */
     'honey.worker': { base: 12000, growth: 3, max: 2, step: 1 },
+    /** Honey's belt onto the east main belt (level 1 builds it, later levels speed it up). */
+    'honey.machine': { base: 15000, growth: 2.5, max: 4, step: 1 },
     /** The butcher's north of the factory yard (single level): old cows go there, a calf takes their place. */
     'meat.unlock': { base: 60000, growth: 1, max: 1, step: 1 },
     /** Corn cable line (pile by the grain stall -> shop counter, over the coop): level 1 builds it, later levels speed it up. */

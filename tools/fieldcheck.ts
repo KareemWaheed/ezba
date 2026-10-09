@@ -22,7 +22,8 @@ const tick = (w: SimWorld, s: number, drive?: () => void): void => {
 };
 
 // a farm with the corn field and a corn worker, no tractor drivers
-const w = new SimWorld(7), bot = new Bot(w, 'active');
+// (no corn cable line: it would send the corn worker home)
+const w = new SimWorld(7), bot = new Bot(w, 'active', (id) => id === 'corn.machine');
 for (let i = 0; i < 30 * 60 * 90 && w.upgrades.level('corn.worker') < 1; i++) { w.money = Math.max(w.money, 1e9); bot.update(DT); w.tick(DT); w.events.drain(() => {}); }
 const corn = w.stations.find((s) => s.def.product === 'corn')!;
 ok(corn.open && w.upgrades.level('corn.worker') >= 1 && w.field.drivers.length === 0, 'test farm: corn field + corn worker, no drivers');

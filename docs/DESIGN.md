@@ -403,3 +403,20 @@ This file records the decisions made on top of it.
   the apiary; cows per level unchanged, so old saves at level 2 just get a smaller pen). A cow on its way to the
   butcher's no longer counts as a pen animal (a cow bought during the walk was lost), a save mid-walk keeps it (in
   at the butcher's on load), a leaving cow stops hopping, and the butcher's sign redraws once the web font loads.
+- Wheat for the bakery (playtest: "the bakery and the silo never fill"): field hands only ever cut corn, so a farm
+  with hands but no tractor never got wheat. With no tractor drivers and the bakery short, the first hand goes to
+  the wheat (the others stay on the corn). Standing at a factory machine with nothing it takes says what it takes.
+  `npm run fieldcheck`.
+- The main belts and the sorters (playtest: "the counter area is a jam; once there's a belt the workers should go;
+  pens far from the counter with organised, creative belts"): `LAYOUT.trunk`. Each product's belt now rides one of two
+  main belts along the front of the pens to a junction at its end of the counter, down to a sorter (الفرّازة) standing
+  against the counter's end, which drops each item on its slot: west, eggs (ground) and corn (its cable line now
+  lands on the west junction); east, milk (ground) and honey (a cable line over the pen fronts: no room for a ground
+  belt beside the apiary's tiles), with a new honey belt `honey.machine`. The middle of the road stays clear.
+  Buying a product's belt sends its workers home and gives back what they cost (their tile goes; levels stay, so
+  price growth and requirements don't change); saves from before get that refund once on load (`rt`). The sorters
+  turn solid with their side's first belt. The shop cash moved south-west of the east sorter; a few tiles moved off
+  the belts (layoutcheck: no tile on a main belt or a sorter). The café helper only leaves a pile for the shop when
+  a worker or a belt will carry it there (otherwise nobody did and the coffee ran dry). The inspector no longer checks
+  the pile behind the belt he just jammed, picks an empty café table, and doesn't fail a checkpoint that went bad
+  while he was looking at it. `npm run beltcheck`.

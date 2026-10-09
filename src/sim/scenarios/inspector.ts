@@ -24,6 +24,8 @@ export class InspectorMechanic implements Mechanic {
   x = 0; z = 0; rot = 0; speed = 0;
   /** Seconds left looking at the current checkpoint (0 = walking). */
   lookT = 0;
+  /** The current checkpoint was fine when he got there (a mess made while he looks isn't the player's fault). */
+  private fineOnArrival = false;
 
   start(w: SimWorld, _def: ScenarioDef): void {
     const e = LAYOUT.inspectorEntry;
@@ -37,21 +39,26 @@ export class InspectorMechanic implements Mechanic {
     }
     // one machine jams right as the inspector walks in
     const running = w.staff.machines.filter((m) => m.running);
+    let jammed = -1;
     if (running.length) {
       const m = running[w.rng.int(running.length)];
+      jammed = w.staff.belts.indexOf(m as never);
       m.broken = true;
       m.fixT = 0;
       w.events.emit('break', '', m.mx, m.mz, 0, 0, w.staff.machines.indexOf(m));
       stops.push({ kind: 'machine', ref: w.staff.machines.indexOf(m), x: m.mx, z: m.mz, passed: null });
     }
     // a messy café table
-    if (w.cafe.open && w.cafe.tableCount > 0) {
-      const i = w.rng.int(w.cafe.tableCount), t = w.cafe.tables[i];
-      if (!t.occupant) t.dirty = true;
+    // (an empty one: a table someone is eating at turns dirty whenever they leave, maybe a second before the check)
+    const free = w.cafe.open ? w.cafe.tables.slice(0, w.cafe.tableCount).map((t, i) => (t.occupant ? -1 : i)).filter((i) => i >= 0) : [];
+    if (free.length) {
+      const i = free[w.rng.int(free.length)], t = w.cafe.tables[i];
+      t.dirty = true;
       stops.push({ kind: 'table', ref: i, x: t.x, z: t.z, passed: null });
     }
     // the fullest pile
-    const piles = w.stations.filter((s) => s.open && s.farmed).sort((a, b) => b.pile - a.pile);
+    // (not the pile behind the belt just jammed: with belts doing the workers' job, that one can't be fine in time)
+    const piles = w.stations.filter((s) => s.open && s.farmed && s.index !== jammed).sort((a, b) => b.pile - a.pile);
     if (piles.length) stops.push({ kind: 'pile', ref: piles[0].index, x: piles[0].def.pile.x, z: piles[0].def.pile.z, passed: null });
     // visit them nearest-first from the gate
     let cx = this.x, cz = this.z;
@@ -81,14 +88,14 @@ export class InspectorMechanic implements Mechanic {
     if (this.lookT > 0) {
       this.lookT -= dt;
       if (this.lookT <= 0) {
-        c.passed = this.fine(w, c);
+        c.passed = this.fineOnArrival || this.fine(w, c);
         w.events.emit('scenarioCue', '', c.x, c.z, 0, c.passed ? 1 : 2, this.at);
         this.at++;
       }
       return;
     }
     // stop a little in front of the spot
-    if (moveToward(this, c.x, c.z + 1.0, WALK, dt, 0.3)) this.lookT = LOOK_TIME;
+    if (moveToward(this, c.x, c.z + 1.0, WALK, dt, 0.3)) { this.lookT = LOOK_TIME; this.fineOnArrival = this.fine(w, c); }
   }
 
   goal(w: SimWorld, g: ScenarioGoal): boolean | undefined {

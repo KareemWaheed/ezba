@@ -85,8 +85,35 @@ export class UpgradeSystem {
     return refund;
   }
 
+  /** A product's workers once its belt is built: the belt does their job (the tile goes; they go home). */
+  beltReplaces(id: UpgradeId): boolean {
+    const st = this.w.stations.find((s) => s.def.workerTrack === id);
+    return !!st && !!st.def.machineTrack && this.level(st.def.machineTrack) > 0;
+  }
+
+  /**
+   * Workers whose product has a belt now go home, and what they cost (with anything paid toward the next one)
+   * comes back. On buying a belt (`onlyTrack`: a 'retired' event, main.ts says so); and once on loading a save from
+   * before this rule, for belts bought then (listed in w.refunds: main.ts shows them with the price-drop refunds).
+   */
+  retireWorkers(onlyTrack?: UpgradeId): void {
+    const w = this.w;
+    for (const st of w.stations) {
+      const wt = st.def.workerTrack, mt = st.def.machineTrack;
+      if (!wt || !mt || this.level(mt) <= 0 || (onlyTrack && onlyTrack !== mt)) continue;
+      const free = w.path.startLevels[wt] ?? 0;
+      let amount = this.paid[wt];
+      for (let l = free; l < this.level(wt); l++) amount += this.costAt(wt, l);
+      this.paid[wt] = 0;
+      if (amount <= 0) continue;
+      w.money += amount;
+      if (!onlyTrack) w.refunds.push({ id: wt, amount, retired: true });
+      else if (!w.away) w.events.emit('retired', st.def.product, st.def.pile.x, st.def.pile.z, amount, 0, st.index);
+    }
+  }
+
   available(def: UpgradeDef): boolean {
-    if (this.hidden(def.id) || this.maxed(def.id)) return false;
+    if (this.hidden(def.id) || this.maxed(def.id) || this.beltReplaces(def.id)) return false;
     if (def.capBy && this.level(def.id) >= 1 + this.level(def.capBy)) return false;
     if (def.requiresMaxed && !this.maxed(def.requiresMaxed)) return false;
     for (const r of this.requires(def)) if (this.level(r.id) < r.level) return false;
@@ -166,6 +193,13 @@ export class UpgradeSystem {
     w.river.sync();
     if (w.river.open) { w.bounds.z0 = RIVER.unlockedZ0; w.addSolid('fishStall', RIVER.stall.box); }
     if (this.level('eggs.incubator') > 0) w.addSolid('incubator', LAYOUT.surplus.incubator.box);
+    // the sorters stand on reachable ground: solid once a belt on their side is built
+    for (const st of w.stations) {
+      const mt = st.def.machineTrack;
+      if (!mt || this.level(mt) <= 0) continue;
+      if (st.def.counter.x < 0) w.addSolid('westSorter', LAYOUT.trunk.westSorter);
+      else w.addSolid('eastSorter', LAYOUT.trunk.eastSorter);
+    }
     if (this.level('meat.unlock') > 0) w.addSolid('butcher', { ...LAYOUT.butcher.box, z1: LAYOUT.butcher.box.z1 + 0.5 }); // (with the window counter)
     const grill = FACTORY.machines.find((m) => m.id === 'grill');
     if (grill && this.level(grill.unlockTrack) > 0) w.addSolid('grill', grill.box);
@@ -193,6 +227,7 @@ export class UpgradeSystem {
     this.levels[id]++;
     this.paid[id] = 0;
     this.bought++;
+    if (this.levels[id] === 1) this.retireWorkers(id);
     // the next level's tile appears right under the player: it must not drain until they step off
     t.armed = dist(p.x, p.z, t.def.pos.x, t.def.pos.z) > ECONOMY.tiles.armDistance;
     this.apply();

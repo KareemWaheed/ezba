@@ -1,6 +1,6 @@
 import { ECONOMY, type ItemId } from '../config/economy';
 import { LAYOUT } from '../config/layout';
-import { beltEnds, type StationDef } from '../config/stations';
+import { beltFix, beltPath, type PathPoint } from '../config/stations';
 import { Carrier } from './carrier';
 import { dist, moveToward, turnToward } from './math';
 import type { Station } from './station';
@@ -167,26 +167,28 @@ export interface BeltRoute {
   deliver(item: ItemId): void;
   readonly ax: number; readonly az: number;
   readonly bx: number; readonly bz: number;
-  /** Travel time (default ECONOMY.machines.belt.travel), where jams are fixed (default the middle), cable line. */
+  /** Travel time (default ECONOMY.machines.belt.travel), where jams are fixed (default the middle). */
   readonly travel?: number;
   readonly fix?: { x: number; z: number };
-  readonly sky?: StationDef['skyBelt'];
+  /** The way items ride (a station's belt along the main belt, through the sorter); straight a -> b when absent. */
+  readonly path?: readonly PathPoint[];
 }
 
-/** Station belt route: pile -> counter slot, along the outer side. */
+/** Length of a path in metres. */
+export function pathLength(p: readonly PathPoint[]): number {
+  let L = 0;
+  for (let i = 1; i < p.length; i++) L += Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y, p[i].z - p[i - 1].z);
+  return L;
+}
+
+/** Station belt route: pile -> its side's main belt -> the sorter -> the counter slot (LAYOUT.trunk). */
 export function stationRoute(st: Station): BeltRoute {
   const take = () => (st.pile > 0 ? (st.pile--, st.def.product) : null), deliver = () => { st.counter++; };
-  const sky = st.def.skyBelt;
-  if (sky) {
-    // a long line: about 5 m/s along the cable, plus the lift at each end
-    const L = Math.hypot(sky.tower.x - sky.a.x, sky.tower.z - sky.a.z);
-    return { ax: sky.a.x, az: sky.a.z, bx: st.def.counter.x, bz: st.def.counter.z, travel: 1.5 + L / 5, fix: sky.fix, sky, take, deliver };
-  }
-  const e = beltEnds(st.def, LAYOUT.counter.z0);
+  const path = beltPath(st.def), a = path[0], b = path[path.length - 1];
+  // (about 4 m/s along the way: the cable line from the field takes a few seconds more)
   return {
-    ax: e.ax, az: e.az, bx: e.bx, bz: e.bz,
-    take: () => (st.pile > 0 ? (st.pile--, st.def.product) : null),
-    deliver: () => { st.counter++; },
+    ax: a.x, az: a.z, bx: b.x, bz: b.z, travel: Math.max(ECONOMY.machines.belt.travel, pathLength(path) / 4),
+    fix: beltFix(st.def), path, take, deliver,
   };
 }
 
@@ -285,14 +287,30 @@ export class StaffSystem {
     while (have < want) this.workers.push(new Worker(job, have++, x + have * 0.5, z));
   }
 
+  /** Someone moves this station's pile to its counter on their own: its workers or its belt. */
+  carries(s: Station): boolean {
+    return (this.belts[s.index]?.level ?? 0) > 0 || this.workers.some((k) => k.job.key === s.def.id);
+  }
+
+  /** Send a station's workers home; what they carry goes on its counter. */
+  private dismiss(s: Station): void {
+    for (let i = this.workers.length - 1; i >= 0; i--) {
+      const wk = this.workers[i];
+      if (wk.job.key !== s.def.id) continue;
+      s.counter += wk.carry.n;
+      this.workers.splice(i, 1);
+    }
+  }
+
   /** Match staff/machines to upgrade levels. Called from UpgradeSystem.apply(). */
   sync(): void {
     const w = this.w, up = w.upgrades;
     for (const s of w.stations) {
       if (!s.open) continue;
-      const wt = s.def.workerTrack;
-      if (wt) this.ensureWorkers(new StationJob(s), up.level(wt) * ECONOMY.upgrades[wt].step, s.def.pile.x + 1.2, s.def.pile.z + 1.4);
-      const mt = s.def.machineTrack;
+      const wt = s.def.workerTrack, mt = s.def.machineTrack;
+      // (a built belt does the workers' job: they go home, handing in what they carry)
+      if (wt && mt && up.level(mt) > 0) this.dismiss(s);
+      else if (wt) this.ensureWorkers(new StationJob(s), up.level(wt) * ECONOMY.upgrades[wt].step, s.def.pile.x + 1.2, s.def.pile.z + 1.4);
       if (mt) this.belts[s.index].level = up.level(mt);
     }
     while (this.mechanics.length < up.level('hr.mechanic') * ECONOMY.upgrades['hr.mechanic'].step) {
