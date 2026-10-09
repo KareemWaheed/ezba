@@ -22,7 +22,7 @@ const L = LAYOUT.surplus, S = ECONOMY.surplus;
 /** A farm with the coop and its worker; extra levels on top. */
 function farm(extra: Partial<Record<UpgradeId, number>> = {}): SimWorld {
   const w = new SimWorld(9);
-  const lv: Partial<Record<UpgradeId, number>> = { 'eggs.animals': 4, 'eggs.worker': 1, ...extra };
+  const lv: Partial<Record<UpgradeId, number>> = { 'eggs.animals': 4, 'eggs.worker': 1, 'surplus.yard': 1, ...extra };
   for (const [k, v] of Object.entries(lv)) { w.upgrades.levels[k as UpgradeId] = v!; w.upgrades.bought += v!; }
   w.upgrades.apply(); w.upgrades.refresh();
   return w;
@@ -169,6 +169,21 @@ const untilParked = (w: SimWorld, max: number) => {
     if (tr && tr.state === 'parked') loaded = Math.max(loaded, tr.want - tr.left);
   }
   ok(loaded > 0, `river workers load it on their own (${loaded} fish)`);
+}
+
+// the surplus yard: nothing of it before it's built; a save that already used the corner gets the yard
+{
+  const w = farm({ 'surplus.yard': 0 });
+  egg(w).counter = 5000;
+  run(w, 400, away);
+  ok(!w.surplus.visit && w.surplus.ready === null, 'no trader and no record before the yard is built');
+  ok(w.solids.some((b) => b.x1 === LAYOUT.surplusYard.box.x1 && b.z0 === LAYOUT.surplusYard.gate.z0), 'its gate is shut');
+  const old = new SimWorld(1);
+  const s = migrate(JSON.parse(JSON.stringify(serialize(farm({ 'surplus.yard': 0, 'eggs.incubator': 1 }), Date.now()))))!;
+  restore(old, s);
+  ok(old.upgrades.level('surplus.yard') === 1 && old.surplus.open, 'an older save with the incubator gets the yard');
+  ok(!old.solids.some((b) => b.x1 === LAYOUT.surplusYard.box.x1 && b.z0 === LAYOUT.surplusYard.gate.z0), '...with its gate open');
+  ok(old.bounds.x0 <= LAYOUT.surplusYard.unlockedX0, '...and the walkable area reaching it');
 }
 
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }

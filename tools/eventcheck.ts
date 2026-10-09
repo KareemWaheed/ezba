@@ -43,7 +43,7 @@ const ok = (cond: boolean, msg: string): void => {
  * their own checks in fieldcheck and surpluscheck).
  */
 function grownSave(n = 160, seed = 7): SaveData {
-  const w = new SimWorld(seed), bot = new Bot(w, 'active', (id) => id.startsWith('market.') || ['field.hand', 'field.handSkill', 'field.expand', 'corn.machine', 'eggs.incubator', 'trader.deal'].includes(id));
+  const w = new SimWorld(seed), bot = new Bot(w, 'active', (id) => id.startsWith('market.') || ['field.hand', 'field.handSkill', 'field.expand', 'corn.machine', 'surplus.yard', 'eggs.incubator', 'trader.deal'].includes(id));
   for (let i = 0; i < 30 * 60 * 60 && w.upgrades.bought < n; i++) {
     w.money = Math.max(w.money, 1e9);
     bot.update(DT);

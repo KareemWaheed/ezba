@@ -149,6 +149,12 @@ export function restore(w: SimWorld, s: SaveData): void {
     up.paid[id] = Math.max(0, num(s.paid?.[id]));
     up.bought += up.levels[id];
   }
+  // the surplus corner moved into its own yard: a farm that already used it (incubator, trader deal, a record) has it
+  const recs = s.surplus?.records ?? {};
+  if (up.levels['surplus.yard'] === 0 && (up.levels['eggs.incubator'] > 0 || up.levels['trader.deal'] > 0 || Object.values(recs).some((n) => num(n) > 0))) {
+    up.levels['surplus.yard'] = 1;
+    up.bought++;
+  }
   for (const st of w.stations) {
     const d = s.stations?.[st.def.id];
     if (!d) continue;

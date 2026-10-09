@@ -150,6 +150,11 @@ export class UpgradeSystem {
     w.staff.sync();
     w.bounds.x0 = this.level('hr.office') > 0 ? LAYOUT.hrYard.unlockedX0 : LAYOUT.bounds.x0;
     if (this.level('river.unlock') > 0) w.bounds.x0 = Math.min(w.bounds.x0, RIVER.unlockedX0);
+    if (this.level('surplus.yard') > 0) w.bounds.x0 = Math.min(w.bounds.x0, LAYOUT.surplusYard.unlockedX0);
+    // a locked yard keeps its gate shut (the walkable area can reach it once the river or the other yard opens)
+    const shut = (y: { box: { x1: number }; gate: { z0: number; z1: number } }) => ({ x0: y.box.x1 - 0.3, x1: y.box.x1, z0: y.gate.z0, z1: y.gate.z1 });
+    w.setSolid('hrGate', this.level('hr.office') > 0 ? null : shut(LAYOUT.hrYard));
+    w.setSolid('surplusGate', this.level('surplus.yard') > 0 ? null : shut(LAYOUT.surplusYard));
     w.cafe.sync();
     w.field.sync();
     w.bounds.z0 = w.field.open ? FIELDS.unlockedZ0 : LAYOUT.bounds.z0;

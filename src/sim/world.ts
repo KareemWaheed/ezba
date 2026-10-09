@@ -73,6 +73,8 @@ export class SimWorld {
   /** Bumped whenever this world adds a solid (route caches rebuild). */
   solidsVersion = 0;
   private built = new Set<string>();
+  /** Solids that can be taken away again (a locked yard's gate), by key. */
+  private temp = new Map<string, Box>();
   /** Walkable area; grows when walled plots are unlocked. */
   readonly bounds = { ...LAYOUT.bounds };
   /** Current stick input, magnitude 0..1. Set by the UI or the simulated player. */
@@ -302,6 +304,23 @@ export class SimWorld {
     if (this.built.has(key)) return;
     this.built.add(key);
     this.solids.push({ ...b });
+    this.solidsVersion++;
+  }
+
+  /** A solid that can come off again (setSolid(key, null)). */
+  setSolid(key: string, b: Box | null): void {
+    const cur = this.temp.get(key);
+    if (!b) {
+      if (!cur) return;
+      this.solids.splice(this.solids.indexOf(cur), 1);
+      this.temp.delete(key);
+      this.solidsVersion++;
+      return;
+    }
+    if (cur) return;
+    const s = { ...b };
+    this.temp.set(key, s);
+    this.solids.push(s);
     this.solidsVersion++;
   }
 

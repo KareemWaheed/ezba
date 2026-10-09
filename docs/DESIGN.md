@@ -357,4 +357,12 @@ This file records the decisions made on top of it.
     (12 s at level 2), with a small 🧾 float. Not during time away (that pays its own sum).
   - Customer service `hr.service` (خدمة العملاء, 20k x2.5, 3 levels): shop customers' patience +15% per level.
   - `npm run awaycheck` covers both.
+- The surplus yard (playtest: "the incubator, the omelette record and these feel out of place; they need a new
+  yard"): the trader, the incubator and the record stand moved out of the main yard into `حوش العزبة`
+  (`LAYOUT.surplusYard`, `surplus.yard`, 2k, milestone, after the first egg worker), walled like the HR yard,
+  west of the main yard below it, with a gate in the east wall and a gap in the west wall the trader's truck
+  drives in through. Shaded and shut until bought; no trader and no records before it. The incubator and the
+  trader deal are bought inside it. Old saves that used the corner (incubator, trader deal or a record) get the
+  yard. The army truck moved 2.7 m south and four trees moved to make room. Locked yards (HR, surplus) now keep
+  their gate shut: once the river or another yard widened the walkable area, a locked yard could be walked into.
 

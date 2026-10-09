@@ -261,14 +261,18 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 23.4, z: 30.6 }, requires: [{ id: 'market.shelves', level: 1 }],
   },
   // Loading dock: company contracts with trucks
-  // what a big surplus is good for (bottom left of the yard)
+  // what a big surplus is good for: its own yard west of the main one (trader, incubator, records)
+  {
+    id: 'surplus.yard', icon: '🏡', label: 'حوش العزبة', msg: 'فتحت الحوش! تاجر الجملة والحضّانة والأرقام القياسية هناك 🏡',
+    pos: { x: -7.4, z: 13.5 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true,
+  },
   {
     id: 'eggs.incubator', icon: '🐣', label: 'حضّانة', msg: 'الحضّانة شغالة! البيض الزيادة بيطلع كتاكيت 🐣',
-    pos: { x: -5.3, z: 8.4 }, requires: [{ id: 'eggs.worker', level: 1 }],
+    pos: { x: -14.6, z: 15.6 }, requires: [{ id: 'surplus.yard', level: 1 }],
   },
   {
     id: 'trader.deal', icon: '🤝', label: 'اتفاق مع تاجر الجملة', msg: 'تاجر الجملة هيحمّل لوحده من النهارده 🤝',
-    pos: { x: -3.2, z: 10.2 }, requires: [{ id: 'eggs.worker', level: 1 }],
+    pos: { x: -12.3, z: 15.6 }, requires: [{ id: 'surplus.yard', level: 1 }],
   },
   {
     id: 'dock.unlock', icon: '🚚', label: 'رصيف التحميل', msg: 'الشركات هتبعت عربيات تاخد منك بالجملة 🚚',

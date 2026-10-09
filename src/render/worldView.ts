@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { HR_WALLS, LAYOUT } from '../config/layout';
+import { HR_WALLS, LAYOUT, SURPLUS_WALLS } from '../config/layout';
 import { CAFE } from '../config/cafe';
 import { EMOJI } from './canvas';
 import type { Box } from '../sim/math';
@@ -85,6 +85,17 @@ export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
     part(box, 0x9fd3f0, hx + 1.5, 1.2, h.z1 + 0.01, 0, 0, 0, 0.8, 0.6, 0.04),
   );
 
+  // surplus yard (حوش العزبة): packed earth, the same low brick walls, a dirt track in from the west gap
+  const sy = L.surplusYard, sb = sy.box;
+  g.push(ground(sb, 0xd9c08a, 0.013));
+  g.push(part(box, 0xc4a46e, (sb.x0 + L.surplus.load.x) / 2, 0.016, (sy.road.z0 + sy.road.z1) / 2, 0, 0, 0, L.surplus.load.x - sb.x0, 0.01, sy.road.z1 - sy.road.z0 - 0.4));
+  for (const s of SURPLUS_WALLS) {
+    g.push(part(box, 0xb5653f, (s.x0 + s.x1) / 2, 0.5, (s.z0 + s.z1) / 2, 0, 0, 0, s.x1 - s.x0, 1.0, s.z1 - s.z0));
+    g.push(part(box, 0xe0d4b8, (s.x0 + s.x1) / 2, 1.04, (s.z0 + s.z1) / 2, 0, 0, 0, s.x1 - s.x0 + 0.06, 0.08, s.z1 - s.z0 + 0.06));
+  }
+  for (const z of [sy.gate.z0, sy.gate.z1]) g.push(part(box, 0x8e4a2c, sb.x1 - 0.15, 0.7, z, 0, 0, 0, 0.4, 1.4, 0.4));
+  for (const z of [sy.road.z0, sy.road.z1]) g.push(part(box, 0x8e4a2c, sb.x0 + 0.15, 0.7, z, 0, 0, 0, 0.4, 1.4, 0.4));
+
   // Farm café: checkered floor, hedges on the far sides, kitchen machines, café counter, awning
   const cp = CAFE.plot;
   g.push(ground(cp, 0xf3e6c8, 0.014));
@@ -143,11 +154,12 @@ export function buildWorld(scene: THREE.Scene): Record<LockId, THREE.Group> {
   return {
     pen: lockOverlay(scene, L.pen),
     hrYard: lockOverlay(scene, yb, gate),
+    surplusYard: lockOverlay(scene, sb, new THREE.Mesh(merge([part(box, 0x9a6233, sb.x1 - 0.15, 0.55, (sy.gate.z0 + sy.gate.z1) / 2, 0, 0, 0, 0.12, 0.9, sy.gate.z1 - sy.gate.z0 - 0.4)]), MAT)),
     cafe: lockOverlay(scene, cp),
   };
 }
 
-export type LockId = 'pen' | 'hrYard' | 'cafe';
+export type LockId = 'pen' | 'hrYard' | 'surplusYard' | 'cafe';
 
 const LOCK_MAT = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false });
 

@@ -520,6 +520,8 @@ export const ECONOMY = {
     'cafe.cleaner': { base: 15000, growth: 3, max: 2, step: 1 },
     /** A deal with the wholesale trader: he loads the surplus himself. */
     'trader.deal': { base: 6000, growth: 1, max: 1, step: 1 },
+    /** The surplus yard (trader, incubator, record stand), single level. */
+    'surplus.yard': { base: 2000, growth: 1, max: 1, step: 1 },
     /** Incubator: surplus eggs become chicks to sell (level 2: twice the trays). */
     'eggs.incubator': { base: 3000, growth: 3, max: 2, step: 1 },
     /** Loading dock: company trucks with supply contracts. */
