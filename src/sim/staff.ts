@@ -256,6 +256,9 @@ function yardRoute(x: number, z: number, tx: number, tz: number, out: { x: numbe
 /** A hired mechanic: waits by the HR office, walks to the nearest jam nobody else has taken and fixes it. */
 export interface Mechanic { x: number; z: number; rot: number; speed: number; target: Breakable | null; fixT: number }
 
+/** The hired feeder: waits by the HR office, walks to a trough running low and refills it. */
+export interface Feeder { x: number; z: number; rot: number; speed: number; target: number; t: number }
+
 /** Station workers and belts, reconciled from upgrade levels, plus every machine that can jam. */
 export class StaffSystem {
   readonly workers: Worker[] = [];
@@ -264,6 +267,7 @@ export class StaffSystem {
   /** Everything the jam/fix logic looks at. */
   readonly machines: Breakable[] = [];
   readonly mechanics: Mechanic[] = [];
+  readonly feeders: Feeder[] = [];
   /** Accountant: seconds until the next round of the cash piles. */
   private accountT = 0;
   private way = { x: 0, z: 0 };
@@ -295,10 +299,45 @@ export class StaffSystem {
       const h = LAYOUT.hrYard.mechanics;
       this.mechanics.push({ x: h.x + this.mechanics.length * 0.8, z: h.z, rot: 0, speed: 0, target: null, fixT: 0 });
     }
+    while (this.feeders.length < up.level('hr.feeder')) {
+      const h = LAYOUT.hrYard.mechanics;
+      this.feeders.push({ x: h.x - 1.2, z: h.z, rot: 0, speed: 0, target: -1, t: 0 });
+    }
     const cap = ECONOMY.staff.worker.capacity + up.level('hr.capacity') * ECONOMY.upgrades['hr.capacity'].step;
     // kitchen helpers and shelf stockers (with a trolley) carry more than farm workers; HR capacity adds on top
     const base = (key: string) => key === 'cafe.supply' ? ECONOMY.cafe.helperCapacity : key.startsWith('market.stock') ? ECONOMY.supermarket.stockerCapacity : ECONOMY.staff.worker.capacity;
     for (const x of this.workers) x.carry.cap = cap - ECONOMY.staff.worker.capacity + base(x.job.key);
+  }
+
+  /** Feeders (hr.feeder): a trough under the refill mark gets walked to and refilled (no player stats). */
+  private updateFeeders(dt: number, speedMult: number): void {
+    const w = this.w, F = ECONOMY.feed, home = LAYOUT.hrYard.mechanics;
+    const low = (i: number) => { const s = w.stations[i]; return !!s && s.open && !!s.def.trough && s.boostT < F.duration * F.refillBelow; };
+    this.feeders.forEach((f) => {
+      f.speed = 0;
+      if (f.target >= 0 && !low(f.target)) { f.target = -1; f.t = 0; }
+      if (f.target < 0) {
+        // the trough closest to empty
+        let best = -1, bestT = Infinity;
+        w.stations.forEach((s, i) => { if (low(i) && s.boostT < bestT && !this.feeders.some((o) => o !== f && o.target === i)) { best = i; bestT = s.boostT; } });
+        f.target = best;
+      }
+      const tr = f.target >= 0 ? w.stations[f.target].def.trough! : null;
+      const tx = tr ? tr.x : home.x - 1.2, tz = tr ? tr.z + 0.7 : home.z;
+      const r = yardRoute(f.x, f.z, tx, tz, this.way);
+      const px = f.x, pz = f.z;
+      const there = moveToward(f, r.x, r.z, F.feederSpeed * speedMult, dt, 0.2) && r.x === tx && r.z === tz;
+      if (f.x !== px || f.z !== pz) f.speed = F.feederSpeed * speedMult;
+      if (!tr || !there) return;
+      f.rot = turnToward(f.rot, tr.x - f.x, tr.z - f.z, 12, dt);
+      if ((f.t += dt) < F.feederTime) return;
+      const s = w.stations[f.target];
+      s.boostT = F.duration;
+      s.refillT = 0;
+      f.target = -1;
+      f.t = 0;
+      if (!w.away) w.events.emit('feed', s.def.product, tr.x, tr.z, 0, 1, s.index);
+    });
   }
 
   /** Accountant (hr.accountant): every so often the cash piles go straight into the player's money. */
@@ -364,6 +403,7 @@ export class StaffSystem {
     for (const x of this.workers) x.update(w, dt, speedMult);
     if (!w.scenario.powerCut) for (const b of this.belts) b.update(dt);
     this.updateMechanics(dt, speedMult);
+    this.updateFeeders(dt, speedMult);
     this.updateAccountant(dt);
     // schedule and trigger jams for every running machine
     for (const m of this.machines) {

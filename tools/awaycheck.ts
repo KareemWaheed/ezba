@@ -63,6 +63,24 @@ ok(ms < 8000, `a day away is quick to work out (${ms} ms)`);
   ok(w.staff.belts.filter((x) => x.running && x.broken).length === 0 || w.staff.mechanics.some((m) => m.target), 'after an hour away no jam is left waiting for the player');
 }
 
+// feeder (hr.feeder): walks out of the HR yard to troughs running low and refills them (not the player's feeds)
+{
+  const w = farm();
+  w.upgrades.levels['hr.office'] = 1; w.upgrades.levels['hr.feeder'] = 1;
+  w.upgrades.apply();
+  ok(w.staff.feeders.length === 1, 'a feeder with the upgrade');
+  const troughs = w.stations.filter((s) => s.open && s.def.trough);
+  for (const s of troughs) s.boostT = 0;
+  const feeds0 = w.stats.feeds;
+  let t = 0;
+  while (troughs.some((s) => s.boostT <= 0) && t < 60) { w.player.x = 8; w.player.z = 8; w.input.x = w.input.z = 0; w.tick(1 / 30); w.events.drain(() => {}); t += 1 / 30; }
+  ok(troughs.every((s) => s.boostT > 0), `he fills every empty trough (${troughs.length} in ${t.toFixed(1)} s)`);
+  ok(w.stats.feeds === feeds0, "they don't count as the player's feeds");
+  // time away: the troughs stay full
+  simulateAway(w, H);
+  ok(troughs.every((s) => s.boostT > 0 || w.staff.feeders[0].target >= 0), 'after an hour away the troughs are still being kept full');
+}
+
 // accountant (hr.accountant): the cash piles go into the player's money on their own
 {
   const w = farm();

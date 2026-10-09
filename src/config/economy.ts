@@ -422,6 +422,9 @@ export const ECONOMY = {
     refillTime: 1,
     refillBelow: 0.25,
     radius: 1.1,
+    /** Hired feeder (hr.feeder): walks to a trough running low and refills it in `feederTime` s. */
+    feederSpeed: 2.8,
+    feederTime: 2,
   },
 
   /**
@@ -496,6 +499,8 @@ export const ECONOMY = {
     maint: { base: 3000, growth: 2, max: 4, step: 0.6 },
     /** Mechanics (+1 per level): fix jammed belts and machines on their own, also during time away. */
     'hr.mechanic': { base: 150000, growth: 2.5, max: 2, step: 1 },
+    /** Feeder: keeps the animals' troughs full (production x feed.mult), also during time away. */
+    'hr.feeder': { base: 45000, growth: 1, max: 1, step: 1 },
     /** Accountant: collects the farm's cash piles (shop, café, grain stall, fish stall) every `step` s (level 1), x0.4 at level 2. */
     'hr.accountant': { base: 40000, growth: 3, max: 2, step: 30 },
     /** Customer service: shop customers' patience +step per level. */

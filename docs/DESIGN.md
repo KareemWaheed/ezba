@@ -365,4 +365,8 @@ This file records the decisions made on top of it.
   trader deal are bought inside it. Old saves that used the corner (incubator, trader deal or a record) get the
   yard. The army truck moved 2.7 m south and four trees moved to make room. Locked yards (HR, surplus) now keep
   their gate shut: once the river or another yard widened the walkable area, a locked yard could be walked into.
+- Feeder (playtest: "someone to fill the animals' feed"): `hr.feeder` (عامل علف, 45k, one, in the HR yard after
+  the cow pen). Green shirt, straw hat, a sack on the back: waits by the HR office, walks through the gate to the
+  trough closest to empty once it's under the refill mark, refills it in 2 s; also during time away. Doesn't
+  count toward the player's feeds. Active/auto pacing stays 1.68x. `npm run awaycheck`.
 
