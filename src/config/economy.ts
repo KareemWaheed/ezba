@@ -272,7 +272,7 @@ export const ECONOMY = {
    * price, and scenario events come every `eventGap` s instead of SCENARIO_GAP (so a relaxed player sees the whole
    * farm in a day or two and an event every few minutes).
    */
-  easy: { costMult: 0.3, eventGap: { min: 150, max: 240 } },
+  easy: { costMult: 0.27, eventGap: { min: 150, max: 240 } },
 
   /** Animals / machines that generate items into a pickup pile. */
   producers: {

@@ -392,7 +392,7 @@ This file records the decisions made on top of it.
   Hay bales moved east to make room. `npm run surpluscheck`.
 - Easy mode (playtest: "the game needs to be more casual, or at least add modes; a casual player should finish the
   upgrades in a day or two at most, with more events"): `ECONOMY.easy`, `SimWorld.easy` (saved; `setEasy` switches
-  mid-game). Every upgrade costs 0.3 of its price, and events come every 150-240 s instead of 360-540 s. New games
+  mid-game). Every upgrade costs 0.27 of its price (0.3 until the main belts made the casual bot a little slower), and events come every 150-240 s instead of 360-540 s. New games
   start in easy mode; old saves stay normal; the settings switch it either way (prices change at once). Normal mode
   and its targets are unchanged. `npm run simulate:easy` (3 days, its own targets): the casual bot buys every upgrade
   level at minute 142 (day 2), the efficient one at minute 101 (not inside the first hour); 45 events in 4 h of play
