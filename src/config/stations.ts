@@ -90,11 +90,12 @@ export const SORTER_Y = 2.4;
  * counter slot.
  */
 export function beltPath(d: StationDef): PathPoint[] {
-  const T = LAYOUT.trunk, side = d.counter.x < 0 ? T.west : T.east, slot = { x: d.counter.x, y: 1.15, z: d.counter.z };
+  const T = LAYOUT.trunk, west = d.counter.x < 0, side = west ? T.west : T.east, sorter = west ? T.westSorter : T.eastSorter;
+  const slot = { x: d.counter.x, y: 1.15, z: d.counter.z };
   const down: PathPoint[] = [
     { x: side.x, y: BELT_Y, z: T.z },
     { x: side.x, y: BELT_Y, z: T.sortZ },
-    { x: side.x, y: SORTER_Y, z: (T.westSorter.z0 + T.westSorter.z1) / 2 },
+    { x: side.x, y: SORTER_Y, z: (sorter.z0 + sorter.z1) / 2 },
     slot,
   ];
   const sky = d.skyBelt;

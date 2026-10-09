@@ -71,6 +71,17 @@ function groundBelt(ax: number, az: number, bx: number, bz: number): THREE.Mesh 
   return m;
 }
 
+/** A short sloped belt from a to b (off a pile onto the main belt, up into a sorter). */
+function rampBelt(a: PathPoint, b: PathPoint): THREE.Mesh {
+  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, H = Math.hypot(dx, dz), L = Math.hypot(H, dy);
+  const parts = [part(PRIM.box, 0x4a4f57, 0, -0.1, 0, 0, 0, 0, 0.6, 0.1, L)];
+  for (const e of [-0.32, 0.32]) parts.push(part(PRIM.box, 0xc9a227, e, -0.04, 0, 0, 0, 0, 0.05, 0.07, L));
+  const m = new THREE.Mesh(merge(parts), MAT);
+  m.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  m.rotation.set(-Math.atan2(dy, H), Math.atan2(dx, dz), 0, 'YXZ');
+  return m;
+}
+
 /** A cable-line mast from the ground up to h, with its pulley arm across `yaw`. */
 function mast(x: number, z: number, h: number, yaw: number): THREE.Mesh {
   const m = new THREE.Mesh(merge([
@@ -138,7 +149,7 @@ class TrunkView {
     for (let i = 1; i < p.length; i++) s.push(s[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y, p[i].z - p[i - 1].z));
     this.paths.set(belt.id, { p, s });
     const r = (v: number) => v.toFixed(2);
-    // (first piece: off the pile or up the field mast; last: from the sorter onto the slot; both drawn by what's there)
+    // (the last piece, from the sorter onto the slot, is the sorter's chute)
     for (let i = 1; i < p.length - 1; i++) {
       const a = p[i - 1], b = p[i], key = `${r(a.x)},${r(a.y)},${r(a.z)}>${r(b.x)},${r(b.y)},${r(b.z)}`;
       const flat = Math.abs(a.y - BELT_Y) < 0.01 && Math.abs(b.y - BELT_Y) < 0.01;
@@ -158,7 +169,7 @@ class TrunkView {
         }, animate);
         // the field end's mast
         this.once(`mast ${r(a.x)},${r(a.z)}`, () => mast(a.x, a.z, a.y + 0.35, Math.atan2(b.x - a.x, b.z - a.z)), animate);
-      }
+      } else this.once(key, () => rampBelt(a, b), animate);
     }
     const west = belt.route.bx < 0, T = LAYOUT.trunk;
     this.once(west ? 'westSorter' : 'eastSorter', () => sorter(west ? T.westSorter : T.eastSorter, west ? 1 : -1), animate);

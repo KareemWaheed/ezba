@@ -81,7 +81,8 @@ for (const d of UPGRADES) {
 
 // the main belts and the sorters (LAYOUT.trunk): no tile on them (unlock tiles are gone before any belt is built)
 {
-  const H = TILE / 2, W = 0.4;
+  // (the drawn rails reach 0.45 from the line)
+  const H = TILE / 2, W = 0.45;
   const pieces = new Map<string, { ax: number; az: number; bx: number; bz: number }>();
   for (const st of STATIONS) {
     if (!st.machineTrack) continue;

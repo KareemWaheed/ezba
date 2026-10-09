@@ -45,7 +45,7 @@ export const LAYOUT = {
    * West: eggs, and the corn's cable line from the field lands on the junction. East: milk and honey.
    */
   trunk: {
-    z: 0.4,
+    z: 0.45,
     west: { x: -8.5 },
     east: { x: 8.5 },
     /** Where the belt down from the junction ends, on top of the sorter. */
