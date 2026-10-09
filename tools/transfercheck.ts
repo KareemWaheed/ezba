@@ -25,6 +25,26 @@ ok(enc('AB') === 'BB8' && enc('Hello!!') === '%69 VD92EX0' && enc('base-45') ===
 ok(new TextDecoder().decode(fromBase45('QED8WEX0')!) === 'ietf!', 'base45 decodes the RFC example');
 ok(fromBase45('GGW') === null, 'base45 rejects an out-of-range triple');
 
+// easy mode: upgrades cost ECONOMY.easy.costMult, events come every eventGap, and it's saved; switching mid-game
+{
+  const n = new SimWorld(7), e = new SimWorld(7);
+  e.setEasy(true);
+  const id: UpgradeId = 'milk.unlock';
+  ok(e.upgrades.cost(id) === Math.round(n.upgrades.cost(id) * ECONOMY.easy.costMult), `easy prices (${n.upgrades.cost(id)} -> ${e.upgrades.cost(id)})`);
+  const back = new SimWorld(7);
+  restore(back, JSON.parse(JSON.stringify(serialize(e, Date.now()))));
+  const fresh = new SimWorld(7);
+  restore(fresh, JSON.parse(JSON.stringify(serialize(n, Date.now()))));
+  ok(back.easy && !fresh.easy, 'easy mode is saved (and an old save stays normal)');
+  const G = ECONOMY.easy.eventGap;
+  let gaps = 0, inRange = 0;
+  for (let i = 0; i < 40; i++) { const t = (e.scenario as unknown as { gap(): number }).gap(); gaps++; if (t >= G.min && t <= G.max) inRange++; }
+  ok(inRange === gaps && e.scenario.t <= G.max, `events every ${G.min}-${G.max} s in easy mode (next in ${Math.round(e.scenario.t)} s)`);
+  const tile = e.upgrades.tiles.find((t) => t.def.id === 'eggs.animals');
+  e.setEasy(false);
+  ok(e.upgrades.cost('eggs.animals') === n.upgrades.cost('eggs.animals') && !!tile, 'switching back restores the normal prices');
+}
+
 // a late-game farm: every track maxed, money, stats, a full album page's worth of state
 const w = new SimWorld(42);
 for (const id of Object.keys(ECONOMY.upgrades) as UpgradeId[]) if (!id.startsWith('market.')) w.upgrades.levels[id] = ECONOMY.upgrades[id].max;

@@ -267,6 +267,13 @@ export const ECONOMY = {
    */
   butcher: { readyAge: 600, calfAge: 60, walkSpeed: 1.6, chopTime: 6, packs: 12, price: 60, sellEvery: 2.5 },
 
+  /**
+   * Easy mode (وضع سهل, picked on the title screen or in the settings): every upgrade costs `costMult` of its
+   * price, and scenario events come every `eventGap` s instead of SCENARIO_GAP (so a relaxed player sees the whole
+   * farm in a day or two and an event every few minutes).
+   */
+  easy: { costMult: 0.3, eventGap: { min: 150, max: 240 } },
+
   /** Animals / machines that generate items into a pickup pile. */
   producers: {
     chicken: {

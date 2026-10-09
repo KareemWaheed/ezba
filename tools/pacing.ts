@@ -13,6 +13,8 @@ export const PLAY = {
   overnightHours: 12,
   /** Days simulated by default (override with --days N). */
   days: 7,
+  /** Days simulated in easy mode (a casual player should have bought everything by the end of day 2). */
+  easyDays: 3,
   seed: 12345,
 };
 
@@ -36,6 +38,13 @@ export interface RunResult {
   curve: [number, number][];
   playMin: number;
   offlineEarned: number;
+  /** Upgrade levels still not bought at the end, which tracks, and when the last one was bought (if all were). */
+  /** Scenario events that started. */
+  events: number;
+  left: number;
+  leftIds: string[];
+  doneMin?: number;
+  doneDay?: number;
 }
 
 /** pending = shown but not enforced by --check yet (lands in a later milestone). */
@@ -90,5 +99,23 @@ export function checkTargets(eff: RunResult, casual: RunResult): TargetResult[] 
   const autoS = eff.sessions.filter((s) => s.autoPerMin > 0 && s.day <= 4);
   const worst = autoS.reduce((m, s) => Math.min(m, s.activePerMin / s.autoPerMin), Infinity);
   add('days 1-4: active player earns noticeably more than automation alone (>= 1.5x)', autoS.length === 0 || worst >= 1.5, autoS.length ? `worst ratio ${worst.toFixed(2)}x` : 'no automation yet');
+  return out;
+}
+
+/**
+ * Easy mode: a casual player has bought every upgrade by the end of day 2 (160 min of play), but not in the first
+ * hour; active play still pays clearly more than automation alone.
+ */
+export function checkEasyTargets(eff: RunResult, casual: RunResult): TargetResult[] {
+  const out: TargetResult[] = [];
+  const add = (name: string, ok: boolean, detail: string) => out.push({ name, ok, detail });
+  const done = (r: RunResult) => (r.doneMin !== undefined ? `${r.doneMin.toFixed(0)} min (day ${r.doneDay})` : `never (${r.left} levels left)`);
+  add('easy: casual buys every upgrade by the end of day 2', casual.doneDay !== undefined && casual.doneDay <= 2, done(casual));
+  add('easy: not before the first hour of play (efficient)', eff.doneMin === undefined || eff.doneMin >= 60, done(eff));
+  const c1 = casual.purchases[0];
+  add('easy: casual first upgrade within ~1 min', !!c1 && c1.playMin <= 1, c1 ? `${c1.playMin.toFixed(1)} min` : 'never');
+  const ratios = eff.sessions.filter((s) => s.day <= 2 && s.autoPerMin > 0).map((s) => s.activePerMin / s.autoPerMin);
+  const worst = ratios.length ? Math.min(...ratios) : 0;
+  add('easy: active play earns more than automation alone (>= 1.3x)', worst >= 1.3, `worst ratio ${worst.toFixed(2)}x`);
   return out;
 }

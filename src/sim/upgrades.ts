@@ -50,7 +50,11 @@ export class UpgradeSystem {
     return ECONOMY.upgrades[id].max + bonus;
   }
   maxed(id: UpgradeId): boolean { return this.level(id) >= this.maxOf(id); }
-  cost(id: UpgradeId): number { return Math.max(1, Math.round(upgradeCost(id, this.level(id)) * (this.w.path.costMult[id] ?? 1))); }
+  cost(id: UpgradeId): number { return Math.max(1, Math.round(upgradeCost(id, this.level(id)) * this.mult(id))); }
+  /** Price of a level of a track in this game. */
+  costAt(id: UpgradeId, level: number): number { return Math.max(1, Math.round(upgradeCost(id, level) * this.mult(id))); }
+  /** This game's price factor for a track: its path's, and easy mode's. */
+  mult(id: UpgradeId): number { return (this.w.path.costMult[id] ?? 1) * (this.w.easy ? ECONOMY.easy.costMult : 1); }
 
   /** Requirements on this game's path (the supermarket path rewires some). */
   requires(def: UpgradeDef): readonly { id: UpgradeId; level: number }[] { return this.w.path.requires[def.id] ?? def.requires; }
@@ -72,7 +76,7 @@ export class UpgradeSystem {
     for (const id of Object.keys(this.levels) as UpgradeId[]) {
       if (!id.startsWith('market.')) continue;
       const free = this.w.path.startLevels[id] ?? 0;
-      for (let l = free; l < this.levels[id]; l++) refund += Math.round(upgradeCost(id, l) * (this.w.path.costMult[id] ?? 1));
+      for (let l = free; l < this.levels[id]; l++) refund += Math.round(upgradeCost(id, l) * this.mult(id));
       refund += this.paid[id];
       this.bought -= Math.max(0, this.levels[id] - free);
       this.levels[id] = 0;

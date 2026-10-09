@@ -8,6 +8,7 @@ export interface RefundLine { id: UpgradeId; amount: number }
 function priceAt(w: SimWorld, id: UpgradeId, level: number, pv: number): number {
   let track: { base: number; growth: number } = ECONOMY.upgrades[id];
   let mult = w.path.costMult[id] ?? 1;
+  const easy = w.easy ? ECONOMY.easy.costMult : 1;
   let gotTrack = false, gotMult = false;
   for (const c of PRICE_CHANGES) {
     if (c.version <= pv) continue;
@@ -15,7 +16,7 @@ function priceAt(w: SimWorld, id: UpgradeId, level: number, pv: number): number 
     const m = c.costMult?.[w.mode]?.[id];
     if (!gotMult && m !== undefined) { mult = m; gotMult = true; }
   }
-  return Math.max(1, Math.round(Math.round(track.base * Math.pow(track.growth, level)) * mult));
+  return Math.max(1, Math.round(Math.round(track.base * Math.pow(track.growth, level)) * mult * easy));
 }
 
 /**

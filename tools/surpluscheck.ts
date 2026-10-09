@@ -229,7 +229,7 @@ const untilParked = (w: SimWorld, max: number) => {
   const m0 = w.money, v = w.butcher.cash.value;
   run(w, 0.5, LAYOUT.butcher.cash);
   ok(w.money - m0 >= v && w.butcher.cash.value === 0, `the player collects the window money (+${Math.round(w.money - m0)})`);
-  const back = new SimWorld(9); restore(back, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now())))));
+  const back = new SimWorld(9); restore(back, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
   ok(back.butcher.open && back.butcher.stock === w.butcher.stock, `the butcher's and its stock are saved (${back.butcher.stock} packs)`);
 }
 

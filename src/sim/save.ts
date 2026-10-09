@@ -57,6 +57,8 @@ export interface SaveData {
   daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
   /** Prestige level (config/legacy.ts). */
   legacy?: number;
+  /** Easy mode (ECONOMY.easy). */
+  easy?: boolean;
   /** Upgrade price version the levels were bought at (config/priceHistory.ts; absent = before refunds existed). */
   pv?: number;
   /** VIP cooldown left (s). */
@@ -100,7 +102,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     v: SAVE_VERSION, mode: w.mode, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
-    rating: w.service.rating, legacy: w.legacy, pv: PRICE_VERSION, vipT: w.customers.vipT,
+    rating: w.service.rating, legacy: w.legacy, easy: w.easy, pv: PRICE_VERSION, vipT: w.customers.vipT,
     market: marketSave(w),
     trust: { ...w.contracts.trust },
     ...(w.scenario.phase === 'idle' ? { eventT: Math.round(w.scenario.t) } : {}),
@@ -143,6 +145,7 @@ export function restore(w: SimWorld, s: SaveData): void {
   w.time = num(s.time);
   w.money = num(s.money);
   w.legacy = Math.max(0, Math.floor(num(s.legacy)));
+  w.easy = s.easy === true;
   w.customers.vipT = Math.max(0, num(s.vipT));
   if (s.rng) w.rng.state = num(s.rng, w.rng.state) >>> 0;
   const up = w.upgrades;
@@ -170,7 +173,7 @@ export function restore(w: SimWorld, s: SaveData): void {
   w.service.rating = Math.max(1, Math.min(5, num(s.rating, w.service.rating)));
   // the event countdown carries over (it used to restart at 10-16 min on every load, so with short sessions
   // events almost never came); after a long time away the next one comes soon
-  if (Number.isFinite(s.eventT)) w.scenario.t = Math.max(20, Math.min(SCENARIO_GAP.max, s.eventT!));
+  if (Number.isFinite(s.eventT)) w.scenario.t = Math.max(20, Math.min(w.easy ? ECONOMY.easy.eventGap.max : SCENARIO_GAP.max, s.eventT!));
   if (Number.isFinite(s.t) && Date.now() - s.t > SCENARIO_WELCOME.away * 1000) w.scenario.t = Math.min(w.scenario.t, SCENARIO_WELCOME.soon);
   for (const k of Object.keys(w.contracts.trust)) w.contracts.trust[k] = Math.max(0, Math.min(5, num(s.trust?.[k])));
   for (const st of w.stations) st.boostT = Math.max(0, num(s.boost?.[st.def.id]));
@@ -269,6 +272,7 @@ export function legacyReset(w: SimWorld, now: number): SaveData | null {
   if (w.legacyMissing.length > 0) return null;
   const f = new SimWorld((now % 1_000_000_007) >>> 0 || 1, w.mode);
   f.legacy = w.legacy + 1;
+  f.easy = w.easy;
   f.money = f.path.startMoney + LEGACY.startMoney * f.legacy;
   for (const k of Object.keys(f.stats) as (keyof typeof f.stats)[]) f.stats[k] = w.stats[k];
   for (const id of w.album.seen) f.album.seen.add(id);

@@ -129,7 +129,7 @@ export class ScenarioSystem {
     this.t = this.gap();
   }
 
-  private gap(): number { return this.w.rng.range(SCENARIO_GAP.min, SCENARIO_GAP.max); }
+  private gap(): number { const g = this.w.easy ? ECONOMY.easy.eventGap : SCENARIO_GAP; return this.w.rng.range(g.min, g.max); }
 
   get active(): boolean { return this.phase === 'active'; }
 

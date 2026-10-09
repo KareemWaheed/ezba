@@ -83,8 +83,9 @@ setInterval(() => { sim.clock = clockFromDate(new Date()); }, 60_000);
 
 // ---- save / load ----
 const saved = loadSave();
+// (a new game starts in easy mode; the settings switch it)
 if (saved) restore(sim, saved);
-else hud.showHint(true);
+else { hud.showHint(true); sim.setEasy(true); }
 const save = () => writeSave(serialize(sim, Date.now()));
 // a price-drop refund was just credited: save right away so it's never given twice
 if (sim.refunds.length) save();
@@ -165,6 +166,7 @@ const title = new TitleScreen(uiRoot, save);
 if (FEATURES.supermarket && !chosenMode()) title.show();
 const menus = new MetaMenus(uiRoot, sim, modal);
 menus.onSwitchGame = () => title.show(true);
+menus.onEasy = (on) => { sim.setEasy(on); save(); toast.show(on ? '😌 الوضع السهل: الترقيات أرخص والإيفنتات أكتر' : '💪 الوضع العادي: الترقيات بسعرها والإيفنتات أقل'); };
 const transfer = new TransferPanel(modal, () => serialize(sim, Date.now()), () => menus.showSettings());
 menus.onTransfer = (kind) => { if (kind === 'send') void transfer.showSend(); else transfer.showReceive(); };
 const orderPanel = new OrderPanel(sim, modal);

@@ -84,6 +84,8 @@ export class SimWorld {
   readonly input = { x: 0, z: 0 };
   /** True while simulating time away: the player can't carry, serve or pay. */
   away = false;
+  /** Easy mode: cheaper upgrades, more frequent events (ECONOMY.easy). */
+  easy = false;
   /** Prestige level: how many times the farm was sold for a bigger one (config/legacy.ts). */
   legacy = 0;
   /** Trash button held: the top carried item is thrown away every trashInterval. Set by the UI. */
@@ -303,6 +305,13 @@ export class SimWorld {
     this.river.interact(dt);
     this.butcher.interact();
     this.market.interact(dt);
+  }
+
+  /** Switch easy mode on/off mid-game: tile prices change at once; a far-off next event comes sooner. */
+  setEasy(on: boolean): void {
+    this.easy = on;
+    this.upgrades.refresh();
+    if (on && this.scenario.phase === 'idle') this.scenario.t = Math.min(this.scenario.t, ECONOMY.easy.eventGap.max);
   }
 
   /** Make a box solid once (something built on ground the player can already reach). */
