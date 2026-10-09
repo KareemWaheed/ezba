@@ -247,7 +247,8 @@ function yardRoute(x: number, z: number, tx: number, tz: number, out: { x: numbe
   // line up with the gate on this side, then step through it
   const inX = b.x1 - 0.6, outX = b.x1 + 0.8, lined = Math.abs(z - gz) < 0.3;
   if (a) { out.x = lined && x > inX - 0.3 ? outX : inX; out.z = gz; return out; }
-  if (Math.abs(x - outX) > 0.3 || !lined) return farmRoute(x, z, outX, gz, out);
+  // (once lined up at the gate, keep stepping in: going back to the line-up spot halfway in would loop forever)
+  if (!lined || x > outX + 0.3) return farmRoute(x, z, outX, gz, out);
   out.x = inX; out.z = gz;
   return out;
 }

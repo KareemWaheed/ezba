@@ -5,6 +5,7 @@
 import { ECONOMY } from '../src/config/economy';
 import { SimWorld } from '../src/sim/world';
 import { awayCap, simulateAway } from '../src/sim/offline';
+import { LAYOUT } from '../src/config/layout';
 
 let fails = 0;
 const ok = (cond: boolean, msg: string): void => {
@@ -47,6 +48,11 @@ ok(ms < 8000, `a day away is quick to work out (${ms} ms)`);
   let t = 0;
   while ((a.broken || b.broken) && t < 60) { w.player.x = 8; w.player.z = 8; w.input.x = w.input.z = 0; w.tick(1 / 30); w.events.drain(() => {}); t += 1 / 30; }
   ok(!a.broken && !b.broken, `they fix both jams on their own (${t.toFixed(1)} s)`);
+  // ...and walk back into the HR yard (they used to loop at the gate, flickering, never getting in)
+  const home = LAYOUT.hrYard.mechanics;
+  for (let i = 0; i < 40 * 30; i++) { w.player.x = 8; w.player.z = 8; w.input.x = w.input.z = 0; w.tick(1 / 30); w.events.drain(() => {}); }
+  const d = Math.max(...w.staff.mechanics.map((m, i) => Math.hypot(m.x - (home.x + i * 0.8), m.z - home.z)));
+  ok(w.staff.mechanics.every((m) => !m.target) && d < 0.5, `and walk back through the gate to the office (${d.toFixed(2)} m from their spots)`);
   const fixes = w.stats.fixes;
   ok(fixes === 0, 'the player fixed none of them');
   // time away: jams don't pile up
