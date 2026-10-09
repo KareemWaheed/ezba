@@ -37,6 +37,8 @@ export class MetaMenus {
   onLegacyReady: (() => void) | null = null;
   /** Settings' "switch game" button (opens the start screen). */
   onSwitchGame: (() => void) | null = null;
+  /** Easy mode switched in the settings. */
+  onEasy: ((on: boolean) => void) | null = null;
   /** Settings' move-progress buttons. */
   onTransfer: ((kind: 'send' | 'receive') => void) | null = null;
   private installEvt: InstallPrompt | null = null;
@@ -169,6 +171,7 @@ export class MetaMenus {
       : '<div class="s-tip">📲 من قايمة المتصفح اختار <b>Install</b> أو <b>Add to Home screen</b></div>';
     const card = this.modal.open(`
       <div class="m-title">⚙️ الإعدادات</div>
+      <button class="m-btn s-easy" data-easy>${this.sim.easy ? '😌 الوضع السهل شغال' : '💪 الوضع العادي'}<br><small>${this.sim.easy ? 'دوس عشان ترجع للعادي' : 'دوس للسهل: ترقيات أرخص وإيفنتات أكتر'}</small></button>
       <button class="m-btn s-sound" data-sound>${isMuted() ? '🔇 الصوت مقفول' : '🔊 الصوت شغال'}</button>
       ${FEATURES.supermarket ? `<button class="m-btn s-switch" data-switch>🔁 ${this.sim.mode === 'market' ? 'روح للمزرعة 🐔' : 'روح للسوبر ماركت 🛒'}</button>` : ''}
       ${install}
@@ -181,6 +184,7 @@ export class MetaMenus {
       try { localStorage.setItem(SOUND_KEY, isMuted() ? '1' : '0'); } catch { /* storage blocked */ }
       this.showSettings();
     });
+    card.querySelector('[data-easy]')?.addEventListener('click', () => { this.onEasy?.(!this.sim.easy); this.showSettings(); });
     card.querySelector('[data-switch]')?.addEventListener('click', () => { this.modal.close(); this.onSwitchGame?.(); });
     card.querySelector('[data-send]')?.addEventListener('click', () => { this.open = null; this.onTransfer?.('send'); });
     card.querySelector('[data-receive]')?.addEventListener('click', () => { this.open = null; this.onTransfer?.('receive'); });

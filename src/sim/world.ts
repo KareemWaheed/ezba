@@ -21,6 +21,7 @@ import { FieldSystem } from './field';
 import { AlbumSystem, DailySystem } from './meta';
 import { FactorySystem } from './factory';
 import { RiverSystem } from './river';
+import { ButcherSystem } from './butcher';
 import { MarketSystem } from './market';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
@@ -29,6 +30,7 @@ import { LEGACY } from '../config/legacy';
 import { PATHS, type GameMode, type PathDef } from '../config/paths';
 import { MARKET } from '../config/market';
 import { UPGRADES } from '../config/upgrades';
+import { SCENARIO_GAP } from '../config/scenarios';
 
 /** Radii of the walk-in zones (units). */
 export const ZONE = { pile: 1.35, drop: 1.25, cash: 1.3 } as const;
@@ -55,6 +57,8 @@ export class SimWorld {
   readonly field: FieldSystem;
   readonly factory: FactorySystem;
   readonly river: RiverSystem;
+  /** The butcher's: old cows' meat, sold at its window. */
+  readonly butcher: ButcherSystem;
   readonly market: MarketSystem;
   readonly album: AlbumSystem;
   readonly daily: DailySystem;
@@ -73,12 +77,16 @@ export class SimWorld {
   /** Bumped whenever this world adds a solid (route caches rebuild). */
   solidsVersion = 0;
   private built = new Set<string>();
+  /** Solids that can be taken away again (a locked yard's gate), by key. */
+  private temp = new Map<string, Box>();
   /** Walkable area; grows when walled plots are unlocked. */
   readonly bounds = { ...LAYOUT.bounds };
   /** Current stick input, magnitude 0..1. Set by the UI or the simulated player. */
   readonly input = { x: 0, z: 0 };
   /** True while simulating time away: the player can't carry, serve or pay. */
   away = false;
+  /** Easy mode: cheaper upgrades, more frequent events (ECONOMY.easy). */
+  easy = false;
   /** Prestige level: how many times the farm was sold for a bigger one (config/legacy.ts). */
   legacy = 0;
   /** Trash button held: the top carried item is thrown away every trashInterval. Set by the UI. */
@@ -111,6 +119,7 @@ export class SimWorld {
     this.field = new FieldSystem(this);
     this.factory = new FactorySystem(this);
     this.river = new RiverSystem(this);
+    this.butcher = new ButcherSystem(this);
     this.market = new MarketSystem(this);
     this.album = new AlbumSystem(this);
     this.daily = new DailySystem(this);
@@ -195,6 +204,7 @@ export class SimWorld {
     this.time += dt;
     if (!this.away) updatePlayer(this.player, this.input.x, this.input.z, dt, this.solids, this.bounds);
     for (const s of this.stations) s.update(dt, this.rng, this.events);
+    this.butcher.update(dt);
     if (!this.away) this.interact(dt);
     this.staff.update(dt);
     this.rush.update(dt);
@@ -294,7 +304,20 @@ export class SimWorld {
     this.field.interact(dt);
     this.factory.interact(dt);
     this.river.interact(dt);
+    this.butcher.interact();
     this.market.interact(dt);
+  }
+
+  /**
+   * Switch easy mode on/off (also right after creating a world): tile prices change at once, and a pending
+   * event countdown is rescaled to the new mode's gap (sooner going easy, later going back).
+   */
+  setEasy(on: boolean): void {
+    if (on === this.easy) return;
+    const from = this.easy ? ECONOMY.easy.eventGap : SCENARIO_GAP, to = on ? ECONOMY.easy.eventGap : SCENARIO_GAP;
+    this.easy = on;
+    this.upgrades.refresh();
+    if (this.scenario.phase === 'idle') this.scenario.t *= to.max / from.max;
   }
 
   /** Make a box solid once (something built on ground the player can already reach). */
@@ -302,6 +325,23 @@ export class SimWorld {
     if (this.built.has(key)) return;
     this.built.add(key);
     this.solids.push({ ...b });
+    this.solidsVersion++;
+  }
+
+  /** A solid that can come off again (setSolid(key, null)). */
+  setSolid(key: string, b: Box | null): void {
+    const cur = this.temp.get(key);
+    if (!b) {
+      if (!cur) return;
+      this.solids.splice(this.solids.indexOf(cur), 1);
+      this.temp.delete(key);
+      this.solidsVersion++;
+      return;
+    }
+    if (cur) return;
+    const s = { ...b };
+    this.temp.set(key, s);
+    this.solids.push(s);
     this.solidsVersion++;
   }
 

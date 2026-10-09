@@ -49,6 +49,8 @@ export interface SaveData {
   };
   album?: { seen: string[]; paid: string[] };
   river?: { pile: number; cash: number; bills: number; untied: number };
+  /** `chop`: seconds of chopping left (a cow still on its way is saved as just arrived). */
+  butcher?: { stock?: number; cash?: number; bills?: number; chop?: number; calf?: number };
   /** Incubator (chicks in the crate / hatching, chicks hatched so far, golden hens) and records set per product. */
   surplus?: { crate: number; hatching: number; hatchT: number; hatched: number; golden: number; records: Record<string, number> };
   /** Factory machine buffers and the wheat silo. */
@@ -56,6 +58,8 @@ export interface SaveData {
   daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
   /** Prestige level (config/legacy.ts). */
   legacy?: number;
+  /** Easy mode (ECONOMY.easy). */
+  easy?: boolean;
   /** Upgrade price version the levels were bought at (config/priceHistory.ts; absent = before refunds existed). */
   pv?: number;
   /** VIP cooldown left (s). */
@@ -99,7 +103,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     v: SAVE_VERSION, mode: w.mode, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
-    rating: w.service.rating, legacy: w.legacy, pv: PRICE_VERSION, vipT: w.customers.vipT,
+    rating: w.service.rating, legacy: w.legacy, ...(w.easy ? { easy: true } : {}), pv: PRICE_VERSION, vipT: w.customers.vipT,
     market: marketSave(w),
     trust: { ...w.contracts.trust },
     ...(w.scenario.phase === 'idle' ? { eventT: Math.round(w.scenario.t) } : {}),
@@ -116,6 +120,8 @@ export function serialize(w: SimWorld, now: number): SaveData {
     field: { cash: w.field.cash.value + w.field.dockWheat * Math.round(priceOf('wheat') * w.priceMult), bills: Math.min(40, w.field.cash.bills + w.field.dockWheat), hopper: { ...w.field.hopper }, ...(w.field.onFoot ? { parked: { ...w.field.parked } } : {}) },
     album: { seen: [...w.album.seen], paid: [...w.album.paid] },
     surplus: { crate: w.surplus.crate, hatching: w.surplus.hatching, hatchT: w.surplus.hatchT, hatched: w.surplus.hatched, golden: w.surplus.golden, records: { ...w.surplus.records } },
+    // (only what's set: the save travels as a QR code, every field counts)
+    ...(butcherSave(w) ? { butcher: butcherSave(w) } : {}),
     river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },
     factory: { silo: w.factory.silo, machines: Object.fromEntries(w.factory.machines.map((m) => [m.def.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])) },
     daily: { day: w.daily.day, tasks: w.daily.tasks.map((t) => ({ ...t })) },
@@ -136,11 +142,23 @@ function marketSave(w: SimWorld): SaveData['market'] {
 
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 
+/** The butcher's state, without its zero fields (undefined when there's nothing to keep). */
+function butcherSave(w: SimWorld): SaveData['butcher'] | undefined {
+  const b = w.butcher, chop = b.cow ? ECONOMY.butcher.chopTime : b.chopT, calf = b.calfAge();
+  const out: Record<string, number> = {};
+  if (b.stock) out.stock = b.stock;
+  if (b.cash.value) { out.cash = b.cash.value; out.bills = b.cash.bills; }
+  if (chop > 0) out.chop = Math.round(chop * 10) / 10;
+  if (calf >= 0) out.calf = Math.round(calf * 10) / 10;
+  return Object.keys(out).length ? (out as SaveData['butcher']) : undefined;
+}
+
 /** Load a (migrated) save into a fresh world. */
 export function restore(w: SimWorld, s: SaveData): void {
   w.time = num(s.time);
   w.money = num(s.money);
   w.legacy = Math.max(0, Math.floor(num(s.legacy)));
+  w.easy = s.easy === true;
   w.customers.vipT = Math.max(0, num(s.vipT));
   if (s.rng) w.rng.state = num(s.rng, w.rng.state) >>> 0;
   const up = w.upgrades;
@@ -148,6 +166,12 @@ export function restore(w: SimWorld, s: SaveData): void {
     up.levels[id] = Math.min(ECONOMY.upgrades[id].max + 50, Math.max(0, Math.floor(num(s.levels?.[id]))));
     up.paid[id] = Math.max(0, num(s.paid?.[id]));
     up.bought += up.levels[id];
+  }
+  // the surplus corner moved into its own yard: a farm that already used it (incubator, trader deal, a record) has it
+  const recs = s.surplus?.records ?? {};
+  if (up.levels['surplus.yard'] === 0 && (up.levels['eggs.incubator'] > 0 || up.levels['trader.deal'] > 0 || Object.values(recs).some((n) => num(n) > 0))) {
+    up.levels['surplus.yard'] = 1;
+    up.bought++;
   }
   for (const st of w.stations) {
     const d = s.stations?.[st.def.id];
@@ -162,7 +186,7 @@ export function restore(w: SimWorld, s: SaveData): void {
   w.service.rating = Math.max(1, Math.min(5, num(s.rating, w.service.rating)));
   // the event countdown carries over (it used to restart at 10-16 min on every load, so with short sessions
   // events almost never came); after a long time away the next one comes soon
-  if (Number.isFinite(s.eventT)) w.scenario.t = Math.max(20, Math.min(SCENARIO_GAP.max, s.eventT!));
+  if (Number.isFinite(s.eventT)) w.scenario.t = Math.max(20, Math.min(w.easy ? ECONOMY.easy.eventGap.max : SCENARIO_GAP.max, s.eventT!));
   if (Number.isFinite(s.t) && Date.now() - s.t > SCENARIO_WELCOME.away * 1000) w.scenario.t = Math.min(w.scenario.t, SCENARIO_WELCOME.soon);
   for (const k of Object.keys(w.contracts.trust)) w.contracts.trust[k] = Math.max(0, Math.min(5, num(s.trust?.[k])));
   for (const st of w.stations) st.boostT = Math.max(0, num(s.boost?.[st.def.id]));
@@ -203,6 +227,10 @@ export function restore(w: SimWorld, s: SaveData): void {
   w.river.cash.value = num(s.river?.cash);
   w.river.cash.bills = Math.floor(num(s.river?.bills));
   w.river.pendingUntied = Math.max(0, Math.floor(num(s.river?.untied)));
+  w.butcher.stock = Math.max(0, Math.floor(num(s.butcher?.stock)));
+  w.butcher.cash.value = num(s.butcher?.cash);
+  w.butcher.cash.bills = Math.floor(num(s.butcher?.bills));
+  w.butcher.chopT = Math.max(0, Math.min(ECONOMY.butcher.chopTime, num(s.butcher?.chop)));
   for (const m of w.factory.machines) {
     const d = s.factory?.machines?.[m.def.id];
     if (!d) continue;
@@ -241,6 +269,8 @@ export function restore(w: SimWorld, s: SaveData): void {
   // upgrades that got cheaper since this save was priced: the difference comes back (main.ts says so)
   w.refunds = refundPriceDrops(w, Math.floor(num(s.pv)));
   up.apply();
+  // (pen animals aren't saved: the growing calf, if any, gets its age back)
+  w.butcher.restoreCalf(num(s.butcher?.calf, -1));
   w.carry.items.length = 0;
   for (const p of s.carry ?? []) if ((ITEM_IDS as string[]).includes(p) && !w.carry.full()) w.carry.push(p as ItemId);
   w.staff.machines.forEach((m, i) => { m.broken = m.running && !!s.broken?.[String(i)]; });
@@ -258,6 +288,7 @@ export function legacyReset(w: SimWorld, now: number): SaveData | null {
   if (w.legacyMissing.length > 0) return null;
   const f = new SimWorld((now % 1_000_000_007) >>> 0 || 1, w.mode);
   f.legacy = w.legacy + 1;
+  f.easy = w.easy;
   f.money = f.path.startMoney + LEGACY.startMoney * f.legacy;
   for (const k of Object.keys(f.stats) as (keyof typeof f.stats)[]) f.stats[k] = w.stats[k];
   for (const id of w.album.seen) f.album.seen.add(id);

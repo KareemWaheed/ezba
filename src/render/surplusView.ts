@@ -138,7 +138,8 @@ export class SurplusView {
     this.chicks.instanceMatrix.needsUpdate = true;
     if (built) this.drawCrate(sim);
     // record stand: shows how close the next record is; the dish grows while one is being celebrated
-    this.drawStand(sim);
+    this.stand.visible = s.open;
+    if (s.open) this.drawStand(sim); else this.standSign.sprite.visible = false;
     this.standMark.visible = !!s.ready;
     this.dish.visible = s.celebT > 0;
     if (s.celebT > 0) {

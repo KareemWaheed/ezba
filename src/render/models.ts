@@ -19,6 +19,12 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
     ...Q4.map(([a, b]) => part(cylLo, 0xffffff, a * 0.15, 0.4, b * 0.15, 0, 0, 0, 0.1, 0.38, 0.1)),
     ...Q4.map(([a, b]) => part(cylLo, 0x2b6cb0, a * 0.15, 0.62, b * 0.15, 0, 0, 0, 0.07, 0.07, 0.07)),
   ]),
+  // a tray of honey jars with golden lids
+  honey: merge([
+    part(box, 0xc98a4b, 0, 0.06, 0, 0, 0, 0, 0.62, 0.12, 0.62),
+    ...Q4.map(([a, b]) => part(cylLo, 0xf2a31b, a * 0.15, 0.27, b * 0.15, 0, 0, 0, 0.11, 0.3, 0.11)),
+    ...Q4.map(([a, b]) => part(cylLo, 0xd98a1a, a * 0.15, 0.44, b * 0.15, 0, 0, 0, 0.12, 0.05, 0.12)),
+  ]),
   omelette: merge([
     part(cyl, 0xffffff, 0, 0.04, 0, 0, 0, 0, 0.3, 0.06, 0.3),
     part(cyl, 0xf6d24a, 0, 0.09, 0, 0, 0, 0, 0.22, 0.05, 0.16),
@@ -119,9 +125,9 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
 };
 
 /** Stacking height of one item. */
-export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, omelette: 0.17, coffee: 0.36, cake: 0.32, cheese: 0.22, grilledFish: 0.18, fish: 0.3, corn: 0.24, wheat: 0.28, rice: 0.38, pasta: 0.4, oil: 0.48, tea: 0.26, chips: 0.34, soda: 0.28, bread: 0.2, tomato: 0.26, potato: 0.36, bill: 0.11 };
+export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, honey: 0.47, omelette: 0.17, coffee: 0.36, cake: 0.32, cheese: 0.22, grilledFish: 0.18, fish: 0.3, corn: 0.24, wheat: 0.28, rice: 0.38, pasta: 0.4, oil: 0.48, tea: 0.26, chips: 0.34, soda: 0.28, bread: 0.2, tomato: 0.26, potato: 0.36, bill: 0.11 };
 
-export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', omelette: '🍳', coffee: '☕', cake: '🍰', cheese: '🥪', grilledFish: '🍢', fish: '🐟', corn: '🌽', wheat: '🌾', rice: '🍚', pasta: '🍝', oil: '🫒', tea: '🍵', chips: '🍟', soda: '🥤', bread: '🍞', tomato: '🍅', potato: '🥔' };
+export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', honey: '🍯', omelette: '🍳', coffee: '☕', cake: '🍰', cheese: '🥪', grilledFish: '🍢', fish: '🐟', corn: '🌽', wheat: '🌾', rice: '🍚', pasta: '🍝', oil: '🫒', tea: '🍵', chips: '🍟', soda: '🥤', bread: '🍞', tomato: '🍅', potato: '🥔' };
 
 /** Standing crop stalks (one instance per stalk; scaled down to a stub when cut). */
 export const STALK_GEO: Record<FieldCrop, THREE.BufferGeometry> = {
@@ -166,9 +172,18 @@ export const ANIMAL_GEO: Record<ProducerKind, THREE.BufferGeometry> = {
     ...Q4.map(([a, b]) => part(box, 0xffffff, a * 0.3, 0.3, b * 0.55, 0, 0, 0, 0.18, 0.6, 0.18)),
     part(box, 0x2b2b2b, 0, 0.85, -0.8, 0.3, 0, 0, 0.06, 0.5, 0.06),
   ]),
+  // a fat little bee buzzing about at head height: striped body, see-through wings
+  bee: merge([
+    part(sph, 0xf2c230, 0, 1.2, 0, 0, 0, 0, 0.13, 0.11, 0.17),
+    part(box, 0x2b2b2b, 0, 1.2, 0.02, 0, 0, 0, 0.27, 0.23, 0.05),
+    part(box, 0x2b2b2b, 0, 1.2, -0.08, 0, 0, 0, 0.25, 0.21, 0.05),
+    part(sph, 0x2b2b2b, 0, 1.22, 0.17, 0, 0, 0, 0.08, 0.08, 0.08),
+    part(sph, 0xe8f6ff, -0.13, 1.33, 0, 0, 0, 0.5, 0.12, 0.02, 0.08),
+    part(sph, 0xe8f6ff, 0.13, 1.33, 0, 0, 0, -0.5, 0.12, 0.02, 0.08),
+  ]),
 };
 
-export const ANIMAL_SHADOW: Record<ProducerKind, number> = { chicken: 0.35, cow: 0.8 };
+export const ANIMAL_SHADOW: Record<ProducerKind, number> = { chicken: 0.35, cow: 0.8, bee: 0 };
 
 /** Item flight scale when flying from an animal into its pile. */
 export const FLY_SCALE = 0.7;

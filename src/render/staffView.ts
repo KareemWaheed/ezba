@@ -10,6 +10,7 @@ import { MAT, PRIM, merge, part } from './geo';
 import type { Flyers } from './flyers';
 
 const WORKER = { shirt: 0xf28c38, pants: 0x3b4a6b, skin: 0xd9a074, hair: 0x1d1d1d };
+const FEEDER = { shirt: 0x5e8f3a, pants: 0x6b4a2b, skin: 0xd9a074, hair: 0x1d1d1d };
 const MECHANIC = { shirt: 0x2f5fa8, pants: 0x2f5fa8, skin: 0xc68a5a, hair: 0x1d1d1d };
 const CASHIER = { shirt: 0x3fae5a, pants: 0x2e2e2e, skin: 0xf1c7a0, hair: 0x8b4513 };
 
@@ -110,6 +111,7 @@ export class StaffView {
   private workers: { char: CharacterView; stack: CarrierView }[] = [];
   private cashiers: CharacterView[] = [];
   private mechanics: CharacterView[] = [];
+  private feeders: CharacterView[] = [];
   private lanes: THREE.Object3D[] = [];
   private belts = new Map<number, BeltView>();
   private skies = new Map<number, SkyBeltView>();
@@ -147,6 +149,16 @@ export class StaffView {
       this.mechanics.push(c);
     }
     staff.mechanics.forEach((m, i) => this.mechanics[i].update(m.x, m.z, m.rot, m.speed, dt, false));
+
+    // feeders: green shirt, straw hat, a sack of feed on the back
+    while (this.feeders.length < staff.feeders.length) {
+      const c = new CharacterView(FEEDER);
+      c.attach(merge([...hatGeo({ kind: 'straw', color: 0xe6c35a }), part(PRIM.box, 0xc9a66b, 0, 1.0, -0.3, 0.15, 0, 0, 0.36, 0.42, 0.22)]));
+      this.scene.add(c.root);
+      this.pop(c.body, animate);
+      this.feeders.push(c);
+    }
+    staff.feeders.forEach((f, i) => this.feeders[i].update(f.x, f.z, f.rot, f.speed, dt, false));
 
     // checkout lanes: a register on the counter and a rope line on the ground
     while (this.lanes.length < sim.lanes) {

@@ -22,7 +22,7 @@ const L = LAYOUT.surplus, S = ECONOMY.surplus;
 /** A farm with the coop and its worker; extra levels on top. */
 function farm(extra: Partial<Record<UpgradeId, number>> = {}): SimWorld {
   const w = new SimWorld(9);
-  const lv: Partial<Record<UpgradeId, number>> = { 'eggs.animals': 4, 'eggs.worker': 1, ...extra };
+  const lv: Partial<Record<UpgradeId, number>> = { 'eggs.animals': 4, 'eggs.worker': 1, 'surplus.yard': 1, ...extra };
   for (const [k, v] of Object.entries(lv)) { w.upgrades.levels[k as UpgradeId] = v!; w.upgrades.bought += v!; }
   w.upgrades.apply(); w.upgrades.refresh();
   return w;
@@ -169,6 +169,77 @@ const untilParked = (w: SimWorld, max: number) => {
     if (tr && tr.state === 'parked') loaded = Math.max(loaded, tr.want - tr.left);
   }
   ok(loaded > 0, `river workers load it on their own (${loaded} fish)`);
+}
+
+// the surplus yard: nothing of it before it's built; a save that already used the corner gets the yard
+{
+  const w = farm({ 'surplus.yard': 0 });
+  egg(w).counter = 5000;
+  run(w, 400, away);
+  ok(!w.surplus.visit && w.surplus.ready === null, 'no trader and no record before the yard is built');
+  ok(w.solids.some((b) => b.x1 === LAYOUT.surplusYard.box.x1 && b.z0 === LAYOUT.surplusYard.gate.z0), 'its gate is shut');
+  const old = new SimWorld(1);
+  const s = migrate(JSON.parse(JSON.stringify(serialize(farm({ 'surplus.yard': 0, 'eggs.incubator': 1 }), Date.now()))))!;
+  restore(old, s);
+  ok(old.upgrades.level('surplus.yard') === 1 && old.surplus.open, 'an older save with the incubator gets the yard');
+  ok(!old.solids.some((b) => b.x1 === LAYOUT.surplusYard.box.x1 && b.z0 === LAYOUT.surplusYard.gate.z0), '...with its gate open');
+  ok(old.bounds.x0 <= LAYOUT.surplusYard.unlockedX0, '...and the walkable area reaching it');
+}
+
+// bees: the apiary makes honey, its worker carries it to the counter, and shoppers buy it; five lanes with five cashiers
+{
+  const w = farm({ 'milk.unlock': 1, 'cafe.unlock': 1, 'honey.unlock': 1, 'honey.worker': 1, 'cashier': 5, 'shop.lanes': 4 });
+  const h = w.stations.find((s) => s.def.product === 'honey')!;
+  ok(h.open && h.animals.length === ECONOMY.producers.bee.start, `the apiary opens with ${h.animals.length} hives`);
+  const sold0 = w.stats.sold;
+  let made = 0, bought = 0;
+  const lanesUsed = new Set<number>();
+  for (let i = 0; i < 240 * 30; i++) {
+    w.player.x = 8; w.player.z = 8; w.input.x = w.input.z = 0; w.tick(1 / 30);
+    w.events.drain((e) => { if (e.type === 'produce' && e.product === 'honey') made++; if (e.type === 'sell' && e.product === 'honey') bought++; });
+    for (const c of w.customers.list) lanesUsed.add(c.lane);
+  }
+  ok(made > 50, `hives make honey (${made} jars in 4 min)`);
+  ok(bought > 10 && w.stats.sold > sold0, `shoppers buy it off the counter (${bought} jars)`);
+  ok(w.lanes === 5 && w.cashiers === 5, `five lanes, five cashiers (${w.lanes}/${w.cashiers})`);
+  ok(lanesUsed.size === w.lanes, `shoppers use the new lanes (${[...lanesUsed].sort().join(',')})`);
+}
+
+// the butcher's: an old cow walks there, a calf takes its place, the meat sells at the window, money waits there
+{
+  const B = ECONOMY.butcher;
+  const w = farm({ 'milk.unlock': 1, 'milk.animals': 3, 'field.unlock': 1, 'field.wheat': 1, 'cafe.unlock': 1, 'factory.unlock': 1 });
+  const pen = w.stations.find((s) => s.def.producer === 'cow')!, cows = pen.animals.length;
+  for (const a of pen.animals) a.age = B.readyAge + 5;
+  run(w, 5, away);
+  ok(!w.butcher.cow && pen.animals.length === cows, `no butcher's, no cow leaves (${pen.animals.length} cows)`);
+  w.upgrades.levels['meat.unlock'] = 1; w.upgrades.apply(); w.upgrades.refresh();
+  const msgs: number[] = [];
+  const tick = (s: number) => { for (let i = 0; i < s / DT; i++) { w.player.x = away.x; w.player.z = away.z; w.tick(DT); w.events.drain((e) => { if (e.type === 'butcher') msgs.push(e.n); }); } };
+  tick(1);
+  const calf = pen.animals.find((a) => a.age < B.calfAge), t0 = calf?.t ?? -1;
+  const calves = () => pen.animals.filter((a) => a.age < B.calfAge).length;
+  ok(!!w.butcher.cow && calves() === 1 && pen.animals.length === cows + 1, `an old cow leaves, a calf is in the pen (${calves()} calf, ${pen.animals.length} incl. the leaving cow)`);
+  // a save while the cow is on its way: it's in at the butcher's on load (the chopping isn't lost)
+  const mid = new SimWorld(9); restore(mid, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
+  ok(mid.butcher.chopT === B.chopTime, `a save mid-walk keeps the cow (chopping on load: ${mid.butcher.chopT} s)`);
+  const midPen = mid.stations.find((s) => s.def.producer === 'cow')!;
+  const midCalves = midPen.animals.filter((a) => a.age < B.calfAge);
+  ok(midCalves.length === 1 && Math.abs(midCalves[0].age - (calf?.age ?? -1)) < 0.06 && midPen.animals.length === cows, `...and the calf stays a calf (${midCalves.length} calf, ${midCalves[0]?.age.toFixed(1)} s old, ${midPen.animals.length} in the pen)`);
+  // a cow bought while one is on its way still joins the herd
+  w.upgrades.levels['milk.animals']++; w.upgrades.apply();
+  tick(30);
+  ok(w.butcher.cows === 1 && pen.animals.length === cows + 1, `the cow got to the butcher's, the herd is whole again with the new cow (${pen.animals.length})`);
+  ok(!w.butcher.cow && calves() === 1, 'no second cow while the calf grows');
+  ok(!!calf && calf.t === t0, `the calf gives no milk yet (${calf?.age.toFixed(0)} s old)`);
+  ok(w.butcher.cash.value > 0 && msgs.includes(2) && msgs.includes(3), `meat sells at the window (${Math.round(w.butcher.cash.value)} waiting)`);
+  tick(B.calfAge);
+  ok(w.butcher.cows === 2 || !!w.butcher.cow, `once the calf is grown, the next old cow goes (${w.butcher.cows} in so far)`);
+  const m0 = w.money, v = w.butcher.cash.value;
+  run(w, 0.5, LAYOUT.butcher.cash);
+  ok(w.money - m0 >= v && w.butcher.cash.value === 0, `the player collects the window money (+${Math.round(w.money - m0)})`);
+  const back = new SimWorld(9); restore(back, migrate(JSON.parse(JSON.stringify(serialize(w, Date.now()))))!);
+  ok(back.butcher.open && back.butcher.stock === w.butcher.stock, `the butcher's and its stock are saved (${back.butcher.stock} packs)`);
 }
 
 if (fails) { console.log(`\n${fails} failed`); process.exit(1); }

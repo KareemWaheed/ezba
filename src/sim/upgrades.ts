@@ -50,7 +50,11 @@ export class UpgradeSystem {
     return ECONOMY.upgrades[id].max + bonus;
   }
   maxed(id: UpgradeId): boolean { return this.level(id) >= this.maxOf(id); }
-  cost(id: UpgradeId): number { return Math.max(1, Math.round(upgradeCost(id, this.level(id)) * (this.w.path.costMult[id] ?? 1))); }
+  cost(id: UpgradeId): number { return Math.max(1, Math.round(upgradeCost(id, this.level(id)) * this.mult(id))); }
+  /** Price of a level of a track in this game. */
+  costAt(id: UpgradeId, level: number): number { return Math.max(1, Math.round(upgradeCost(id, level) * this.mult(id))); }
+  /** This game's price factor for a track: its path's, and easy mode's. */
+  mult(id: UpgradeId): number { return (this.w.path.costMult[id] ?? 1) * (this.w.easy ? ECONOMY.easy.costMult : 1); }
 
   /** Requirements on this game's path (the supermarket path rewires some). */
   requires(def: UpgradeDef): readonly { id: UpgradeId; level: number }[] { return this.w.path.requires[def.id] ?? def.requires; }
@@ -72,7 +76,7 @@ export class UpgradeSystem {
     for (const id of Object.keys(this.levels) as UpgradeId[]) {
       if (!id.startsWith('market.')) continue;
       const free = this.w.path.startLevels[id] ?? 0;
-      for (let l = free; l < this.levels[id]; l++) refund += Math.round(upgradeCost(id, l) * (this.w.path.costMult[id] ?? 1));
+      for (let l = free; l < this.levels[id]; l++) refund += Math.round(upgradeCost(id, l) * this.mult(id));
       refund += this.paid[id];
       this.bought -= Math.max(0, this.levels[id] - free);
       this.levels[id] = 0;
@@ -143,19 +147,26 @@ export class UpgradeSystem {
       const track = s.def.animalTrack;
       if (!s.open || !track || !s.def.producer) continue;
       const want = ECONOMY.producers[s.def.producer].start + this.level(track) * U[track].step;
-      while (s.animals.length < want) s.addAnimal(w.rng);
+      // (a cow on its way to the butcher's isn't in the pen any more)
+      while (s.animals.filter((a) => !a.leaving).length < want) s.addAnimal(w.rng);
     }
     // (before staff.sync, so new stockers get the HR carry bonus right away)
     w.market.sync();
     w.staff.sync();
     w.bounds.x0 = this.level('hr.office') > 0 ? LAYOUT.hrYard.unlockedX0 : LAYOUT.bounds.x0;
     if (this.level('river.unlock') > 0) w.bounds.x0 = Math.min(w.bounds.x0, RIVER.unlockedX0);
+    if (this.level('surplus.yard') > 0) w.bounds.x0 = Math.min(w.bounds.x0, LAYOUT.surplusYard.unlockedX0);
+    // a locked yard keeps its gate shut (the walkable area can reach it once the river or the other yard opens)
+    const shut = (y: { box: { x1: number }; gate: { z0: number; z1: number } }) => ({ x0: y.box.x1 - 0.3, x1: y.box.x1, z0: y.gate.z0, z1: y.gate.z1 });
+    w.setSolid('hrGate', this.level('hr.office') > 0 ? null : shut(LAYOUT.hrYard));
+    w.setSolid('surplusGate', this.level('surplus.yard') > 0 ? null : shut(LAYOUT.surplusYard));
     w.cafe.sync();
     w.field.sync();
     w.bounds.z0 = w.field.open ? FIELDS.unlockedZ0 : LAYOUT.bounds.z0;
     w.river.sync();
     if (w.river.open) { w.bounds.z0 = RIVER.unlockedZ0; w.addSolid('fishStall', RIVER.stall.box); }
     if (this.level('eggs.incubator') > 0) w.addSolid('incubator', LAYOUT.surplus.incubator.box);
+    if (this.level('meat.unlock') > 0) w.addSolid('butcher', { ...LAYOUT.butcher.box, z1: LAYOUT.butcher.box.z1 + 0.5 }); // (with the window counter)
     const grill = FACTORY.machines.find((m) => m.id === 'grill');
     if (grill && this.level(grill.unlockTrack) > 0) w.addSolid('grill', grill.box);
     w.contracts.sync();

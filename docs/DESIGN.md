@@ -357,4 +357,49 @@ This file records the decisions made on top of it.
     (12 s at level 2), with a small 🧾 float. Not during time away (that pays its own sum).
   - Customer service `hr.service` (خدمة العملاء, 20k x2.5, 3 levels): shop customers' patience +15% per level.
   - `npm run awaycheck` covers both.
+- The surplus yard (playtest: "the incubator, the omelette record and these feel out of place; they need a new
+  yard"): the trader, the incubator and the record stand moved out of the main yard into `حوش العزبة`
+  (`LAYOUT.surplusYard`, `surplus.yard`, 2k, milestone, after the first egg worker), walled like the HR yard,
+  west of the main yard below it, with a gate in the east wall and a gap in the west wall the trader's truck
+  drives in through. Shaded and shut until bought; no trader and no records before it. The incubator and the
+  trader deal are bought inside it. Old saves that used the corner (incubator, trader deal or a record) get the
+  yard. The army truck moved 2.7 m south and four trees moved to make room. Locked yards (HR, surplus) now keep
+  their gate shut: once the river or another yard widened the walkable area, a locked yard could be walked into.
+- Feeder (playtest: "someone to fill the animals' feed"): `hr.feeder` (عامل علف, 45k, one, in the HR yard after
+  the cow pen). Green shirt, straw hat, a sack on the back: waits by the HR office, walks through the gate to the
+  trough closest to empty once it's under the refill mark, refills it in 2 s; also during time away. Doesn't
+  count toward the player's feeds. Active/auto pacing stays 1.68x. `npm run awaycheck`.
 
+- Bees and honey (playtest: "a third animal, bees, fine, but sold on the counter like the rest; and two more
+  cashiers"): an apiary (`LAYOUT.apiary`, `honey.unlock` 30k, milestone, after the café) east of the cow pen,
+  fenced with flowers and hives, shaded until bought. Three hives at the start (`honey.animals`, up to 6 more),
+  bees wander and drop honey jars (🍯, 8 each) on its pile; a honey worker (`honey.worker`) carries them like
+  the other stations. Honey has its own counter slot (between the milk and the café side) and shoppers ask for
+  1-3 jars. No trough: the golden animal never spawns in the apiary. Hay bales moved east (a bot got stuck
+  between them and the fence).
+- Five checkout lanes: `shop.lanes` goes to 4 (5 lanes) and `cashier` to 5; the counter is longer and the
+  egg/milk/corn slots and a few tiles moved. Shoppers used to be held to the first 3 lanes (fixed-size arrays in
+  `customers.ts`). The derby's "hot" mark dropped to 0.65 so it still clashes when left alone with the new layout.
+  eventcheck's grown farm keeps 3 lanes and cashiers (its timings were tuned on that). `npm run surpluscheck`.
+- The butcher's (playtest: "cows that grow old could be slaughtered and we sell meat"): `meat.unlock` (الجزارة,
+  60k, milestone, after the factory, whose opening makes the ground north of its yard reachable). A cow is ready
+  after 10 min in the pen (ages aren't saved; cows appear with spread-out ages, spread by count so seeded runs
+  didn't shift). One at a time, and only while no calf is growing: the oldest ready cow walks out of the pen front,
+  east past the apiary and in at the shop's side door; a calf takes its place right away (smaller, grows for 60 s,
+  no milk until grown), so the herd never shrinks. 6 s later 12 packs of meat are on the window; one sells every
+  2.5 s (60 each x price growth) and the money piles up in front of the window (player or accountant collects it;
+  counted in time away). Meat never goes on the shop counter (no room left there, and a butcher sells his own).
+  Hay bales moved east to make room. `npm run surpluscheck`.
+- Easy mode (playtest: "the game needs to be more casual, or at least add modes; a casual player should finish the
+  upgrades in a day or two at most, with more events"): `ECONOMY.easy`, `SimWorld.easy` (saved; `setEasy` switches
+  mid-game). Every upgrade costs 0.3 of its price, and events come every 150-240 s instead of 360-540 s. New games
+  start in easy mode; old saves stay normal; the settings switch it either way (prices change at once). Normal mode
+  and its targets are unchanged. `npm run simulate:easy` (3 days, its own targets): the casual bot buys every upgrade
+  level at minute 142 (day 2), the efficient one at minute 101 (not inside the first hour); 45 events in 4 h of play
+  (normal: 58 in 9 h 20 min, one every ~10 min, so about twice as often); active/auto stays 1.41x. In normal mode
+  the casual bot buys everything on day 6.
+  `npm run transfercheck` covers prices, the save and the switch.
+- Review fixes (Cubic on the honey/butcher commits): the cow pen grows 2 m a level (was 4: at level 2 it ran into
+  the apiary; cows per level unchanged, so old saves at level 2 just get a smaller pen). A cow on its way to the
+  butcher's no longer counts as a pen animal (a cow bought during the walk was lost), a save mid-walk keeps it (in
+  at the butcher's on load), a leaving cow stops hopping, and the butcher's sign redraws once the web font loads.

@@ -5,6 +5,7 @@
 import { ECONOMY } from '../src/config/economy';
 import { SimWorld } from '../src/sim/world';
 import { awayCap, simulateAway } from '../src/sim/offline';
+import { LAYOUT } from '../src/config/layout';
 
 let fails = 0;
 const ok = (cond: boolean, msg: string): void => {
@@ -47,11 +48,37 @@ ok(ms < 8000, `a day away is quick to work out (${ms} ms)`);
   let t = 0;
   while ((a.broken || b.broken) && t < 60) { w.player.x = 8; w.player.z = 8; w.input.x = w.input.z = 0; w.tick(1 / 30); w.events.drain(() => {}); t += 1 / 30; }
   ok(!a.broken && !b.broken, `they fix both jams on their own (${t.toFixed(1)} s)`);
+  // ...and walk back into the HR yard (they used to loop at the gate, flickering, never getting in)
+  const home = LAYOUT.hrYard.mechanics;
+  // (no new jam during the walk home: a re-break would rightly send one back out)
+  for (const mc of w.staff.machines) mc.breakT = 1e9;
+  for (let i = 0; i < 40 * 30; i++) { w.player.x = 8; w.player.z = 8; w.input.x = w.input.z = 0; w.tick(1 / 30); w.events.drain(() => {}); }
+  const d = Math.max(...w.staff.mechanics.map((m, i) => Math.hypot(m.x - (home.x + i * 0.8), m.z - home.z)));
+  ok(d < 0.5, `and walk back through the gate to the office (${d.toFixed(2)} m from their spots)`);
   const fixes = w.stats.fixes;
   ok(fixes === 0, 'the player fixed none of them');
+  for (const mc of w.staff.machines) mc.breakT = -1;
   // time away: jams don't pile up
   simulateAway(w, H);
   ok(w.staff.belts.filter((x) => x.running && x.broken).length === 0 || w.staff.mechanics.some((m) => m.target), 'after an hour away no jam is left waiting for the player');
+}
+
+// feeder (hr.feeder): walks out of the HR yard to troughs running low and refills them (not the player's feeds)
+{
+  const w = farm();
+  w.upgrades.levels['hr.office'] = 1; w.upgrades.levels['hr.feeder'] = 1;
+  w.upgrades.apply();
+  ok(w.staff.feeders.length === 1, 'a feeder with the upgrade');
+  const troughs = w.stations.filter((s) => s.open && s.def.trough);
+  for (const s of troughs) s.boostT = 0;
+  const feeds0 = w.stats.feeds;
+  let t = 0;
+  while (troughs.some((s) => s.boostT <= 0) && t < 60) { w.player.x = 8; w.player.z = 8; w.input.x = w.input.z = 0; w.tick(1 / 30); w.events.drain(() => {}); t += 1 / 30; }
+  ok(troughs.every((s) => s.boostT > 0), `he fills every empty trough (${troughs.length} in ${t.toFixed(1)} s)`);
+  ok(w.stats.feeds === feeds0, "they don't count as the player's feeds");
+  // time away: the troughs stay full
+  simulateAway(w, H);
+  ok(troughs.every((s) => s.boostT > 0 || w.staff.feeders.some((f) => f.target === s.index)), 'after an hour away the troughs are still being kept full');
 }
 
 // accountant (hr.accountant): the cash piles go into the player's money on their own

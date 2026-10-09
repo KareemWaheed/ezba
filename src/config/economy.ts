@@ -33,6 +33,8 @@ export const ECONOMY = {
     milk: { price: 4 },
     /** Cut in the corn field, sold at the shop counter like eggs and milk. */
     corn: { price: 5 },
+    /** From the beehives east of the cow pen, sold at the shop counter like the rest. */
+    honey: { price: 8 },
   },
 
   /** Goods sold at stalls: wheat (grain stall; it also feeds the bakery), fish (fish stall; or the grill). */
@@ -256,6 +258,22 @@ export const ECONOMY = {
     helperCapacity: 6,
   },
 
+  /**
+   * The butcher's (الجزارة, `meat.unlock`): a cow is ready once it has lived `readyAge` s in the pen (ages are
+   * shuffled when cows appear, so they don't all go at once). One at a time, and only while no calf is growing:
+   * the cow walks there (`walkSpeed`), a calf takes its place in the pen (no milk for `calfAge` s), `chopTime` s
+   * later `packs` packs of meat are on the window; one sells every `sellEvery` s for `price` x price growth and
+   * the money piles up at the window. Meat never goes on the shop counter.
+   */
+  butcher: { readyAge: 600, calfAge: 60, walkSpeed: 1.6, chopTime: 6, packs: 12, price: 60, sellEvery: 2.5 },
+
+  /**
+   * Easy mode (وضع سهل, picked on the title screen or in the settings): every upgrade costs `costMult` of its
+   * price, and scenario events come every `eventGap` s instead of SCENARIO_GAP (so a relaxed player sees the whole
+   * farm in a day or two and an event every few minutes).
+   */
+  easy: { costMult: 0.3, eventGap: { min: 150, max: 240 } },
+
   /** Animals / machines that generate items into a pickup pile. */
   producers: {
     chicken: {
@@ -267,6 +285,8 @@ export const ECONOMY = {
       wanderSpeed: 0.9,
     },
     cow: { interval: 6.0, start: 1, wanderSpeed: 0.6 },
+    /** One per hive: its bees buzz about the apiary (visual), a jar of honey every `interval` s. */
+    bee: { interval: 7.0, start: 3, wanderSpeed: 1.4 },
   },
 
   /** Pickup piles next to producers. Producers pause when their pile is full. */
@@ -307,6 +327,7 @@ export const ECONOMY = {
       egg: { base: 2, perProducer: 0.5, max: 6 },
       milk: { base: 1, perProducer: 1, max: 4 },
       corn: { base: 2, perProducer: 0, max: 4 },
+      honey: { base: 1, perProducer: 0.4, max: 3 },
     },
   },
 
@@ -422,6 +443,9 @@ export const ECONOMY = {
     refillTime: 1,
     refillBelow: 0.25,
     radius: 1.1,
+    /** Hired feeder (hr.feeder): walks to a trough running low and refills it in `feederTime` s. */
+    feederSpeed: 2.8,
+    feederTime: 2,
   },
 
   /**
@@ -488,6 +512,14 @@ export const ECONOMY = {
     'milk.animals': { base: 350, growth: 1.6, max: 6, step: 1 },
     /** Milk workers: +1 worker per level. */
     'milk.worker': { base: 2500, growth: 3, max: 2, step: 1 },
+    /** The apiary east of the cow pen (single level): the honey station starts with producers.bee.start hives. */
+    'honey.unlock': { base: 30000, growth: 1, max: 1, step: 1 },
+    /** +1 hive per level. */
+    'honey.animals': { base: 2500, growth: 1.6, max: 6, step: 1 },
+    /** Honey workers: +1 per level. */
+    'honey.worker': { base: 12000, growth: 3, max: 2, step: 1 },
+    /** The butcher's north of the factory yard (single level): old cows go there, a calf takes their place. */
+    'meat.unlock': { base: 60000, growth: 1, max: 1, step: 1 },
     /** Corn cable line (pile by the grain stall -> shop counter, over the coop): level 1 builds it, later levels speed it up. */
     'corn.machine': { base: 25000, growth: 2.5, max: 4, step: 1 },
     /** Milk belt: level 1 builds it, later levels speed it up. */
@@ -496,6 +528,8 @@ export const ECONOMY = {
     maint: { base: 3000, growth: 2, max: 4, step: 0.6 },
     /** Mechanics (+1 per level): fix jammed belts and machines on their own, also during time away. */
     'hr.mechanic': { base: 150000, growth: 2.5, max: 2, step: 1 },
+    /** Feeder: keeps the animals' troughs full (production x feed.mult), also during time away. */
+    'hr.feeder': { base: 45000, growth: 1, max: 1, step: 1 },
     /** Accountant: collects the farm's cash piles (shop, café, grain stall, fish stall) every `step` s (level 1), x0.4 at level 2. */
     'hr.accountant': { base: 40000, growth: 3, max: 2, step: 30 },
     /** Customer service: shop customers' patience +step per level. */
@@ -520,6 +554,8 @@ export const ECONOMY = {
     'cafe.cleaner': { base: 15000, growth: 3, max: 2, step: 1 },
     /** A deal with the wholesale trader: he loads the surplus himself. */
     'trader.deal': { base: 6000, growth: 1, max: 1, step: 1 },
+    /** The surplus yard (trader, incubator, record stand), single level. */
+    'surplus.yard': { base: 2000, growth: 1, max: 1, step: 1 },
     /** Incubator: surplus eggs become chicks to sell (level 2: twice the trays). */
     'eggs.incubator': { base: 3000, growth: 3, max: 2, step: 1 },
     /** Loading dock: company trucks with supply contracts. */
@@ -599,9 +635,9 @@ export const ECONOMY = {
     /** Auto-reorder: a box is ordered whenever a product runs low in the storeroom. */
     'market.auto': { base: 120000, growth: 1, max: 1, step: 1 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
-    'shop.lanes': { base: 3500, growth: 2.4, max: 2, step: 1 },
+    'shop.lanes': { base: 3500, growth: 2.4, max: 4, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */
-    cashier: { base: 2500, growth: 2.2, max: 3, step: 1 },
+    cashier: { base: 2500, growth: 2.2, max: 5, step: 1 },
     /** Build the HR office (opens the walled HR yard). */
     'hr.office': { base: 1000, growth: 1, max: 1, step: 1 },
     /** The farm's overseer (ناظر): time away counts longer (ECONOMY.offline.capLevels). */

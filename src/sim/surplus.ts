@@ -46,6 +46,9 @@ export class SurplusSystem {
 
   constructor(private w: SimWorld) {}
 
+  /** The surplus yard is built (the trader comes and records are set there). */
+  get open(): boolean { return this.w.upgrades.level('surplus.yard') > 0; }
+
   /** Spare items of a station's product the farm can let go (counter beyond the line's needs). */
   private stationSpare(st: Station | undefined): number {
     return st && st.open ? Math.max(0, this.w.counterSpare(st)) : 0;
@@ -101,7 +104,7 @@ export class SurplusSystem {
   private updateTrader(dt: number): void {
     const w = this.w, cfg = ECONOMY.surplus.trader, L = LAYOUT.surplus;
     const v = this.visit;
-    if (w.away) { this.visit = null; return; }
+    if (w.away || !this.open) { this.visit = null; return; }
     if (!v) {
       if ((this.checkT -= dt) > 0) return;
       // (its own jitter: drawing on the world's random sequence would reshuffle every customer after it)
@@ -184,6 +187,7 @@ export class SurplusSystem {
   private updateRecords(dt: number): void {
     const w = this.w;
     this.celebT = Math.max(0, this.celebT - dt);
+    if (!this.open) { this.ready = null; return; }
     // the product furthest past its record mark
     let pick: RecordProduct | null = null, best = 1;
     for (const p of RECORD_PRODUCTS) {
@@ -212,7 +216,7 @@ export class SurplusSystem {
       w.events.emit('incubator', '', L.incubator.crate.x, L.incubator.crate.z, v, 2, this.crate);
       this.crate = 0;
     }
-    const r = this.ready, near = dist(p.x, p.z, L.record.x, L.record.z) < R;
+    const r = this.ready, near = this.open && dist(p.x, p.z, L.record.x, L.record.z) < R;
     // walking up to the stand with no record ready yet: say what it still needs (once per visit)
     if (near && !r && !this.atStand) {
       const c = this.closest();

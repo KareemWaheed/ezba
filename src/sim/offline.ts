@@ -36,11 +36,12 @@ export function simulateAway(w: SimWorld, seconds: number, step = 0.5): AwayResu
   // grain stall money from hired drivers too
   const field0 = [w.field.cash.value, w.field.cash.bills];
   const river0 = [w.river.cash.value, w.river.cash.bills];
+  const butcher0 = [w.butcher.cash.value, w.butcher.cash.bills];
   const market0 = [w.market.cash.value, w.market.cash.bills];
   const ix = w.input.x, iz = w.input.z;
   w.away = true;
   w.input.x = w.input.z = 0;
-  const gained = () => w.money - money0 + w.cash.value - cash0 + w.cafe.uncollected - cafe0 + w.field.cash.value - field0[0] + w.river.cash.value - river0[0] + w.market.cash.value - market0[0];
+  const gained = () => w.money - money0 + w.cash.value - cash0 + w.cafe.uncollected - cafe0 + w.field.cash.value - field0[0] + w.river.cash.value - river0[0] + w.butcher.cash.value - butcher0[0] + w.market.cash.value - market0[0];
   let t = simT, mid = 0, midSet = false;
   while (t > 1e-6) {
     const s = Math.min(step, t);
@@ -60,6 +61,8 @@ export function simulateAway(w: SimWorld, seconds: number, step = 0.5): AwayResu
   w.market.cash.bills = market0[1];
   w.river.cash.value = river0[0];
   w.river.cash.bills = river0[1];
+  w.butcher.cash.value = butcher0[0];
+  w.butcher.cash.bills = butcher0[1];
   w.field.cash.value = field0[0];
   w.field.cash.bills = field0[1];
   w.cafe.tables.forEach((t, i) => { t.cash = tables0[i][0]; t.bills = tables0[i][1]; });

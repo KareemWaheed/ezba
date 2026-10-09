@@ -19,18 +19,23 @@ export const LAYOUT = {
   coop: { x0: -7, x1: 0, z0: -9.4, z1: -2 } as Box,
   pen: { x0: 3, x1: 10, z0: -9.4, z1: -2 } as Box,
   /**
+   * The apiary east of the cow pen: a 1.5 m walk between it and the fully grown pen (x1 14: `milk.expand` grows it
+   * 2 m a level); flush with the walkable edge east.
+   */
+  apiary: { x0: 15.6, x1: 19.6, z0: -9.4, z1: -2 } as Box,
+  /**
    * Shop front. Products are stocked at the two ends of the counter (see stations.ts) so workers and
    * belts deliver at the sides; checkout lanes sit in the middle (opened in this order). The
    * player/cashier stands at (x, serveZ) behind the counter, customers line up from (x, queueZ).
    */
   shop: {
-    lanes: [{ x: 0 }, { x: -2.4 }, { x: 2.4 }],
+    lanes: [{ x: 0 }, { x: -2.4 }, { x: 2.4 }, { x: -4.8 }, { x: 4.8 }],
     serveZ: 3.0,
     queueZ: 5.45,
     queueGap: 1.15,
     spawn: { x0: -3, x1: -1.5, z: 14.5 },
     exit: { x: 2.8, z: 15.5 },
-    cash: { x: 6.6, z: 4.6 },
+    cash: { x: 8.6, z: 4.2 },
   },
   /**
    * Walled HR yard west of the farm. Locked (shaded, outside the walkable area) until the
@@ -88,19 +93,39 @@ export const LAYOUT = {
   /** Ramadan iftar table in the event square: `places` seats per side, `gap` apart, starting at x0. */
   iftarTable: { x0: -0.5, z: 18.6, places: 6, gap: 1.2 },
   /** Where the army truck parks and the player hands over the bulk order. */
-  army: { drop: { x: -7.4, z: 16.9 }, truck: { x: -10.0, z: 16.9 } },
+  army: { drop: { x: -7.4, z: 19.6 }, truck: { x: -10.0, z: 19.6 } },
   /** Where the health inspector walks in from (the yard's west side). */
   inspectorEntry: { x: -8.3, z: 13.0 },
   /**
-   * The surplus corner (bottom left of the yard): the wholesale trader's truck parks west of `load`, the
+   * The surplus yard (حوش العزبة, `surplus.yard`): walled, west of the main yard below the HR yard, with a gate in
+   * its east wall and a gap in the west wall for the trader's truck. Inside: the trader parks west of `load`, the
    * incubator stands at `incubator.box` (chicks are sold at `incubator.crate`), and records are set at `record`.
+   * Locked (shaded) until bought; then the walkable area grows to `unlockedX0`.
    */
+  surplusYard: {
+    box: { x0: -22.4, x1: -10.6, z0: 10.9, z1: 17.6 } as Box,
+    gate: { z0: 12.4, z1: 14.6 },
+    road: { z0: 11.3, z1: 13.9 },
+    unlockedX0: -22.1,
+  },
   surplus: {
-    load: { x: -6.8, z: 11.8 },
-    park: { x: -9.4, z: 12.2 },
-    road: { x: -26, z: 12.2 },
-    incubator: { box: { x0: -7.9, x1: -6.5, z0: 7.95, z1: 8.85 } as Box, crate: { x: -7.2, z: 9.75 } },
-    record: { x: -4.2, z: 12.2 },
+    load: { x: -16.6, z: 12.6 },
+    park: { x: -19.6, z: 12.6 },
+    road: { x: -34, z: 12.6 },
+    incubator: { box: { x0: -14.2, x1: -12.8, z0: 11.4, z1: 12.3 } as Box, crate: { x: -13.5, z: 13.2 } },
+    record: { x: -18.4, z: 16.4 },
+  },
+  /**
+   * The butcher's (الجزارة, `meat.unlock`) north of the factory yard, east of the apiary, its window facing the
+   * camera. Old cows leave the pen at its front, walk east along `laneZ` past the apiary, north along `laneX`,
+   * and in at the side door. Meat sells at the window; the money piles up at `cash`.
+   */
+  butcher: {
+    box: { x0: 21.4, x1: 24.8, z0: -8.9, z1: -7.5 } as Box,
+    laneZ: -1.25,
+    laneX: 20.5,
+    door: { x: 21.4, z: -8.2 },
+    cash: { x: 23.9, z: -6.2 },
   },
   /** Loading dock for company trucks (bottom right). The player loads at `load`; trucks park at `bay`. */
   dock: {
@@ -111,33 +136,39 @@ export const LAYOUT = {
     platform: { x0: 7.2, x1: 11.2, z0: 10.9, z1: 11.5 } as Box,
   },
   /** Sell counter body. */
-  counter: { x0: -7.6, x1: 5.4, z0: 3.55, z1: 4.45 } as Box,
+  counter: { x0: -7.6, x1: 7.6, z0: 3.55, z1: 4.45 } as Box,
 
-  /** Decorative trees around the edge (x, z); kept clear of the wholesale trader's road (z 12.2, west of the yard). */
+  /** Decorative trees around the edge (x, z); kept clear of the wholesale trader's road (z 12.6, west of the surplus yard). */
   trees: [
-    [-18.5, -11], [-17.5, -5], [-23.6, 2.5], [-23.2, 9], [-10, 15], [-13, 14.8], [-16.5, 15.0], [-14, -1], [31, -12.5], [31, -3], [31.5, 4],
-    [31.5, 11], [-12.5, 27.5], [10.5, 28.5], [-13, 19.5], [11.3, 24.8], [-2, 30], [6, 31],
+    [-18.5, -11], [-17.5, -5], [-23.6, 2.5], [-23.2, 9], [-15.5, 18.6], [-18.5, 18.8], [-21.2, 19.2], [-14, -1], [31, -12.5], [31, -3], [31.5, 4],
+    [31.5, 11], [-12.5, 27.5], [10.5, 28.5], [-15.2, 21.0], [11.3, 24.8], [-2, 30], [6, 31],
   ] as const,
-  hay: [[19.6, -7.6], [19.6, -6.0], [19.6, -4.4], [20.8, -6.8]] as const,
+  // (east of the butcher's, with room to walk between: a narrow gap by the apiary trapped the walker)
+  hay: [[27.0, -8.4], [27.0, -6.8], [27.0, -5.2], [28.2, -7.6]] as const,
 } as const;
 
-/** Yard walls (0.3 thick) with a gap for the gate in the east wall. */
-function hrWalls(): Box[] {
-  const { box: b, gate: g } = LAYOUT.hrYard, t = 0.3;
+/** Walls (0.3 thick) around a yard, with a gate in the east wall and, optionally, a road gap in the west wall. */
+function yardWalls(b: Box, gate: { z0: number; z1: number }, road?: { z0: number; z1: number }): Box[] {
+  const t = 0.3;
   return [
     { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z0 + t },
     { x0: b.x0, x1: b.x1, z0: b.z1 - t, z1: b.z1 },
-    { x0: b.x0, x1: b.x0 + t, z0: b.z0, z1: b.z1 },
-    { x0: b.x1 - t, x1: b.x1, z0: b.z0, z1: g.z0 },
-    { x0: b.x1 - t, x1: b.x1, z0: g.z1, z1: b.z1 },
+    ...(road
+      ? [{ x0: b.x0, x1: b.x0 + t, z0: b.z0, z1: road.z0 }, { x0: b.x0, x1: b.x0 + t, z0: road.z1, z1: b.z1 }]
+      : [{ x0: b.x0, x1: b.x0 + t, z0: b.z0, z1: b.z1 }]),
+    { x0: b.x1 - t, x1: b.x1, z0: b.z0, z1: gate.z0 },
+    { x0: b.x1 - t, x1: b.x1, z0: gate.z1, z1: b.z1 },
   ];
 }
+function hrWalls(): Box[] { return yardWalls(LAYOUT.hrYard.box, LAYOUT.hrYard.gate); }
 export const HR_WALLS = hrWalls();
+export const SURPLUS_WALLS = yardWalls(LAYOUT.surplusYard.box, LAYOUT.surplusYard.gate, LAYOUT.surplusYard.road);
 
 /** Fence solids per station; mutated in place when a pen grows (see fenceFor). */
 export const FENCES: Record<string, Box> = {
   eggs: { x0: LAYOUT.coop.x0 - 0.1, x1: LAYOUT.coop.x1 + 0.1, z0: LAYOUT.coop.z0 - 0.5, z1: LAYOUT.coop.z1 + 0.1 },
   milk: { x0: LAYOUT.pen.x0 - 0.1, x1: LAYOUT.pen.x1 + 0.1, z0: LAYOUT.pen.z0 - 0.5, z1: LAYOUT.pen.z1 + 0.1 },
+  honey: { x0: LAYOUT.apiary.x0 - 0.1, x1: LAYOUT.apiary.x1 + 0.1, z0: LAYOUT.apiary.z0 - 0.5, z1: LAYOUT.apiary.z1 + 0.1 },
 };
 /** Bumped whenever solids change, so cached routing can rebuild. */
 export const SOLIDS_VERSION = { v: 0 };
@@ -146,8 +177,10 @@ export const SOLIDS_VERSION = { v: 0 };
 export const SOLIDS: Box[] = [
   FENCES.eggs,
   FENCES.milk,
+  FENCES.honey,
   { ...LAYOUT.counter },
   ...hrWalls(),
+  ...SURPLUS_WALLS,
   { ...LAYOUT.hrYard.building },
   ...CAFE.kitchen.map((k) => ({ ...k.box })),
   { ...FIELDS.stall.box },

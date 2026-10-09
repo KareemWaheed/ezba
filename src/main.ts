@@ -83,8 +83,9 @@ setInterval(() => { sim.clock = clockFromDate(new Date()); }, 60_000);
 
 // ---- save / load ----
 const saved = loadSave();
+// (a new game starts in easy mode; the settings switch it)
 if (saved) restore(sim, saved);
-else hud.showHint(true);
+else { hud.showHint(true); sim.setEasy(true); }
 const save = () => writeSave(serialize(sim, Date.now()));
 // a price-drop refund was just credited: save right away so it's never given twice
 if (sim.refunds.length) save();
@@ -165,6 +166,7 @@ const title = new TitleScreen(uiRoot, save);
 if (FEATURES.supermarket && !chosenMode()) title.show();
 const menus = new MetaMenus(uiRoot, sim, modal);
 menus.onSwitchGame = () => title.show(true);
+menus.onEasy = (on) => { sim.setEasy(on); save(); toast.show(on ? '😌 الوضع السهل: الترقيات أرخص والإيفنتات أكتر' : '💪 الوضع العادي: الترقيات بسعرها والإيفنتات أقل'); };
 const transfer = new TransferPanel(modal, () => serialize(sim, Date.now()), () => menus.showSettings());
 menus.onTransfer = (kind) => { if (kind === 'send') void transfer.showSend(); else transfer.showReceive(); };
 const orderPanel = new OrderPanel(sim, modal);
@@ -327,6 +329,12 @@ function onEvent(e: Parameters<Parameters<typeof sim.events.drain>[0]>[0]): void
       else if (e.n === 2) { sfx.kaching(); toast.show(`🤝 بعت ${ltr(e.id.toLocaleString('en-US'))} ${ic} للتاجر ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
       break;
     }
+    case 'butcher':
+      // (the first cow of a session gets the explanation; later ones go quietly)
+      if (e.n === 1) { if (sim.butcher.cows === 0) toast.show('🐄 بقرة كبرت وراحت للجزارة، وعجل صغير مكانها في الحظيرة 🐮'); }
+      else if (e.n === 2) { sfx.sparkle(); toast.show(`🥩 اللحمة جاهزة في شباك الجزارة: ${ltr(String(e.value))} كيس`); }
+      else { const s = toScreen(e.x, 2.2, e.z); hud.float(`+${fmtMoney(e.value)}`, s.x, s.y); }
+      break;
     case 'incubator':
       if (e.n === 2) { sfx.kaching(); const s = toScreen(e.x, 1.5, e.z); hud.float(`+${fmtMoney(e.value)}`, s.x, s.y); toast.show(`🐣 بعت ${ltr(String(e.id))} كتكوت ${ltr(`+${fmtMoney(e.value)}`)} 💰`); }
       else if (e.n === 3) { sfx.fanfare(); toast.show(`✨ فرخة دهبي طلعت من الحضّانة! البيض بقى أغلى ${ltr(`+${Math.round(e.id * ECONOMY.surplus.incubator.goldenBonus * 100)}%`)} 🐔`); }
@@ -456,7 +464,9 @@ function frame(now: number): void {
   dust.update(real);
   rig.update(p.x, p.z, real);
   locks.hrYard.visible = sim.upgrades.level('hr.office') === 0;
+  locks.surplusYard.visible = !sim.surplus.open;
   locks.pen.visible = !sim.stations.some((s) => s.def.id === 'milk' && s.open);
+  locks.apiary.visible = !sim.stations.some((s) => s.def.id === 'honey' && s.open);
   locks.cafe.visible = !sim.cafe.open;
   hud.setMoney(sim.money);
   pressureHud.update(sim);

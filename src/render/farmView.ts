@@ -23,6 +23,7 @@ import { DockView } from './dockView';
 import { FieldView } from './fieldView';
 import { FactoryView } from './factoryView';
 import { RiverView } from './riverView';
+import { ButcherView } from './butcherView';
 import { SurplusView } from './surplusView';
 import { MarketView } from './marketView';
 import { UPGRADES } from '../config/upgrades';
@@ -145,6 +146,7 @@ export class FarmView {
   readonly river: RiverView;
   readonly market: MarketView;
   readonly surplus: SurplusView;
+  readonly butcher: ButcherView;
   /** True on frames where a coin flew into an upgrade tile (for the coin sound). */
   coinFlew = false;
   private payT = 0;
@@ -178,6 +180,7 @@ export class FarmView {
     this.river = new RiverView(scene);
     this.market = new MarketView(scene);
     this.surplus = new SurplusView(scene);
+    this.butcher = new ButcherView(scene);
     this.signs = new SignsView(scene, sim);
     this.dock = new DockView(scene);
     this.arrow = new THREE.Mesh(merge([
@@ -209,6 +212,7 @@ export class FarmView {
     this.river.sync(sim, dt);
     this.market.sync(sim, dt);
     this.surplus.sync(sim, dt);
+    this.butcher.sync(sim, dt);
 
     // coins fly from the player into the tile being paid
     this.coinFlew = false;
@@ -257,6 +261,7 @@ export class FarmView {
     this.cafe.invalidate();
     this.market.invalidate();
     this.surplus.invalidate();
+    this.butcher.invalidate();
     this.tiles.invalidate();
     for (const s of this.stations) s.invalidateLabel();
   }

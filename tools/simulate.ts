@@ -5,24 +5,37 @@
  *   npm run simulate                 timeline + targets, writes sim-out/pacing.html
  *   npm run simulate -- --days 5     simulate more days
  *   npm run simulate -- --check      exit 1 if a pacing target is missed
+ *   npm run simulate -- --easy       easy mode (its own targets: a casual player buys everything in 2 days)
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { UPGRADES } from '../src/config/upgrades';
 import { SimWorld } from '../src/sim/world';
 import { Bot, type BotProfile } from '../src/sim/bot';
 import { simulateAway } from '../src/sim/offline';
-import { upgradeCost } from '../src/sim/upgrades';
-import { PLAY, checkTargets, type Purchase, type RunResult, type SessionStat } from './pacing';
+import { PLAY, checkTargets, checkEasyTargets, type Purchase, type RunResult, type SessionStat } from './pacing';
 
 const args = process.argv.slice(2);
 const argVal = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
-const days = Number(argVal('--days') ?? PLAY.days);
+const days = Number(argVal('--days') ?? (args.includes('--easy') ? PLAY.easyDays : PLAY.days));
 const check = args.includes('--check');
+const easy = args.includes('--easy');
 const verbose = args.includes('--verbose');
 const DT = 1 / 30;
 
+/** Upgrade levels this game still offers (every track not hidden on its path, up to its max). */
+function levelsLeft(w: SimWorld): number {
+  let n = 0;
+  for (const d of UPGRADES) if (!w.upgrades.hidden(d.id)) n += Math.max(0, w.upgrades.maxOf(d.id) - w.upgrades.level(d.id));
+  return n;
+}
+function leftIds(w: SimWorld): string[] {
+  return UPGRADES.filter((d) => !w.upgrades.hidden(d.id) && !w.upgrades.maxed(d.id)).map((d) => `${d.id} ${w.upgrades.level(d.id)}/${w.upgrades.maxOf(d.id)}`);
+}
+
 function run(profile: BotProfile): RunResult {
   const w = new SimWorld(PLAY.seed);
+  w.setEasy(easy);
+  let doneMin: number | undefined, doneDay: number | undefined, events = 0;
   const bot = new Bot(w, profile);
   const purchases: Purchase[] = [];
   const sessions: SessionStat[] = [];
@@ -37,9 +50,11 @@ function run(profile: BotProfile): RunResult {
     else if (e.type === 'goldenCaught') money.golden += e.value;
     else if (e.type === 'truckDone') money.trucks += e.value;
     else if (e.type === 'cropSold' || e.type === 'goldenStalk') money.crops += e.value;
+    if (e.type === 'scenarioStart') events++;
     if (e.type !== 'buy') return;
     const id = UPGRADES[e.id].id;
-    purchases.push({ id, level: e.n, cost: upgradeCost(id, e.n - 1), playMin: playSec / 60, day });
+    purchases.push({ id, level: e.n, cost: w.upgrades.costAt(id, e.n - 1), playMin: playSec / 60, day });
+    if (doneMin === undefined && levelsLeft(w) === 0) { doneMin = playSec / 60; doneDay = day; }
   };
   for (day = 1; day <= days; day++) {
     for (let s = 0; s < PLAY.sessionsPerDay; s++) {
@@ -67,7 +82,7 @@ function run(profile: BotProfile): RunResult {
       sessions.push({ day, session: s + 1, endMin: playSec / 60, activePerMin, autoPerMin: away.raw / (away.seconds / 60), offline: away.earned, detail });
     }
   }
-  return { profile, purchases, sessions, curve, playMin: playSec / 60, offlineEarned };
+  return { profile, purchases, sessions, curve, playMin: playSec / 60, offlineEarned, events, left: levelsLeft(w), leftIds: leftIds(w), doneMin, doneDay };
 }
 
 const fmtMin = (m: number) => `${Math.floor(m)}:${String(Math.floor((m % 1) * 60)).padStart(2, '0')}`;
@@ -119,7 +134,8 @@ printTimeline(efficient);
 printTimeline(casual);
 const result = casual;
 
-const results = checkTargets(efficient, casual);
+const results = easy ? checkEasyTargets(efficient, casual) : checkTargets(efficient, casual);
+for (const r of [efficient, casual]) console.log(`${r.profile}: ${r.events} events in ${fmtMin(r.playMin)} play; ${r.left} upgrade levels left${r.doneMin !== undefined ? `, all bought at ${fmtMin(r.doneMin)} (day ${r.doneDay})` : ''}${r.left ? `: ${r.leftIds.join(', ')}` : ''}`);
 console.log('\n=== Targets ===');
 for (const r of results) console.log(`${r.ok ? 'PASS' : r.pending ? 'TODO' : 'FAIL'}  ${r.name}  (${r.detail})${!r.ok && r.pending ? ` [pending: ${r.pending}]` : ''}`);
 

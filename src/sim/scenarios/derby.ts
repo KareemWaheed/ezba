@@ -5,7 +5,7 @@ import type { SimWorld } from '../world';
 import type { Mechanic } from './mechanic';
 
 /** |meter| above this for CLASH_AFTER seconds = the fans start chanting at each other. */
-const HOT = 0.75;
+const HOT = 0.65;
 const CLASH_AFTER = 4;
 /** How fast the meter follows the crowd. */
 const FOLLOW = 0.35;

@@ -40,11 +40,11 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'player.capacity', icon: '🎒', label: 'شيل أكتر', msg: 'بقيت تشيل أكتر 💪',
-    pos: { x: -4.3, z: 6.3 }, requires: [{ id: 'eggs.animals', level: 1 }],
+    pos: { x: -4.4, z: 11.8 }, requires: [{ id: 'eggs.animals', level: 1 }],
   },
   {
     id: 'player.speed', icon: '👟', label: 'جري أسرع', msg: 'بقيت أسرع ⚡',
-    pos: { x: 8.0, z: 6.6 }, requires: [{ id: 'player.capacity', level: 1 }],
+    pos: { x: -6.6, z: 9.8 }, requires: [{ id: 'player.capacity', level: 1 }],
   },
   {
     id: 'eggs.worker', icon: '👷', label: 'وظّف عامل بيض', msg: 'العامل بيلم البيض بدالك 👷',
@@ -56,7 +56,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   {
     id: 'shop.lanes', icon: '🛒', label: 'خط دفع جديد', msg: 'فتحت خط دفع جديد، زباين أكتر 🛒',
-    pos: { x: 7.6, z: 2.3 }, requires: [{ id: 'cashier', level: 1 }], milestone: true,
+    pos: { x: 8.4, z: 6.6 }, requires: [{ id: 'cashier', level: 1 }], milestone: true,
   },
   {
     id: 'eggs.machine', icon: '⚙️', label: 'سير للبيض', msg: 'سير البيض شغال لوحده ⚙️',
@@ -111,6 +111,24 @@ export const UPGRADES: readonly UpgradeDef[] = [
   {
     id: 'cafe.helper', icon: '🧑‍🍳', label: 'وظّف مساعد مطبخ', msg: 'مساعد مطبخ جديد بيجيب البيض واللبن 🧑‍🍳',
     pos: { x: 19.4, z: 3.3 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+  },
+  // bees: the apiary east of the cow pen (after the café, whose opening reaches it)
+  {
+    id: 'honey.unlock', icon: '🐝', label: 'منحل العسل', msg: 'فتحت المنحل! النحل بيطلع عسل 🍯 بيتباع على الكاونتر',
+    pos: { x: 13.0, z: -0.9 }, requires: [{ id: 'cafe.unlock', level: 1 }], milestone: true,
+  },
+  {
+    id: 'honey.animals', icon: '🐝', label: 'خلية جديدة', msg: 'خلية نحل جديدة 🐝',
+    pos: { x: 15.0, z: -0.9 }, requires: [{ id: 'honey.unlock', level: 1 }],
+  },
+  {
+    id: 'honey.worker', icon: '🍯', label: 'وظّف عامل عسل', msg: 'عامل العسل بيودّي العسل للكاونتر 🍯',
+    pos: { x: 11.0, z: -0.9 }, requires: [{ id: 'honey.unlock', level: 1 }], milestone: true,
+  },
+  // the butcher's north of the factory yard (reachable once the factory is open): old cows' meat
+  {
+    id: 'meat.unlock', icon: '🥩', label: 'الجزارة', msg: 'فتحت الجزارة! البقرة الكبيرة بتروح للجزار وعجل بياخد مكانها، واللحمة بتتباع في الشباك 🥩',
+    pos: { x: 22.6, z: -4.4 }, requires: [{ id: 'factory.unlock', level: 1 }, { id: 'milk.unlock', level: 1 }], milestone: true,
   },
   // Stage 4: crop fields north of the pens
   {
@@ -261,14 +279,18 @@ export const UPGRADES: readonly UpgradeDef[] = [
     pos: { x: 23.4, z: 30.6 }, requires: [{ id: 'market.shelves', level: 1 }],
   },
   // Loading dock: company contracts with trucks
-  // what a big surplus is good for (bottom left of the yard)
+  // what a big surplus is good for: its own yard west of the main one (trader, incubator, records)
+  {
+    id: 'surplus.yard', icon: '🏡', label: 'حوش العزبة', msg: 'فتحت الحوش! تاجر الجملة والحضّانة والأرقام القياسية هناك 🏡',
+    pos: { x: -7.4, z: 13.5 }, requires: [{ id: 'eggs.worker', level: 1 }], milestone: true,
+  },
   {
     id: 'eggs.incubator', icon: '🐣', label: 'حضّانة', msg: 'الحضّانة شغالة! البيض الزيادة بيطلع كتاكيت 🐣',
-    pos: { x: -5.3, z: 8.4 }, requires: [{ id: 'eggs.worker', level: 1 }],
+    pos: { x: -14.6, z: 15.6 }, requires: [{ id: 'surplus.yard', level: 1 }],
   },
   {
     id: 'trader.deal', icon: '🤝', label: 'اتفاق مع تاجر الجملة', msg: 'تاجر الجملة هيحمّل لوحده من النهارده 🤝',
-    pos: { x: -3.2, z: 10.2 }, requires: [{ id: 'eggs.worker', level: 1 }],
+    pos: { x: -12.3, z: 15.6 }, requires: [{ id: 'surplus.yard', level: 1 }],
   },
   {
     id: 'dock.unlock', icon: '🚚', label: 'رصيف التحميل', msg: 'الشركات هتبعت عربيات تاخد منك بالجملة 🚚',
@@ -322,6 +344,10 @@ export const UPGRADES: readonly UpgradeDef[] = [
   {
     id: 'hr.service', icon: '🤝', label: 'خدمة العملاء', msg: 'الزباين بقوا أصبر 🤝',
     pos: { x: -19.2, z: 6.8 }, requires: [{ id: 'hr.office', level: 1 }],
+  },
+  {
+    id: 'hr.feeder', icon: '🌾', label: 'وظّف عامل علف', msg: 'عامل العلف بيملا أكل الحيوانات لوحده 🌾',
+    pos: { x: -19.2, z: 4.8 }, requires: [{ id: 'hr.office', level: 1 }, { id: 'milk.unlock', level: 1 }],
   },
   {
     id: 'rush.warning', icon: '📣', label: 'إنذار بدري', msg: 'هتعرف بالزحمة بدري ⏰',

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { ProducerKind } from '../config/economy';
+import { ECONOMY, type ProducerKind } from '../config/economy';
 import type { Station } from '../sim/station';
 import { MAT } from './geo';
 import { ANIMAL_GEO, ANIMAL_SHADOW } from './models';
@@ -38,8 +38,10 @@ export class AnimalHerdView {
     this.shown = n;
     for (let i = 0; i < n; i++) {
       const a = list[i];
-      let sc = 1;
-      if (this.popT[i] < 1) { this.popT[i] = Math.min(1, this.popT[i] + dt * 5); sc = Math.max(0.01, easeOutBack(this.popT[i])); }
+      // (a calf from the butcher's grows to full size)
+      const calf = ECONOMY.butcher.calfAge, grow = a.age < calf ? 0.5 + 0.5 * (a.age / calf) : 1;
+      let sc = grow;
+      if (this.popT[i] < 1) { this.popT[i] = Math.min(1, this.popT[i] + dt * 5); sc = grow * Math.max(0.01, easeOutBack(this.popT[i])); }
       // peck/graze while standing, hop when producing
       const peck = a.pause > 0 ? Math.max(0, Math.sin(time * 6 + i * 1.7 + this.seedPhase)) * 0.25 : 0;
       const hop = Math.sin(a.hop * Math.PI) * 0.35;
