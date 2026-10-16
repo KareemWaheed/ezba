@@ -23,7 +23,8 @@ const ok = (cond: boolean, msg: string): void => {
 /** A late farm with the east's tracks at the given levels. */
 function farm(east: Partial<Record<UpgradeId, number>>): SimWorld {
   const w = new SimWorld(11);
-  for (const id of Object.keys(ECONOMY.upgrades) as UpgradeId[]) if (id !== 'eggs.unlock' && !id.startsWith('orchard.') && !id.startsWith('pigeons.')) w.upgrades.levels[id] = w.upgrades.maxOf(id);
+  // (twice: some maxes grow with other tracks, e.g. chickens with the coop)
+  for (let k = 0; k < 2; k++) for (const id of Object.keys(ECONOMY.upgrades) as UpgradeId[]) if (id !== 'eggs.unlock' && !id.startsWith('orchard.') && !id.startsWith('pigeons.')) w.upgrades.levels[id] = w.upgrades.maxOf(id);
   for (const [k, v] of Object.entries(east)) w.upgrades.levels[k as UpgradeId] = v!;
   w.upgrades.bought = Object.values(w.upgrades.levels).reduce((a, n) => a + n, 0);
   // (no accountant, so the windows' cash stays where it is)
@@ -40,11 +41,13 @@ const O = EAST.venues[0], P = EAST.venues[1];
 // ---- only for a finished farm ----
 {
   const w = farm({});
+  w.upgrades.levels['hr.accountant'] = w.upgrades.maxOf('hr.accountant');
+  w.upgrades.apply();
   const def = UPGRADE_BY_ID.get('orchard.unlock')!;
   ok(w.legacyMissing.length === 0 && w.upgrades.available(def), 'a finished farm is offered the orchard');
-  w.upgrades.levels['cafe.waiter'] = 0;
+  w.upgrades.levels['river.size'] -= 1;
   w.upgrades.apply();
-  ok(w.legacyMissing.length > 0 && !w.upgrades.available(def), "while a milestone is missing it isn't");
+  ok(w.legacyMissing.length === 0 && !w.upgrades.available(def), "while a farm upgrade is still left it isn't (even with the farm sellable)");
 }
 
 // ---- the orchard by hand ----

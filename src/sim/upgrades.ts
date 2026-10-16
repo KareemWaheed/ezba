@@ -113,12 +113,17 @@ export class UpgradeSystem {
     }
   }
 
+  /** Every level of every farm track bought (the east's `extra` tracks aside): the game's farm is finished. */
+  get farmDone(): boolean {
+    return UPGRADES.every((d) => d.extra || this.hidden(d.id) || this.beltReplaces(d.id) || this.maxed(d.id));
+  }
+
   available(def: UpgradeDef): boolean {
     if (this.hidden(def.id) || this.maxed(def.id) || this.beltReplaces(def.id)) return false;
     if (def.capBy && this.level(def.id) >= 1 + this.level(def.capBy)) return false;
     if (def.requiresMaxed && !this.maxed(def.requiresMaxed)) return false;
     for (const r of this.requires(def)) if (this.level(r.id) < r.level) return false;
-    if (def.afterFarm && this.level(def.id) === 0 && this.w.legacyMissing.length > 0) return false;
+    if (def.afterFarm && this.level(def.id) === 0 && !this.farmDone) return false;
     return true;
   }
 

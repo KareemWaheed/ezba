@@ -448,7 +448,7 @@ This file records the decisions made on top of it.
     its door with squabs; the kitchen's brick oven stuffs them; tower hands carry, `pigeons.oven` / `pigeons.waiter`
     speed the oven and the window.
   - 12 tracks, 36 levels, all `extra`: the orchard is only offered once the farm is finished (`afterFarm`: every
-    milestone bought), its milestones are goals on the HUD card but never needed to sell the farm (a finished farm stays
+    level of every farm track bought, `UpgradeSystem.farmDone`), its milestones are goals on the HUD card but never needed to sell the farm (a finished farm stays
     sellable), and the simulator's "bought everything" targets count the farm without them (it prints the east apart;
     the efficient bot finishes the east too). The factory yard's east fence turns solid with a gate once the east opens; the
     corner trees at x 31 moved east. Items: `ECONOMY.venue` (a new item kind, never on the shop counter or the café).

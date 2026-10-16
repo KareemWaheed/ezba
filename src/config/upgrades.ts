@@ -18,7 +18,7 @@ export interface UpgradeDef {
   milestone?: boolean;
   /** The end game (the east): its milestones are goals, but not needed to sell the farm for a bigger one. */
   extra?: boolean;
-  /** Only offered once the farm is finished (every milestone bought: it could be sold for a bigger one). */
+  /** Only offered once the farm is finished (every level of every farm track bought: UpgradeSystem.farmDone). */
   afterFarm?: boolean;
   /** Level can't exceed 1 + this track's level (e.g. one cashier per open lane). */
   capBy?: UpgradeId;
