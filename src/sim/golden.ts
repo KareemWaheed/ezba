@@ -21,14 +21,14 @@ export class GoldenSystem {
 
   private gap(): number {
     const g = ECONOMY.golden;
-    return this.w.rng.range(g.gapMin, g.gapMax);
+    return this.w.rng.range(g.gapMin, g.gapMax) / (1 + this.w.perk('golden'));
   }
 
   /** Cash for catching a golden animal of this station right now. */
   reward(station: number): number {
     const st = this.w.stations[station], p = ECONOMY.producers[st.def.producer ?? 'chicken'];
     const perSec = (st.animals.length / p.interval) * ECONOMY.products[st.def.product].price * this.w.priceMult;
-    return Math.round(Math.max(50, perSec * ECONOMY.golden.rewardSeconds));
+    return Math.round(Math.max(50, perSec * ECONOMY.golden.rewardSeconds) * (1 + this.w.perk('golden')));
   }
 
   /** Spawn one now (debug panel). */

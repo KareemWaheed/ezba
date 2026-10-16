@@ -422,3 +422,36 @@ This file records the decisions made on top of it.
   a worker or a belt will carry it there (otherwise nobody did and the coffee ran dry). The inspector no longer checks
   the pile behind the belt he just jammed, picks an empty café table, and doesn't fail a checkpoint that went bad
   while he was looking at it. `npm run beltcheck`.
+- Perks of a bigger ezba (playtest: "once someone finishes the game they need something new to come back for"):
+  every sale of the farm gives `PERKS.pointsPerLegacy` (2) points, one per perk level (config/perks.ts: faster
+  walk, bigger carry, faster staff, cheaper upgrades, bigger event rewards, more golden animals, more money for time
+  away, more start money). Points can be taken back and spent again any time, so each new farm can be played another
+  way; old saves with a legacy level get their points at once. Saved as `perks` (only the ones taken; a save never
+  loads more levels than its points cover). The save keeps only non-zero upgrade levels/payments now (the QR went
+  from version 30 to 27). `npm run transfercheck` covers perks.
+- The decorations shop (محل الزينة, the 🎨 side button, config/shop.ts): decorations for the farm (flower boxes, flags,
+  a lantern garland over the counter, street lamps, palms, a ful cart, a swing, a fountain, a pharaoh statue) around
+  the event square and the yard, clothes (galabeya, suit, football shirts, gold) and hats (tarboosh, turban, crown...)
+  for the farmer. Bought with money, kept forever (also when the farm is sold). Each decoration raises every sale
+  price by `SHOP.decorBonus` (2%); clothes and hats are only for looks. The cart, swing, fountain and statue are
+  solid (sim/shop.ts adds them). Saved as `shop` only once something was bought (see the east below for its format).
+- The east (playtest: "new places and lots of new upgrades for players who finished"): past the factory yard, the
+  walkable area grows to `EAST.unlockedX1` (config/venues.ts, sim/venue.ts, render/venueView.ts). Two venues share one
+  system: sources the player (or the venue's hands) picks from, a kitchen that cooks one recipe at a time, and a window
+  where the made goods sell one every `sellEvery` s into its own cash pile (the accountant collects it; it counts in
+  time away). Nothing goes through the shop counter.
+  - بستان المانجة (`orchard.unlock`, 400k): 3 mango trees (+1 a level of `orchard.trees`, up to 9) grow a mango every
+    6 s up to 6 each; the press makes mango juice (2 mangoes); `orchard.guava` adds 3 guava trees (guava juice, dearer);
+    `orchard.water` (the ساقية, drawn with its channel) grows fruit faster; `orchard.press` / `orchard.stand` speed the
+    press and the window; pickers (`orchard.picker`) go to the tree whose fruit the press is shortest of.
+  - برج الحمام (`pigeons.unlock`, 600k, after the orchard): the tower's nests (4, +2 a level of `pigeons.nests`) fill
+    its door with squabs; the kitchen's brick oven stuffs them; tower hands carry, `pigeons.oven` / `pigeons.waiter`
+    speed the oven and the window.
+  - 12 tracks, 36 levels, all `extra`: the orchard is only offered once the farm is finished (`afterFarm`: `UpgradeSystem.farmDone`,
+    every farm track on offer maxed; tracks hidden on the path or replaced by a belt don't count), its milestones are goals on the HUD card but never needed to sell the farm (a finished farm stays
+    sellable), and the simulator's "bought everything" targets count the farm without them (it prints the east apart;
+    the efficient bot finishes the east too). The factory yard's east fence turns solid with a gate once the east opens; the
+    corner trees at x 31 moved east. Items: `ECONOMY.venue` (a new item kind, never on the shop counter or the café).
+  - The save keeps the shop as index strings (`shop.d/o/h`, base 36 into SHOP's lists: append new things, never
+    reorder) and the east only for open venues; the QR of a farm with everything (east, shop, perks) is version 30.
+  `npm run eastcheck`; layoutcheck covers the east's work spots and solids and the solid decorations.

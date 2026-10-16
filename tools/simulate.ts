@@ -22,15 +22,18 @@ const easy = args.includes('--easy');
 const verbose = args.includes('--verbose');
 const DT = 1 / 30;
 
-/** Upgrade levels this game still offers (every track not hidden on its path, up to its max). */
-function levelsLeft(w: SimWorld): number {
+/**
+ * Upgrade levels of the farm this game still offers (every track not hidden on its path, up to its max). The east's
+ * tracks (`extra`, the end game past a finished farm) are counted apart: `east` = true counts only those.
+ */
+function levelsLeft(w: SimWorld, east = false): number {
   let n = 0;
   // (a product's workers once its belt runs aren't on offer any more)
-  for (const d of UPGRADES) if (!w.upgrades.hidden(d.id) && !w.upgrades.beltReplaces(d.id)) n += Math.max(0, w.upgrades.maxOf(d.id) - w.upgrades.level(d.id));
+  for (const d of UPGRADES) if (!!d.extra === east && !w.upgrades.hidden(d.id) && !w.upgrades.beltReplaces(d.id)) n += Math.max(0, w.upgrades.maxOf(d.id) - w.upgrades.level(d.id));
   return n;
 }
 function leftIds(w: SimWorld): string[] {
-  return UPGRADES.filter((d) => !w.upgrades.hidden(d.id) && !w.upgrades.beltReplaces(d.id) && !w.upgrades.maxed(d.id)).map((d) => `${d.id} ${w.upgrades.level(d.id)}/${w.upgrades.maxOf(d.id)}`);
+  return UPGRADES.filter((d) => !d.extra && !w.upgrades.hidden(d.id) && !w.upgrades.beltReplaces(d.id) && !w.upgrades.maxed(d.id)).map((d) => `${d.id} ${w.upgrades.level(d.id)}/${w.upgrades.maxOf(d.id)}`);
 }
 
 function run(profile: BotProfile): RunResult {
@@ -83,7 +86,7 @@ function run(profile: BotProfile): RunResult {
       sessions.push({ day, session: s + 1, endMin: playSec / 60, activePerMin, autoPerMin: away.raw / (away.seconds / 60), offline: away.earned, detail });
     }
   }
-  return { profile, purchases, sessions, curve, playMin: playSec / 60, offlineEarned, events, left: levelsLeft(w), leftIds: leftIds(w), doneMin, doneDay };
+  return { profile, purchases, sessions, curve, playMin: playSec / 60, offlineEarned, events, left: levelsLeft(w), leftIds: leftIds(w), eastLeft: levelsLeft(w, true), doneMin, doneDay };
 }
 
 const fmtMin = (m: number) => `${Math.floor(m)}:${String(Math.floor((m % 1) * 60)).padStart(2, '0')}`;
@@ -136,7 +139,7 @@ printTimeline(casual);
 const result = casual;
 
 const results = easy ? checkEasyTargets(efficient, casual) : checkTargets(efficient, casual);
-for (const r of [efficient, casual]) console.log(`${r.profile}: ${r.events} events in ${fmtMin(r.playMin)} play; ${r.left} upgrade levels left${r.doneMin !== undefined ? `, all bought at ${fmtMin(r.doneMin)} (day ${r.doneDay})` : ''}${r.left ? `: ${r.leftIds.join(', ')}` : ''}`);
+for (const r of [efficient, casual]) console.log(`${r.profile}: ${r.events} events in ${fmtMin(r.playMin)} play; ${r.left} upgrade levels left${r.doneMin !== undefined ? `, all bought at ${fmtMin(r.doneMin)} (day ${r.doneDay})` : ''}${r.left ? `: ${r.leftIds.join(', ')}` : ''}; the east: ${r.eastLeft} levels left`);
 console.log('\n=== Targets ===');
 for (const r of results) console.log(`${r.ok ? 'PASS' : r.pending ? 'TODO' : 'FAIL'}  ${r.name}  (${r.detail})${!r.ok && r.pending ? ` [pending: ${r.pending}]` : ''}`);
 

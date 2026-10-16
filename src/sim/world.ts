@@ -23,10 +23,14 @@ import { FactorySystem } from './factory';
 import { RiverSystem } from './river';
 import { ButcherSystem } from './butcher';
 import { MarketSystem } from './market';
+import { ShopSystem } from './shop';
+import { VenueSystem } from './venue';
+import { SHOP } from '../config/shop';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
 import { LEGACY } from '../config/legacy';
+import { PERKS, PERK_BY_ID, type PerkId } from '../config/perks';
 import { PATHS, type GameMode, type PathDef } from '../config/paths';
 import { MARKET } from '../config/market';
 import { UPGRADES } from '../config/upgrades';
@@ -60,8 +64,12 @@ export class SimWorld {
   /** The butcher's: old cows' meat, sold at its window. */
   readonly butcher: ButcherSystem;
   readonly market: MarketSystem;
+  /** The east: the mango orchard and the pigeon tower (config/venues.ts). */
+  readonly venues: VenueSystem;
   readonly album: AlbumSystem;
   readonly daily: DailySystem;
+  /** The decorations shop: clothes, hats and decorations (kept when the farm is sold). */
+  readonly shop: ShopSystem;
   /** Real-world clock for seasonal events (the UI updates it; the simulator keeps the default). */
   clock: Clock = { weekday: 1, hour: 12, ramadan: false };
   readonly cash = { value: 0, bills: 0 };
@@ -89,6 +97,8 @@ export class SimWorld {
   easy = false;
   /** Prestige level: how many times the farm was sold for a bigger one (config/legacy.ts). */
   legacy = 0;
+  /** Perk levels bought with legacy points (config/perks.ts); kept when the farm is sold. */
+  readonly perks = {} as Record<PerkId, number>;
   /** Trash button held: the top carried item is thrown away every trashInterval. Set by the UI. */
   trashing = false;
 
@@ -121,8 +131,10 @@ export class SimWorld {
     this.river = new RiverSystem(this);
     this.butcher = new ButcherSystem(this);
     this.market = new MarketSystem(this);
+    this.venues = new VenueSystem(this);
     this.album = new AlbumSystem(this);
     this.daily = new DailySystem(this);
+    this.shop = new ShopSystem(this);
     this.upgrades = new UpgradeSystem(this);
     for (const [id, n] of Object.entries(this.path.startLevels)) this.upgrades.levels[id as keyof typeof this.upgrades.levels] = n;
     this.money = this.path.startMoney;
@@ -169,12 +181,39 @@ export class SimWorld {
 
   /** Sale price multiplier from farm growth (see ECONOMY.market). */
   get priceMult(): number {
-    return (1 + this.upgrades.bought * ECONOMY.market.growthPerUpgrade) * (1 + this.legacy * LEGACY.priceStep);
+    return (1 + this.upgrades.bought * ECONOMY.market.growthPerUpgrade) * (1 + this.legacy * LEGACY.priceStep) * (1 + this.shop.decorCount * SHOP.decorBonus);
+  }
+
+  /** A perk's effect: its level x its step (0 when not taken). */
+  perk(id: PerkId): number { return (this.perks[id] ?? 0) * PERK_BY_ID.get(id)!.step; }
+
+  /** Perk points earned (every sale of the farm) and not spent yet. */
+  get perkPoints(): number {
+    let spent = 0;
+    for (const p of PERKS.list) spent += this.perks[p.id] ?? 0;
+    return this.legacy * PERKS.pointsPerLegacy - spent;
+  }
+
+  /** Spend a point on a perk (false when there's no point or it's maxed). */
+  buyPerk(id: PerkId): boolean {
+    const d = PERK_BY_ID.get(id);
+    if (!d || this.perkPoints <= 0 || (this.perks[id] ?? 0) >= d.max) return false;
+    this.perks[id] = (this.perks[id] ?? 0) + 1;
+    this.upgrades.apply();
+    this.upgrades.refresh();
+    return true;
+  }
+
+  /** Take every point back to spend again. */
+  resetPerks(): void {
+    for (const p of PERKS.list) delete this.perks[p.id];
+    this.upgrades.apply();
+    this.upgrades.refresh();
   }
 
   /** Milestone upgrades not bought yet (all bought = the farm can be sold for a bigger one). */
   get legacyMissing(): typeof UPGRADES[number][] {
-    return UPGRADES.filter((d) => d.milestone && !this.upgrades.hidden(d.id) && !this.upgrades.beltReplaces(d.id) && this.upgrades.level(d.id) === 0);
+    return UPGRADES.filter((d) => d.milestone && !d.extra && !this.upgrades.hidden(d.id) && !this.upgrades.beltReplaces(d.id) && this.upgrades.level(d.id) === 0);
   }
 
   /** Open checkout lanes (1 at the start). */
@@ -219,6 +258,7 @@ export class SimWorld {
     this.surplus.update(dt);
     this.river.update(dt);
     this.market.update(dt);
+    this.venues.update(dt);
     if (!this.away) this.upgrades.update(dt);
   }
 
@@ -306,6 +346,7 @@ export class SimWorld {
     this.river.interact(dt);
     this.butcher.interact();
     this.market.interact(dt);
+    this.venues.interact(dt);
   }
 
   /**

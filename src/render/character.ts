@@ -43,6 +43,7 @@ export class CharacterView {
   readonly body = new THREE.Group();
   private legL: THREE.Mesh; private legR: THREE.Mesh;
   private armL: THREE.Mesh; private armR: THREE.Mesh;
+  private torso: THREE.Mesh;
   private phase = 0;
   private spd = 0;
   private hold = 0;
@@ -55,7 +56,8 @@ export class CharacterView {
     const g = charGeo(outfit);
     this.shadow = blob(0.45);
     this.root.add(this.body, this.shadow);
-    this.body.add(new THREE.Mesh(g.torso, MAT));
+    this.torso = new THREE.Mesh(g.torso, MAT);
+    this.body.add(this.torso);
     const limb = (geo: THREE.BufferGeometry, x: number, y: number) => {
       const m = new THREE.Mesh(geo, MAT);
       m.position.set(x, y, 0);
@@ -64,6 +66,14 @@ export class CharacterView {
     };
     this.legL = limb(g.leg, -0.14, 0.6); this.legR = limb(g.leg, 0.14, 0.6);
     this.armL = limb(g.arm, -0.37, 1.13); this.armR = limb(g.arm, 0.37, 1.13);
+  }
+
+  /** Change clothes (geometry is cached per outfit). */
+  setOutfit(o: Outfit): void {
+    const g = charGeo(o);
+    this.torso.geometry = g.torso;
+    this.legL.geometry = this.legR.geometry = g.leg;
+    this.armL.geometry = this.armR.geometry = g.arm;
   }
 
   /** Raise the right arm and wave (call after update()). */

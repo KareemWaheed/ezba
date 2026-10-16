@@ -7,6 +7,7 @@ import { FACTORY } from '../config/factories';
 import { RIVER } from '../config/river';
 import { MARKET, SHELVES } from '../config/market';
 import { FEATURES } from '../config/features';
+import { EAST } from '../config/venues';
 import { dist } from './math';
 import type { SimWorld } from './world';
 
@@ -54,7 +55,7 @@ export class UpgradeSystem {
   /** Price of a level of a track in this game. */
   costAt(id: UpgradeId, level: number): number { return Math.max(1, Math.round(upgradeCost(id, level) * this.mult(id))); }
   /** This game's price factor for a track: its path's, and easy mode's. */
-  mult(id: UpgradeId): number { return (this.w.path.costMult[id] ?? 1) * (this.w.easy ? ECONOMY.easy.costMult : 1); }
+  mult(id: UpgradeId): number { return (this.w.path.costMult[id] ?? 1) * (this.w.easy ? ECONOMY.easy.costMult : 1) * (1 - this.w.perk('discount')); }
 
   /** Requirements on this game's path (the supermarket path rewires some). */
   requires(def: UpgradeDef): readonly { id: UpgradeId; level: number }[] { return this.w.path.requires[def.id] ?? def.requires; }
@@ -112,11 +113,17 @@ export class UpgradeSystem {
     }
   }
 
+  /** Every level of every farm track bought (the east's `extra` tracks aside): the game's farm is finished. */
+  get farmDone(): boolean {
+    return UPGRADES.every((d) => d.extra || this.hidden(d.id) || this.beltReplaces(d.id) || this.maxed(d.id));
+  }
+
   available(def: UpgradeDef): boolean {
     if (this.hidden(def.id) || this.maxed(def.id) || this.beltReplaces(def.id)) return false;
     if (def.capBy && this.level(def.id) >= 1 + this.level(def.capBy)) return false;
     if (def.requiresMaxed && !this.maxed(def.requiresMaxed)) return false;
     for (const r of this.requires(def)) if (this.level(r.id) < r.level) return false;
+    if (def.afterFarm && this.level(def.id) === 0 && !this.farmDone) return false;
     return true;
   }
 
@@ -154,8 +161,8 @@ export class UpgradeSystem {
   /** Derived effects of all levels. Safe to call repeatedly (e.g. after loading). */
   apply(): void {
     const w = this.w, U = ECONOMY.upgrades;
-    w.carry.cap = ECONOMY.player.capacity + this.level('player.capacity') * U['player.capacity'].step;
-    w.player.speedMult = 1 + this.level('player.speed') * U['player.speed'].step;
+    w.carry.cap = ECONOMY.player.capacity + this.level('player.capacity') * U['player.capacity'].step + w.perk('carry');
+    w.player.speedMult = 1 + this.level('player.speed') * U['player.speed'].step + w.perk('walk');
     for (const s of w.stations) {
       if (s.def.unlockTrack) s.open = this.level(s.def.unlockTrack) > 0;
       // supermarket path: even the coop starts closed (eggs.unlock opens it)
@@ -179,6 +186,8 @@ export class UpgradeSystem {
     }
     // (before staff.sync, so new stockers get the HR carry bonus right away)
     w.market.sync();
+    // (venue hands are hired here, before staff.sync gives every worker the HR carry bonus)
+    w.venues.sync();
     w.staff.sync();
     w.bounds.x0 = this.level('hr.office') > 0 ? LAYOUT.hrYard.unlockedX0 : LAYOUT.bounds.x0;
     if (this.level('river.unlock') > 0) w.bounds.x0 = Math.min(w.bounds.x0, RIVER.unlockedX0);
@@ -199,6 +208,7 @@ export class UpgradeSystem {
     w.contracts.sync();
     w.factory.sync();
     w.bounds.x1 = w.factory.open || w.mode === 'market' ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
+    if (w.venues.open) w.bounds.x1 = Math.max(w.bounds.x1, EAST.unlockedX1);
     const ex = this.level('field.expand');
     if (ex > 0) w.bounds.x1 = Math.max(w.bounds.x1, FIELDS.expandX1[Math.min(ex, FIELDS.expandX1.length) - 1]);
     // the yard south of a built store is walkable (its upgrade tiles stand there)

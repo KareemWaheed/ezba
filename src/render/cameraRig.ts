@@ -8,6 +8,8 @@ const HALF_WIDTH = 5.6;
 const FOLLOW = 16;
 /** Softer follow while panning to / from a focus point. */
 const FOCUS_FOLLOW = 3.5;
+/** Dev builds only: `?zoom=3` pulls the camera out (overview screenshots). */
+const DEV_ZOOM = import.meta.env.DEV ? Math.min(10, Math.max(1, Number(new URLSearchParams(location.search).get('zoom')) || 1)) : 1;
 
 /** Fixed tilted top-down camera that tightly follows a target (or briefly looks at a focus point). */
 export class CameraRig {
@@ -43,7 +45,7 @@ export class CameraRig {
     const soft = focusing || this.returnT > 0;
     this.zoom += ((focusing ? this.focusZoom : 1) - this.zoom) * (1 - Math.exp(-realDt * FOCUS_FOLLOW));
     const tanH = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
-    const d = clamp(HALF_WIDTH / (tanH * cam.aspect), 14, 28) * this.zoom;
+    const d = clamp(HALF_WIDTH / (tanH * cam.aspect), 14, 28) * this.zoom * DEV_ZOOM;
     this.off.set(0, Math.sin(ELEVATION) * d, Math.cos(ELEVATION) * d);
     const goal = focusing ? this.focusAt : this.tmp.set(x, 0, z + 0.6);
     this.target.lerp(goal, 1 - Math.exp(-realDt * (soft ? FOCUS_FOLLOW : FOLLOW)));

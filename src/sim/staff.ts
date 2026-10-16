@@ -367,7 +367,7 @@ export class StaffSystem {
     this.accountT = ECONOMY.upgrades['hr.accountant'].step * (lv >= 2 ? 0.4 : 1);
     let v = 0;
     // (the farm's piles; the supermarket has its own checkout staff)
-    for (const c of [w.cash, w.cafe.cash, w.field.cash, w.river.cash, w.butcher.cash]) { v += c.value; c.value = 0; c.bills = 0; }
+    for (const c of [w.cash, w.cafe.cash, w.field.cash, w.river.cash, w.butcher.cash, ...w.venues.list.map((x) => x.cash)]) { v += c.value; c.value = 0; c.bills = 0; }
     if (v <= 0) return;
     w.money += v;
     w.stats.earned += v;
@@ -417,7 +417,7 @@ export class StaffSystem {
   }
 
   update(dt: number): void {
-    const w = this.w, speedMult = 1 + w.upgrades.level('hr.speed') * ECONOMY.upgrades['hr.speed'].step;
+    const w = this.w, speedMult = 1 + w.upgrades.level('hr.speed') * ECONOMY.upgrades['hr.speed'].step + w.perk('staff');
     for (const x of this.workers) x.update(w, dt, speedMult);
     if (!w.scenario.powerCut) for (const b of this.belts) b.update(dt);
     this.updateMechanics(dt, speedMult);

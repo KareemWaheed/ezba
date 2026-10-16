@@ -21,7 +21,8 @@
     "marketpacing": "tsx tools/marketpacing.ts",
     "transfercheck": "tsx tools/transfercheck.ts",
     "surpluscheck": "tsx tools/surpluscheck.ts",
-    "awaycheck": "tsx tools/awaycheck.ts"
+    "awaycheck": "tsx tools/awaycheck.ts",
+    "eastcheck": "tsx tools/eastcheck.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.12.0",

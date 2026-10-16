@@ -24,6 +24,7 @@ https://kareemwaheed.github.io/ezba/
 ## Scripts
 - `npm run build`: type-check and production build into `dist/`
 - `npm run preview`: serve the production build on the LAN
+- `npm run eastcheck`: the orchard and pigeon tower (picking, press, window, hands, time away, save)
 - `npm run simulate`: headless pacing simulator. Prints when each upgrade is bought (play minute + day) for an
   efficient active player and an automation-only player, checks the pacing targets in `tools/pacing.ts`, and writes
   an earnings chart to `sim-out/pacing.html`. Options: `-- --days 5`, `-- --check` (exit 1 on a missed target)

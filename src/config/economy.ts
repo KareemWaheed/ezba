@@ -44,6 +44,19 @@ export const ECONOMY = {
   },
 
   /**
+   * The east (config/venues.ts): fruit off the orchard's trees and squabs from the pigeon tower, and what the juice
+   * press / the pigeon kitchen make of them (sold at their own windows, never on the shop counter).
+   */
+  venue: {
+    mango: { price: 9 },
+    guava: { price: 12 },
+    squab: { price: 14 },
+    mangoJuice: { price: 45 },
+    guavaJuice: { price: 60 },
+    stuffedPigeon: { price: 40 },
+  },
+
+  /**
    * Stage 7 supermarket goods: bought wholesale at the order desk (never made on the farm). `price` is
    * the shelf price; shelf prices and wholesale costs of everything in the store are in config/market.ts.
    */
@@ -637,6 +650,30 @@ export const ECONOMY = {
     'market.ads': { base: 40000, growth: 2.2, max: 3, step: 0.3 },
     /** Auto-reorder: a box is ordered whenever a product runs low in the storeroom. */
     'market.auto': { base: 120000, growth: 1, max: 1, step: 1 },
+    /** The east: the mango orchard and its juice stand (three trees to start with). */
+    'orchard.unlock': { base: 400000, growth: 1, max: 1, step: 1 },
+    /** Another mango tree per level. */
+    'orchard.trees': { base: 45000, growth: 1.45, max: 6, step: 1 },
+    /** Fruit pickers (+1 per level): trees -> the juice press, also during time away. */
+    'orchard.picker': { base: 120000, growth: 2.5, max: 2, step: 1 },
+    /** The press works faster: time / (1 + step x level). */
+    'orchard.press': { base: 60000, growth: 2, max: 4, step: 0.4 },
+    /** More thirsty visitors at the window: a cup sells every sellEvery / (1 + step x level). */
+    'orchard.stand': { base: 80000, growth: 2.2, max: 3, step: 0.5 },
+    /** The water wheel (ساقية): trees grow fruit faster, time / (1 + step x level). */
+    'orchard.water': { base: 50000, growth: 2.2, max: 3, step: 0.25 },
+    /** Three guava trees: guava juice, the dearer one. */
+    'orchard.guava': { base: 250000, growth: 1, max: 1, step: 1 },
+    /** The east: the pigeon tower and its kitchen (stuffed pigeon). */
+    'pigeons.unlock': { base: 600000, growth: 1, max: 1, step: 1 },
+    /** More nests in the tower: + step nests per level. */
+    'pigeons.nests': { base: 60000, growth: 1.55, max: 6, step: 2 },
+    /** Tower hands (+1 per level): squabs from the tower -> the kitchen, also during time away. */
+    'pigeons.worker': { base: 150000, growth: 2.5, max: 2, step: 1 },
+    /** The kitchen's oven works faster: time / (1 + step x level). */
+    'pigeons.oven': { base: 80000, growth: 2, max: 4, step: 0.4 },
+    /** More diners at the kitchen window: a plate sells every sellEvery / (1 + step x level). */
+    'pigeons.waiter': { base: 100000, growth: 2.2, max: 3, step: 0.5 },
     /** Open another checkout lane (+1 lane per level; 1 lane at the start). */
     'shop.lanes': { base: 3500, growth: 2.4, max: 4, step: 1 },
     /** Hire a cashier (+1 per level, never more than the open lanes). */
@@ -718,19 +755,23 @@ export type DishId = keyof typeof ECONOMY.dishes;
 export type CropId = keyof typeof ECONOMY.crops;
 /** Supermarket goods (bought wholesale). */
 export type GoodId = keyof typeof ECONOMY.goods;
+/** The east's fruit, squabs and what's made of them (config/venues.ts). */
+export type VenueItemId = keyof typeof ECONOMY.venue;
 /** Anything that can be carried. */
-export type ItemId = ProductId | DishId | CropId | GoodId;
+export type ItemId = ProductId | DishId | CropId | GoodId | VenueItemId;
 
 export const PRODUCT_IDS = Object.keys(ECONOMY.products) as ProductId[];
 export const DISH_IDS = Object.keys(ECONOMY.dishes) as DishId[];
 export const CROP_IDS = Object.keys(ECONOMY.crops) as CropId[];
 export const GOOD_IDS = Object.keys(ECONOMY.goods) as GoodId[];
-export const ITEM_IDS: ItemId[] = [...PRODUCT_IDS, ...DISH_IDS, ...CROP_IDS, ...GOOD_IDS];
+export const VENUE_IDS = Object.keys(ECONOMY.venue) as VenueItemId[];
+export const ITEM_IDS: ItemId[] = [...PRODUCT_IDS, ...DISH_IDS, ...CROP_IDS, ...GOOD_IDS, ...VENUE_IDS];
 
 export function priceOf(item: ItemId): number {
   if (item in ECONOMY.products) return ECONOMY.products[item as ProductId].price;
   if (item in ECONOMY.crops) return ECONOMY.crops[item as CropId].price;
   if (item in ECONOMY.goods) return ECONOMY.goods[item as GoodId].price;
+  if (item in ECONOMY.venue) return ECONOMY.venue[item as VenueItemId].price;
   return ECONOMY.dishes[item as DishId].price;
 }
 export type ProducerKind = keyof typeof ECONOMY.producers;

@@ -6,6 +6,7 @@ import { MAT, PRIM, merge, part } from './geo';
 import { CanvasSprite, EMOJI, FONT, groundMarker, rr } from './canvas';
 import { InstancedStack, gridSlots } from './stacks';
 import { ground, lockOverlay } from './worldView';
+import { EAST } from '../config/venues';
 
 const { box, cyl, cone } = PRIM;
 
@@ -115,8 +116,11 @@ export class FactoryView {
     const g = [ground(y, 0xcfcab8, 0.012)];
     // tiled concrete lines and a low fence along the far side
     for (let z = y.z0 + 1.5; z < y.z1; z += 1.5) g.push(part(box, 0xbdb7a4, (y.x0 + y.x1) / 2, 0.02, z, 0, 0, 0, y.x1 - y.x0, 0.005, 0.05));
-    for (let z = y.z0 + 0.4; z < y.z1; z += 1.2) g.push(part(box, 0x8a5a32, y.x1 + 0.2, 0.45, z, 0, 0, 0, 0.12, 0.9, 0.12));
-    g.push(part(box, 0x9a6233, y.x1 + 0.2, 0.75, (y.z0 + y.z1) / 2, 0, 0, 0, 0.08, 0.1, y.z1 - y.z0));
+    // (with a gap for the gate to the east, config/venues.ts)
+    const gate = EAST.fence.gate;
+    for (let z = y.z0 + 0.4; z < y.z1; z += 1.2) if (z < gate.z0 - 0.1 || z > gate.z1 + 0.1) g.push(part(box, 0x8a5a32, y.x1 + 0.2, 0.45, z, 0, 0, 0, 0.12, 0.9, 0.12));
+    g.push(part(box, 0x9a6233, y.x1 + 0.2, 0.75, (y.z0 + gate.z0) / 2, 0, 0, 0, 0.08, 0.1, gate.z0 - y.z0));
+    g.push(part(box, 0x9a6233, y.x1 + 0.2, 0.75, (gate.z1 + y.z1) / 2, 0, 0, 0, 0.08, 0.1, y.z1 - gate.z1));
     const yard = new THREE.Mesh(merge(g), MAT);
     yard.matrixAutoUpdate = false;
     scene.add(yard);
