@@ -89,6 +89,8 @@ const O = EAST.venues[0], P = EAST.venues[1];
   v.input.mango += 3; v.input.guava += 2; v.stock.mangoJuice += 4; v.stock.guavaJuice += 1;
   const s = JSON.parse(JSON.stringify(serialize(w, Date.now())));
   const saved = s.east.orchard;
+  // (taken back out, so the time away below only sells what the pickers bring)
+  v.input.mango -= 3; v.input.guava -= 2; v.stock.mangoJuice -= 4; v.stock.guavaJuice -= 1;
   const q = new SimWorld(11);
   restore(q, s);
   const qv = q.venues.get('orchard');

@@ -55,9 +55,10 @@ class VenueJob implements WorkerJob {
   room(): number { return this.v.def.kitchen.inputMax - this.v.inputCount; }
 
   putBack(_w: SimWorld, item: ItemId, slot: number): void {
-    const s = this.v.sources[this.from[slot] ?? -1] ?? this.v.sources.find((x) => x.def.item === item);
-    // (never past what a source holds: a tree that refilled meanwhile keeps its own fruit)
-    if (s) s.n = Math.min(this.v.def.hold, s.n + 1);
+    // (back on its own tree if there's room, else on any tree of that fruit with room: never past what one holds)
+    const hold = this.v.def.hold, own = this.v.sources[this.from[slot] ?? -1];
+    const s = own && own.def.item === item && own.n < hold ? own : this.v.sources.find((x) => x.open && x.def.item === item && x.n < hold);
+    if (s) s.n++;
   }
 }
 
