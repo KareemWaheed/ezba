@@ -38,10 +38,12 @@ export function simulateAway(w: SimWorld, seconds: number, step = 0.5): AwayResu
   const river0 = [w.river.cash.value, w.river.cash.bills];
   const butcher0 = [w.butcher.cash.value, w.butcher.cash.bills];
   const market0 = [w.market.cash.value, w.market.cash.bills];
+  const venues0 = w.venues.list.map((v) => [v.cash.value, v.cash.bills]);
+  const venueCash = () => w.venues.list.reduce((a, v, i) => a + v.cash.value - venues0[i][0], 0);
   const ix = w.input.x, iz = w.input.z;
   w.away = true;
   w.input.x = w.input.z = 0;
-  const gained = () => w.money - money0 + w.cash.value - cash0 + w.cafe.uncollected - cafe0 + w.field.cash.value - field0[0] + w.river.cash.value - river0[0] + w.butcher.cash.value - butcher0[0] + w.market.cash.value - market0[0];
+  const gained = () => w.money - money0 + w.cash.value - cash0 + w.cafe.uncollected - cafe0 + w.field.cash.value - field0[0] + w.river.cash.value - river0[0] + w.butcher.cash.value - butcher0[0] + w.market.cash.value - market0[0] + venueCash();
   let t = simT, mid = 0, midSet = false;
   while (t > 1e-6) {
     const s = Math.min(step, t);
@@ -58,6 +60,7 @@ export function simulateAway(w: SimWorld, seconds: number, step = 0.5): AwayResu
   const rate = simT > 0 ? (Math.max(0, simRaw - mid) / (simT / 2) + simRaw / simT) / 2 : 0;
   const raw = simRaw + rate * (capped - simT);
   w.market.cash.value = market0[0];
+  w.venues.list.forEach((v, i) => { v.cash.value = venues0[i][0]; v.cash.bills = venues0[i][1]; });
   w.market.cash.bills = market0[1];
   w.river.cash.value = river0[0];
   w.river.cash.bills = river0[1];

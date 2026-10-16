@@ -16,6 +16,10 @@ export interface UpgradeDef {
   requires: readonly { id: UpgradeId; level: number }[];
   /** Big unlocks shown in the HUD "next goal" card. */
   milestone?: boolean;
+  /** The end game (the east): its milestones are goals, but not needed to sell the farm for a bigger one. */
+  extra?: boolean;
+  /** Only offered once the farm is finished (every milestone bought: it could be sold for a bigger one). */
+  afterFarm?: boolean;
   /** Level can't exceed 1 + this track's level (e.g. one cashier per open lane). */
   capBy?: UpgradeId;
   /** Only offered while this track is at its (current) max, e.g. "expand the coop" once it's full. */
@@ -282,6 +286,55 @@ export const UPGRADES: readonly UpgradeDef[] = [
   {
     id: 'market.guard', icon: '👮', label: 'أمن', msg: 'الأمن واقف على الباب: الحرامية مش هيعرفوا يهربوا 👮',
     pos: { x: 23.4, z: 30.6 }, requires: [{ id: 'market.shelves', level: 1 }],
+  },
+  // The east (config/venues.ts), past the factory yard: the end game, not needed to sell the farm (extra)
+  {
+    id: 'orchard.unlock', icon: '🥭', label: 'بستان المانجة', msg: 'فتحت بستان المانجة! لِم المانجة من الشجر وودّيها للعصّارة 🥭🧃',
+    pos: { x: 27.4, z: -3.0 }, requires: [{ id: 'factory.unlock', level: 1 }, { id: 'field.wheat', level: 1 }], milestone: true, extra: true, afterFarm: true,
+  },
+  {
+    id: 'orchard.trees', icon: '🌳', label: 'شجرة مانجة', msg: 'شجرة مانجة جديدة في البستان 🌳',
+    pos: { x: 31.0, z: 5.0 }, requires: [{ id: 'orchard.unlock', level: 1 }], extra: true,
+  },
+  {
+    id: 'orchard.picker', icon: '🧺', label: 'وظّف جامع فاكهة', msg: 'جامع الفاكهة بيلم من الشجر ويودّي للعصّارة 🧺',
+    pos: { x: 33.2, z: 5.0 }, requires: [{ id: 'orchard.unlock', level: 1 }], milestone: true, extra: true,
+  },
+  {
+    id: 'orchard.press', icon: '⚙️', label: 'عصّارة أسرع', msg: 'العصّارة بقت أسرع ⚙️',
+    pos: { x: 35.4, z: 5.0 }, requires: [{ id: 'orchard.unlock', level: 1 }], extra: true,
+  },
+  {
+    id: 'orchard.stand', icon: '🧃', label: 'كشك أوسع', msg: 'زباين أكتر على كشك العصير 🧃',
+    pos: { x: 37.6, z: 5.0 }, requires: [{ id: 'orchard.unlock', level: 1 }], extra: true,
+  },
+  {
+    id: 'orchard.water', icon: '🎡', label: 'ساقية', msg: 'الساقية بتسقي الشجر، الفاكهة بتطلع أسرع 🎡💧',
+    pos: { x: 39.8, z: 5.0 }, requires: [{ id: 'orchard.trees', level: 2 }], extra: true,
+  },
+  {
+    id: 'orchard.guava', icon: '🍐', label: 'شجر جوافة', msg: 'شجر الجوافة طلع! عصير الجوافة أغلى 🍹',
+    pos: { x: 42.0, z: 5.0 }, requires: [{ id: 'orchard.trees', level: 3 }], milestone: true, extra: true,
+  },
+  {
+    id: 'pigeons.unlock', icon: '🕊️', label: 'برج الحمام', msg: 'فتحت برج الحمام! لِم الزغاليل من الباب وودّيها المطبخ تتحشي 🕊️🍗',
+    pos: { x: 30.4, z: 10.4 }, requires: [{ id: 'orchard.unlock', level: 1 }], milestone: true, extra: true,
+  },
+  {
+    id: 'pigeons.nests', icon: '🪺', label: 'أعشاش أكتر', msg: 'أعشاش جديدة في البرج، زغاليل أكتر 🪺',
+    pos: { x: 32.4, z: 12.6 }, requires: [{ id: 'pigeons.unlock', level: 1 }], extra: true,
+  },
+  {
+    id: 'pigeons.worker', icon: '🧑‍🍳', label: 'وظّف عامل برج', msg: 'عامل البرج بيودّي الزغاليل للمطبخ 🧑‍🍳',
+    pos: { x: 34.6, z: 12.6 }, requires: [{ id: 'pigeons.unlock', level: 1 }], milestone: true, extra: true,
+  },
+  {
+    id: 'pigeons.oven', icon: '🔥', label: 'فرن أسرع', msg: 'فرن الحمام بقى أسرع 🔥',
+    pos: { x: 36.8, z: 12.6 }, requires: [{ id: 'pigeons.unlock', level: 1 }], extra: true,
+  },
+  {
+    id: 'pigeons.waiter', icon: '🍽️', label: 'شبّاك أوسع', msg: 'زباين أكتر على شبّاك الحمام 🍽️',
+    pos: { x: 39.0, z: 12.6 }, requires: [{ id: 'pigeons.unlock', level: 1 }], extra: true,
   },
   // Loading dock: company contracts with trucks
   // what a big surplus is good for: its own yard west of the main one (trader, incubator, records)

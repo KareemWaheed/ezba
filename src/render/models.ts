@@ -118,6 +118,50 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
     part(cylLo, 0xa88450, 0, 0.34, 0, 0, 0, 0, 0.08, 0.07, 0.06),
     ...[-0.1, 0.1].map((x) => part(sphLo, 0xb8864e, x, 0.32, 0.12, 0, 0, 0, 0.07, 0.05, 0.06)),
   ]),
+  // the east: a crate of mangoes / guavas, a basket of squabs, cups of juice on a tray, stuffed pigeons on a plate
+  mango: merge([
+    part(box, 0x9a6233, 0, 0.08, 0, 0, 0, 0, 0.56, 0.16, 0.42),
+    ...[-0.15, 0.03, 0.18].flatMap((x, i) => [-0.08, 0.1].map((z, j) => part(sphLo, (i + j) % 2 ? 0xf2a31b : 0xe8c034, x, 0.21, z, 0, 0.5, 0.3, 0.1, 0.08, 0.13))),
+    part(sphLo, 0x4f9a3a, 0.1, 0.27, 0.02, 0, 0, 0, 0.05, 0.02, 0.04),
+  ]),
+  guava: merge([
+    part(box, 0x9a6233, 0, 0.08, 0, 0, 0, 0, 0.56, 0.16, 0.42),
+    ...[-0.15, 0, 0.15].flatMap((x) => [-0.09, 0.09].map((z) => part(sphLo, 0xb5cf4a, x, 0.21, z, 0, 0, 0, 0.09, 0.09, 0.09))),
+    part(sphLo, 0xf28c8c, 0.02, 0.29, 0.0, 0, 0, 0, 0.06, 0.03, 0.06),
+  ]),
+  squab: merge([
+    part(cyl, 0xc79a4a, 0, 0.1, 0, 0, 0, 0, 0.3, 0.2, 0.3),
+    part(cyl, 0x9a7333, 0, 0.21, 0, 0, 0, 0, 0.31, 0.03, 0.31),
+    ...[-0.1, 0.1].flatMap((x) => [
+      part(sphLo, 0x9aa3b0, x, 0.28, 0, 0, 0, 0, 0.1, 0.09, 0.12),
+      part(sphLo, 0x8a93a3, x, 0.36, 0.07, 0, 0, 0, 0.06, 0.06, 0.06),
+      part(cone, 0xe8a23a, x, 0.36, 0.14, Math.PI / 2, 0, 0, 0.02, 0.05, 0.02),
+    ]),
+  ]),
+  mangoJuice: merge([
+    part(box, 0xc98a4b, 0, 0.03, 0, 0, 0, 0, 0.5, 0.06, 0.34),
+    ...[-0.11, 0.11].flatMap((x) => [
+      part(cylLo, 0xdff1f7, x, 0.2, 0, 0, 0, 0, 0.09, 0.3, 0.09),
+      part(cylLo, 0xf2a31b, x, 0.18, 0, 0, 0, 0, 0.08, 0.24, 0.08),
+      part(cylLo, 0xe8554e, x + 0.03, 0.4, 0, 0, 0, 0.2, 0.012, 0.18, 0.012),
+    ]),
+  ]),
+  guavaJuice: merge([
+    part(box, 0xc98a4b, 0, 0.03, 0, 0, 0, 0, 0.5, 0.06, 0.34),
+    ...[-0.11, 0.11].flatMap((x) => [
+      part(cylLo, 0xdff1f7, x, 0.2, 0, 0, 0, 0, 0.09, 0.3, 0.09),
+      part(cylLo, 0xf2a8a0, x, 0.18, 0, 0, 0, 0, 0.08, 0.24, 0.08),
+      part(cylLo, 0x3fae5a, x + 0.03, 0.4, 0, 0, 0, 0.2, 0.012, 0.18, 0.012),
+    ]),
+  ]),
+  stuffedPigeon: merge([
+    part(cyl, 0xffffff, 0, 0.03, 0, 0, 0, 0, 0.34, 0.05, 0.34),
+    ...[-0.12, 0.12].flatMap((x) => [
+      part(sphLo, 0xb8692e, x, 0.12, 0, 0, 0, 0, 0.11, 0.08, 0.13),
+      part(sphLo, 0x9a5424, x, 0.1, 0.13, 0, 0, 0, 0.04, 0.04, 0.05),
+    ]),
+    part(sphLo, 0xf2ead2, 0, 0.09, -0.12, 0, 0, 0, 0.12, 0.04, 0.06),
+  ]),
   bill: merge([
     part(box, 0x4dbb4f, 0, 0.05, 0, 0, 0, 0, 0.56, 0.1, 0.3),
     part(box, 0x8fe58a, 0, 0.051, 0, 0, 0, 0, 0.3, 0.104, 0.16),
@@ -125,9 +169,9 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
 };
 
 /** Stacking height of one item. */
-export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, honey: 0.47, omelette: 0.17, coffee: 0.36, cake: 0.32, cheese: 0.22, grilledFish: 0.18, fish: 0.3, corn: 0.24, wheat: 0.28, rice: 0.38, pasta: 0.4, oil: 0.48, tea: 0.26, chips: 0.34, soda: 0.28, bread: 0.2, tomato: 0.26, potato: 0.36, bill: 0.11 };
+export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, honey: 0.47, omelette: 0.17, coffee: 0.36, cake: 0.32, cheese: 0.22, grilledFish: 0.18, fish: 0.3, corn: 0.24, wheat: 0.28, rice: 0.38, pasta: 0.4, oil: 0.48, tea: 0.26, chips: 0.34, soda: 0.28, bread: 0.2, tomato: 0.26, potato: 0.36, mango: 0.3, guava: 0.3, squab: 0.42, mangoJuice: 0.36, guavaJuice: 0.36, stuffedPigeon: 0.2, bill: 0.11 };
 
-export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', honey: '🍯', omelette: '🍳', coffee: '☕', cake: '🍰', cheese: '🥪', grilledFish: '🍢', fish: '🐟', corn: '🌽', wheat: '🌾', rice: '🍚', pasta: '🍝', oil: '🫒', tea: '🍵', chips: '🍟', soda: '🥤', bread: '🍞', tomato: '🍅', potato: '🥔' };
+export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', honey: '🍯', omelette: '🍳', coffee: '☕', cake: '🍰', cheese: '🥪', grilledFish: '🍢', fish: '🐟', corn: '🌽', wheat: '🌾', rice: '🍚', pasta: '🍝', oil: '🫒', tea: '🍵', chips: '🍟', soda: '🥤', bread: '🍞', tomato: '🍅', potato: '🥔', mango: '🥭', guava: '🍐', squab: '🕊️', mangoJuice: '🧃', guavaJuice: '🍹', stuffedPigeon: '🍗' };
 
 /** Standing crop stalks (one instance per stalk; scaled down to a stub when cut). */
 export const STALK_GEO: Record<FieldCrop, THREE.BufferGeometry> = {

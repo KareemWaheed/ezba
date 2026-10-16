@@ -13,6 +13,8 @@ import { RIVER } from '../src/config/river';
 import { MARKET, SHELVES } from '../src/config/market';
 import { ECONOMY } from '../src/config/economy';
 import { ZONE } from '../src/sim/world';
+import { EAST } from '../src/config/venues';
+import { SHOP } from '../src/config/shop';
 
 /** Tile cards are 1.8 squares (render/tiles.ts); keep at least this much floor between two. */
 const TILE = 1.8, TILE_GAP = 0.15;
@@ -25,6 +27,11 @@ const STAND_MAX = 1.3;
 
 const problems: string[] = [];
 /** Solids that only exist once the store is built (addSolid), checked like the static ones. */
+/** The east's buildings and trees, and the decorations that stand solid (all built later, by addSolid). */
+const EAST_SOLIDS = [
+  ...EAST.venues.flatMap((v) => [v.kitchen.box, ...v.sources.map((s) => ({ x0: s.x - s.solid.hx, x1: s.x + s.solid.hx, z0: s.z - s.solid.hz, z1: s.z + s.solid.hz }))]),
+  ...SHOP.decor.flatMap((d) => (d.solid ? d.spots.map((s) => ({ x0: s.x - d.solid!.hx, x1: s.x + d.solid!.hx, z0: s.z - d.solid!.hz, z1: s.z + d.solid!.hz })) : [])),
+];
 const MARKET_SOLIDS = [...MARKET.walls, MARKET.checkout.box, MARKET.checkout2.box, MARKET.kiosk.box, MARKET.store.racks, MARKET.desk.box, ...SHELVES.map((s) => s.box)];
 const d = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.hypot(a.x - b.x, a.z - b.z);
 
@@ -66,6 +73,11 @@ const zones: { name: string; x: number; z: number; r: number; owner?: string }[]
   { name: 'market checkout 2', ...MARKET.checkout2.serve, r: MARKET.checkout2.serveR, owner: 'market.lanes' },
   { name: 'delivery van', x: MARKET.van.x, z: MARKET.van.z, r: MARKET.van.r, owner: 'market.delivery' },
   { name: 'market cash', x: MARKET.cash.x, z: MARKET.cash.z, r: MARKET.cash.r, owner: 'market.unlock' },
+  ...EAST.venues.flatMap((v) => [
+    ...v.sources.map((s, i) => ({ name: `${v.id} source ${i}`, ...(s.pick ?? s), r: s.reach, owner: v.unlock as string })),
+    { name: `${v.id} kitchen`, ...v.kitchen.input, r: 1.3, owner: v.unlock as string },
+    { name: `${v.id} cash`, ...v.window.cash, r: 1.3, owner: v.unlock as string },
+  ]),
   ...FACTORY.machines.flatMap((m) => [
     { name: `${m.id} input`, ...m.input, r: 1.1, owner: m.unlockTrack as string },
     { name: `${m.id} output`, ...m.output, r: 1.1, owner: m.unlockTrack as string },
@@ -141,7 +153,7 @@ for (let i = 0; i < UPGRADES.length; i++) {
     const need = TILE_R + Math.min(z.r, STAND_MAX) + ZONE_MARGIN;
     if (g < need) problems.push(`tile pays while working at ${z.name}: ${a.id} (${g.toFixed(2)} apart, need ${need.toFixed(2)})`);
   }
-  for (const s of [...SOLIDS, ...MARKET_SOLIDS]) {
+  for (const s of [...SOLIDS, ...MARKET_SOLIDS, ...EAST_SOLIDS]) {
     if (a.pos.x > s.x0 - 0.5 && a.pos.x < s.x1 + 0.5 && a.pos.z > s.z0 - 0.5 && a.pos.z < s.z1 + 0.5) {
       problems.push(`tile in/against a solid: ${a.id} at (${a.pos.x}, ${a.pos.z})`);
     }
@@ -152,6 +164,17 @@ for (let i = 0; i < UPGRADES.length; i++) {
 for (const z of zones) {
   if (!z.owner?.startsWith('market.')) continue;
   for (const b of MARKET_SOLIDS) if (z.x > b.x0 - 0.3 && z.x < b.x1 + 0.3 && z.z > b.z0 - 0.3 && z.z < b.z1 + 0.3) problems.push(`work spot in a store solid: ${z.name}`);
+}
+
+// the east's work spots stand on open floor, clear of its trees, kitchens and the decorations
+for (const z of zones) {
+  if (!EAST.venues.some((v) => z.name.startsWith(v.id))) continue;
+  for (const b of [...EAST_SOLIDS, ...SOLIDS]) if (z.x > b.x0 - 0.3 && z.x < b.x1 + 0.3 && z.z > b.z0 - 0.3 && z.z < b.z1 + 0.3) problems.push(`work spot in a solid: ${z.name}`);
+}
+// decorations that stand solid: off the pitch, the dance pads and every work spot
+for (const b of EAST_SOLIDS) {
+  for (const z of zones) if (z.x > b.x0 - 0.3 && z.x < b.x1 + 0.3 && z.z > b.z0 - 0.3 && z.z < b.z1 + 0.3 && !EAST.venues.some((v) => z.name.startsWith(v.id))) problems.push(`work spot ${z.name} in an east/decor solid`);
+  for (const p of LAYOUT.dancePads) if (p.x > b.x0 - 0.6 && p.x < b.x1 + 0.6 && p.z > b.z0 - 0.6 && p.z < b.z1 + 0.6) problems.push(`decor solid on a dance pad (${p.x},${p.z})`);
 }
 
 if (problems.length) {

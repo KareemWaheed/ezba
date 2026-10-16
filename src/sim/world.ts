@@ -24,6 +24,7 @@ import { RiverSystem } from './river';
 import { ButcherSystem } from './butcher';
 import { MarketSystem } from './market';
 import { ShopSystem } from './shop';
+import { VenueSystem } from './venue';
 import { SHOP } from '../config/shop';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
@@ -63,6 +64,8 @@ export class SimWorld {
   /** The butcher's: old cows' meat, sold at its window. */
   readonly butcher: ButcherSystem;
   readonly market: MarketSystem;
+  /** The east: the mango orchard and the pigeon tower (config/venues.ts). */
+  readonly venues: VenueSystem;
   readonly album: AlbumSystem;
   readonly daily: DailySystem;
   /** The decorations shop: clothes, hats and decorations (kept when the farm is sold). */
@@ -128,6 +131,7 @@ export class SimWorld {
     this.river = new RiverSystem(this);
     this.butcher = new ButcherSystem(this);
     this.market = new MarketSystem(this);
+    this.venues = new VenueSystem(this);
     this.album = new AlbumSystem(this);
     this.daily = new DailySystem(this);
     this.shop = new ShopSystem(this);
@@ -209,7 +213,7 @@ export class SimWorld {
 
   /** Milestone upgrades not bought yet (all bought = the farm can be sold for a bigger one). */
   get legacyMissing(): typeof UPGRADES[number][] {
-    return UPGRADES.filter((d) => d.milestone && !this.upgrades.hidden(d.id) && !this.upgrades.beltReplaces(d.id) && this.upgrades.level(d.id) === 0);
+    return UPGRADES.filter((d) => d.milestone && !d.extra && !this.upgrades.hidden(d.id) && !this.upgrades.beltReplaces(d.id) && this.upgrades.level(d.id) === 0);
   }
 
   /** Open checkout lanes (1 at the start). */
@@ -254,6 +258,7 @@ export class SimWorld {
     this.surplus.update(dt);
     this.river.update(dt);
     this.market.update(dt);
+    this.venues.update(dt);
     if (!this.away) this.upgrades.update(dt);
   }
 
@@ -341,6 +346,7 @@ export class SimWorld {
     this.river.interact(dt);
     this.butcher.interact();
     this.market.interact(dt);
+    this.venues.interact(dt);
   }
 
   /**

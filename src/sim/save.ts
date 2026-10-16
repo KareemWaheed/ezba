@@ -2,7 +2,7 @@ import { ECONOMY, ITEM_IDS, priceOf, type ItemId, type UpgradeId } from '../conf
 import { SimWorld } from './world';
 import { LEGACY } from '../config/legacy';
 import { PERKS } from '../config/perks';
-import { DECOR_BY_ID, HAT_BY_ID, OUTFIT_BY_ID } from '../config/shop';
+import { SHOP } from '../config/shop';
 import { FIELDS } from '../config/fields';
 import type { GameMode } from '../config/paths';
 import { FEATURES } from '../config/features';
@@ -62,8 +62,13 @@ export interface SaveData {
   legacy?: number;
   /** Perk levels (config/perks.ts), only the ones taken. */
   perks?: Record<string, number>;
-  /** The decorations shop: what was bought ("o:suit", "h:crown", "d:palms"), and what the farmer wears. */
-  shop?: { own: string[]; outfit?: string; hat?: string };
+  /**
+   * The decorations shop: what was bought, per kind as a string of base-36 indices into SHOP.decor / outfits / hats
+   * (so new things must only ever be appended to those lists), and what the farmer wears.
+   */
+  shop?: { d?: string; o?: string; h?: string; outfit?: string; hat?: string };
+  /** The east, per open venue: items on each source, kitchen input, window stock, cash (config/venues.ts). */
+  east?: Record<string, { src: number[]; in?: Record<string, number>; st?: Record<string, number>; cash?: number; bills?: number }>;
   /** Easy mode (ECONOMY.easy). */
   easy?: boolean;
   /** 1 = saved after belts started replacing workers (older saves get the workers of their belts refunded once). */
@@ -130,6 +135,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     surplus: { crate: w.surplus.crate, hatching: w.surplus.hatching, hatchT: w.surplus.hatchT, hatched: w.surplus.hatched, golden: w.surplus.golden, records: { ...w.surplus.records } },
     // (only what's set: the save travels as a QR code, every field counts)
     ...(butcherSave(w) ? { butcher: butcherSave(w) } : {}),
+    ...eastSave(w),
     river: { pile: w.river.pile, cash: w.river.cash.value, bills: w.river.cash.bills, untied: w.river.rowboats.filter((b) => b.state !== 'tied').length },
     factory: { silo: w.factory.silo, machines: Object.fromEntries(w.factory.machines.map((m) => [m.def.id, { in: { ...m.conv.input }, out: { ...m.conv.output } }])) },
     daily: { day: w.daily.day, tasks: w.daily.tasks.map((t) => ({ ...t })) },
@@ -148,21 +154,61 @@ function marketSave(w: SimWorld): SaveData['market'] {
   return { shelves, store, cash: m.cash.value, bills: m.cash.bills, price: { ...m.price } };
 }
 
+/** The east's open venues (a hand's load goes back into the kitchen, the dish cooking counts as made). */
+function eastSave(w: SimWorld): { east?: SaveData['east'] } {
+  const out: NonNullable<SaveData['east']> = {};
+  const nz = (r: Record<string, number>) => { const o: Record<string, number> = {}; for (const [k, v] of Object.entries(r)) if (v) o[k] = v; return Object.keys(o).length ? o : undefined; };
+  for (const v of w.venues.list) {
+    if (!v.open) continue;
+    const input: Record<string, number> = { ...v.input }, st: Record<string, number> = { ...v.stock };
+    for (const x of w.staff.workers) if (x.job === v.job) for (const it of x.carry.items) input[it] = (input[it] ?? 0) + 1;
+    if (v.cooking) st[v.cooking.output] = (st[v.cooking.output] ?? 0) + 1;
+    const e: NonNullable<SaveData['east']>[string] = { src: v.sources.map((x) => x.n) };
+    const i = nz(input), t = nz(st);
+    if (i) e.in = i;
+    if (t) e.st = t;
+    if (v.cash.value) { e.cash = v.cash.value; e.bills = v.cash.bills; }
+    out[v.def.id] = e;
+  }
+  return Object.keys(out).length ? { east: out } : {};
+}
+
+/** The east on load (after the levels, so sources know whether they're open). */
+function restoreEast(w: SimWorld, s: SaveData['east']): void {
+  for (const v of w.venues.list) {
+    const d = s?.[v.def.id];
+    if (!d) continue;
+    v.sources.forEach((x, i) => { x.n = Math.min(v.def.hold, Math.max(0, Math.floor(num(d.src?.[i])))); });
+    for (const k of Object.keys(v.input) as (keyof typeof v.input)[]) v.input[k] = Math.min(v.def.kitchen.inputMax, Math.max(0, Math.floor(num(d.in?.[k]))));
+    for (const k of Object.keys(v.stock) as (keyof typeof v.stock)[]) v.stock[k] = Math.min(v.def.window.max, Math.max(0, Math.floor(num(d.st?.[k]))));
+    v.cash.value = num(d.cash);
+    v.cash.bills = Math.min(40, Math.floor(num(d.bills)));
+  }
+}
+
 /** The shop's state, only when something was bought. */
 function shopSave(w: SimWorld): { shop?: SaveData['shop'] } {
   const sh = w.shop;
   if (!sh.owned.size) return {};
-  return { shop: { own: [...sh.owned], ...(sh.outfit !== 'farmer' ? { outfit: sh.outfit } : {}), ...(sh.hat !== 'none' ? { hat: sh.hat } : {}) } };
+  const out: NonNullable<SaveData['shop']> = {};
+  for (const [k, list] of SHOP_LISTS) {
+    const ix = list.map((x, i) => (sh.owned.has(`${k}:${x.id}`) ? i.toString(36) : '')).join('');
+    if (ix) out[k] = ix;
+  }
+  if (sh.outfit !== 'farmer') out.outfit = sh.outfit;
+  if (sh.hat !== 'none') out.hat = sh.hat;
+  return { shop: out };
 }
+
+const SHOP_LISTS = [['d', SHOP.decor], ['o', SHOP.outfits], ['h', SHOP.hats]] as const;
 
 /** Restore the shop (unknown ids from a newer or older game are dropped). */
 function restoreShop(w: SimWorld, s: SaveData['shop']): void {
   const sh = w.shop;
-  for (const id of s?.own ?? []) {
-    if (typeof id !== 'string') continue;
-    const [k, rest] = [id[0], id.slice(2)];
-    const kind = k === 'o' ? 'outfit' : k === 'h' ? 'hat' : k === 'd' ? 'decor' : null;
-    if (kind && id[1] === ':' && (kind === 'outfit' ? OUTFIT_BY_ID : kind === 'hat' ? HAT_BY_ID : DECOR_BY_ID).has(rest)) sh.owned.add(id);
+  for (const [k, list] of SHOP_LISTS) {
+    const ix = s?.[k];
+    if (typeof ix !== 'string') continue;
+    for (const ch of ix) { const it = list[parseInt(ch, 36)]; if (it) sh.owned.add(`${k}:${it.id}`); }
   }
   if (typeof s?.outfit === 'string') sh.wear('outfit', s.outfit);
   if (typeof s?.hat === 'string') sh.wear('hat', s.hat);
@@ -314,6 +360,7 @@ export function restore(w: SimWorld, s: SaveData): void {
   up.apply();
   // a save from before belts replaced workers: the workers of belts it already has go home, their cost comes back
   if (s.rt !== 1) up.retireWorkers();
+  restoreEast(w, s.east);
   // (pen animals aren't saved: the growing calf, if any, gets its age back)
   w.butcher.restoreCalf(num(s.butcher?.calf, -1));
   w.carry.items.length = 0;

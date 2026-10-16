@@ -79,7 +79,8 @@ function valid(s: SaveData): boolean {
   if (s.paid !== undefined && (!isObj(s.paid) || !Object.values(s.paid).every(isNum))) return false;
   if (!strings(s.carry) || (s.legacy !== undefined && !isNum(s.legacy)) || (s.mode !== undefined && s.mode !== 'farm' && s.mode !== 'market')) return false;
   if (s.album !== undefined && (!isObj(s.album) || !strings(s.album.seen) || !strings(s.album.paid))) return false;
-  if (s.shop !== undefined && (!isObj(s.shop) || !strings(s.shop.own))) return false;
+  if (s.shop !== undefined && (!isObj(s.shop) || !Object.values(s.shop).every((v) => typeof v === 'string'))) return false;
+  if (s.east !== undefined && (!isObj(s.east) || !Object.values(s.east).every((e) => isObj(e) && Array.isArray(e.src)))) return false;
   if (s.daily !== undefined && (!isObj(s.daily) || !Array.isArray(s.daily.tasks))) return false;
   try {
     restore(new SimWorld(1, s.mode === 'market' ? 'market' : 'farm'), JSON.parse(JSON.stringify(s)) as SaveData);

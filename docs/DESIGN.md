@@ -434,4 +434,24 @@ This file records the decisions made on top of it.
   the event square and the yard, clothes (galabeya, suit, football shirts, gold) and hats (tarboosh, turban, crown...)
   for the farmer. Bought with money, kept forever (also when the farm is sold). Each decoration raises every sale
   price by `SHOP.decorBonus` (2%); clothes and hats are only for looks. The cart, swing, fountain and statue are
-  solid (sim/shop.ts adds them). Saved as `shop` (ids prefixed o:/h:/d:, only once something was bought).
+  solid (sim/shop.ts adds them). Saved as `shop` only once something was bought (see the east below for its format).
+- The east (playtest: "new places and lots of new upgrades for players who finished"): past the factory yard, the
+  walkable area grows to `EAST.unlockedX1` (config/venues.ts, sim/venue.ts, render/venueView.ts). Two venues share one
+  system: sources the player (or the venue's hands) picks from, a kitchen that cooks one recipe at a time, and a window
+  where the made goods sell one every `sellEvery` s into its own cash pile (the accountant collects it; it counts in
+  time away). Nothing goes through the shop counter.
+  - بستان المانجة (`orchard.unlock`, 400k): 3 mango trees (+1 a level of `orchard.trees`, up to 9) grow a mango every
+    6 s up to 6 each; the press makes mango juice (2 mangoes); `orchard.guava` adds 3 guava trees (guava juice, dearer);
+    `orchard.water` (the ساقية, drawn with its channel) grows fruit faster; `orchard.press` / `orchard.stand` speed the
+    press and the window; pickers (`orchard.picker`) go to the tree whose fruit the press is shortest of.
+  - برج الحمام (`pigeons.unlock`, 600k, after the orchard): the tower's nests (4, +2 a level of `pigeons.nests`) fill
+    its door with squabs; the kitchen's brick oven stuffs them; tower hands carry, `pigeons.oven` / `pigeons.waiter`
+    speed the oven and the window.
+  - 12 tracks, 36 levels, all `extra`: the orchard is only offered once the farm is finished (`afterFarm`: every
+    milestone bought), its milestones are goals on the HUD card but never needed to sell the farm (a finished farm stays
+    sellable), and the simulator's "bought everything" targets count the farm without them (it prints the east apart;
+    the efficient bot finishes the east too). The factory yard's east fence turns solid with a gate once the east opens; the
+    corner trees at x 31 moved east. Items: `ECONOMY.venue` (a new item kind, never on the shop counter or the café).
+  - The save keeps the shop as index strings (`shop.d/o/h`, base 36 into SHOP's lists: append new things, never
+    reorder) and the east only for open venues; the QR of a farm with everything (east, shop, perks) is version 30.
+  `npm run eastcheck`; layoutcheck covers the east's work spots and solids and the solid decorations.

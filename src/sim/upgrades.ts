@@ -7,6 +7,7 @@ import { FACTORY } from '../config/factories';
 import { RIVER } from '../config/river';
 import { MARKET, SHELVES } from '../config/market';
 import { FEATURES } from '../config/features';
+import { EAST } from '../config/venues';
 import { dist } from './math';
 import type { SimWorld } from './world';
 
@@ -117,6 +118,7 @@ export class UpgradeSystem {
     if (def.capBy && this.level(def.id) >= 1 + this.level(def.capBy)) return false;
     if (def.requiresMaxed && !this.maxed(def.requiresMaxed)) return false;
     for (const r of this.requires(def)) if (this.level(r.id) < r.level) return false;
+    if (def.afterFarm && this.level(def.id) === 0 && this.w.legacyMissing.length > 0) return false;
     return true;
   }
 
@@ -199,6 +201,8 @@ export class UpgradeSystem {
     w.contracts.sync();
     w.factory.sync();
     w.bounds.x1 = w.factory.open || w.mode === 'market' ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
+    w.venues.sync();
+    if (w.venues.open) w.bounds.x1 = Math.max(w.bounds.x1, EAST.unlockedX1);
     const ex = this.level('field.expand');
     if (ex > 0) w.bounds.x1 = Math.max(w.bounds.x1, FIELDS.expandX1[Math.min(ex, FIELDS.expandX1.length) - 1]);
     // the yard south of a built store is walkable (its upgrade tiles stand there)

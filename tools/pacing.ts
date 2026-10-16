@@ -42,6 +42,8 @@ export interface RunResult {
   /** Scenario events that started. */
   events: number;
   left: number;
+  /** Levels of the east (extra tracks) not bought yet. */
+  eastLeft: number;
   leftIds: string[];
   doneMin?: number;
   doneDay?: number;
