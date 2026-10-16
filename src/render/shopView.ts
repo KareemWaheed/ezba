@@ -172,7 +172,8 @@ const FLAG = merge([
 
 /** The decorations bought in the shop, at their spots, with a little life (water, swaying, swinging). */
 export class DecorView {
-  private version = -1;
+  private key = '';
+  private geos: THREE.BufferGeometry[] = [];
   private root = new THREE.Group();
   private moving: { obj: THREE.Object3D; kind: string; i: number }[] = [];
 
@@ -180,6 +181,9 @@ export class DecorView {
 
   private build(sim: SimWorld): void {
     this.root.clear();
+    // (geometries built here; the shared ones (flag cloth, shadows) stay)
+    for (const g of this.geos) g.dispose();
+    this.geos.length = 0;
     this.moving.length = 0;
     for (const d of SHOP.decor) {
       if (!sim.shop.has('decor', d.id)) continue;
@@ -187,7 +191,7 @@ export class DecorView {
         const g = new THREE.Group();
         g.position.set(s.x, 0, s.z);
         g.rotation.y = s.rot ?? 0;
-        if (d.id !== 'lanterns') g.add(new THREE.Mesh(decorGeo(d.id), MAT));
+        if (d.id !== 'lanterns') g.add(new THREE.Mesh(this.own(decorGeo(d.id)), MAT));
         if (d.id !== 'lanterns' && d.id !== 'flags' && d.id !== 'lamps') g.add(blob(d.solid ? Math.max(d.solid.hx, d.solid.hz) * 1.2 : 0.7));
         if (d.id === 'flags') {
           const f = new THREE.Mesh(FLAG, MAT);
@@ -199,16 +203,16 @@ export class DecorView {
         if (d.id === 'swing') {
           const seat = new THREE.Group();
           seat.position.y = 2.2;
-          seat.add(new THREE.Mesh(merge([
+          seat.add(new THREE.Mesh(this.own(merge([
             part(cylLo, 0x5a3a22, -0.28, -0.75, 0, 0, 0, 0, 0.02, 1.5, 0.02),
             part(cylLo, 0x5a3a22, 0.28, -0.75, 0, 0, 0, 0, 0.02, 1.5, 0.02),
             part(box, 0x8a5a32, 0, -1.5, 0, 0, 0, 0, 0.7, 0.07, 0.36),
-          ]), MAT));
+          ])), MAT));
           g.add(seat);
           this.moving.push({ obj: seat, kind: 'swing', i });
         }
         if (d.id === 'fountain') {
-          const jet = new THREE.Mesh(merge([part(sph, 0x9fd6f5, 0, 0, 0, 0, 0, 0, 0.12, 0.5, 0.12), part(sph, 0xd5eefb, 0, 0.4, 0, 0, 0, 0, 0.08, 0.14, 0.08)]), MAT);
+          const jet = new THREE.Mesh(this.own(merge([part(sph, 0x9fd6f5, 0, 0, 0, 0, 0, 0, 0.12, 0.5, 0.12), part(sph, 0xd5eefb, 0, 0.4, 0, 0, 0, 0, 0.08, 0.14, 0.08)])), MAT);
           jet.position.y = 1.65;
           g.add(jet);
           this.moving.push({ obj: jet, kind: 'jet', i });
@@ -218,16 +222,19 @@ export class DecorView {
     }
   }
 
+  /** Keep a geometry built for the current decorations (disposed on the next rebuild). */
+  private own(g: THREE.BufferGeometry): THREE.BufferGeometry { this.geos.push(g); return g; }
+
   /** A garland over the counter, from one sorter to the other, with lanterns swaying under it. */
   private lanterns(g: THREE.Group): void {
     const span = 14.6, y = 3.15, cols = [0xe8554e, 0x2f6fd6, 0x3fae5a, 0xd96aa7, 0xf28c38];
-    g.add(new THREE.Mesh(merge([
+    g.add(new THREE.Mesh(this.own(merge([
       part(box, 0x5a3a22, 0, y, 0, 0, 0, 0, span, 0.025, 0.025),
       // little triangle flags all along the rope
       ...Array.from({ length: 28 }, (_, k) => part(cone, cols[k % cols.length], -span / 2 + 0.3 + k * ((span - 0.6) / 27), y - 0.12, 0, Math.PI, 0, 0, 0.12, 0.22, 0.02)),
-    ]), MAT));
+    ])), MAT));
     for (let k = 0; k < 9; k++) {
-      const l = new THREE.Mesh(lanternGeo(cols[k % cols.length]), MAT);
+      const l = new THREE.Mesh(this.own(lanternGeo(cols[k % cols.length])), MAT);
       l.position.set(-span / 2 + 0.8 + k * ((span - 1.6) / 8), y, 0);
       g.add(l);
       this.moving.push({ obj: l, kind: 'lantern', i: k });
@@ -235,7 +242,9 @@ export class DecorView {
   }
 
   update(sim: SimWorld, time: number): void {
-    if (sim.shop.version !== this.version) { this.version = sim.shop.version; this.build(sim); }
+    // (rebuilt only when the decorations change, not on a change of clothes)
+    const key = SHOP.decor.map((d) => (sim.shop.has('decor', d.id) ? 1 : 0)).join('');
+    if (key !== this.key) { this.key = key; this.build(sim); }
     for (const m of this.moving) {
       if (m.kind === 'flag') m.obj.rotation.y = Math.sin(time * 2.2 + m.i) * 0.25;
       else if (m.kind === 'lantern') m.obj.rotation.z = Math.sin(time * 1.6 + m.i * 0.9) * 0.12;

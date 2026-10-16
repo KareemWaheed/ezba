@@ -197,7 +197,7 @@ class OneVenueView {
     this.root.add(new THREE.Mesh(v.id === 'orchard' ? standGeo(v) : kitchenGeo(v), MAT));
     // the drop spot (what it takes), the cash spot
     const icons = [...new Set(v.kitchen.recipes.flatMap((r) => Object.keys(r.inputs) as VenueItemId[]))].map((k) => ITEM_ICON[k]).join('');
-    const dm = groundMarker(icons.slice(0, 2), 1.5, 'rgba(255,214,140,0.35)', '#e8a23a');
+    const dm = groundMarker(Array.from(icons).slice(0, 2).join(''), 1.5, 'rgba(255,214,140,0.35)', '#e8a23a');
     dm.position.set(v.kitchen.input.x, 0, v.kitchen.input.z);
     const cm = groundMarker('', 1.4, 'rgba(94,198,208,0.35)', '#5ec6d0');
     cm.position.set(v.window.cash.x, 0, v.window.cash.z);
@@ -208,7 +208,7 @@ class OneVenueView {
     // what's for sale on the window counter (one instanced mesh per product)
     const b = v.kitchen.box;
     for (const r of v.kitchen.recipes) {
-      const m = new THREE.InstancedMesh(ITEM_GEO[r.output], MAT, 12);
+      const m = new THREE.InstancedMesh(ITEM_GEO[r.output], MAT, v.window.max);
       m.count = 0;
       m.frustumCulled = false;
       this.cups.set(r.output, m);
@@ -300,14 +300,15 @@ class OneVenueView {
     const b = v.kitchen.box;
     let col = 0;
     for (const [item, m] of this.cups) {
-      const n = Math.min(12, ven.stock[item] ?? 0);
+      const n = Math.min(v.window.max, ven.stock[item] ?? 0);
       const first = col;
       col += 6;
       if (n === this.cupsShown.get(item)) continue;
       this.cupsShown.set(item, n);
       for (let k = 0; k < n; k++) {
-        const slot = first + (k % 6), layer = Math.floor(k / 6);
-        _p.set(v.window.x - 1.1 + (slot % 12) * 0.2 + (layer ? 0.1 : 0), 0.95 + layer * 0.02, b.z1 + 0.15 + layer * 0.25);
+        // (six a row, two rows deep, then stacked on top)
+        const slot = first + (k % 6), layer = Math.floor(k / 6), row = layer % 2, up = Math.floor(layer / 2);
+        _p.set(v.window.x - 1.1 + (slot % 12) * 0.2 + (row ? 0.1 : 0), 0.95 + up * 0.28, b.z1 + 0.15 + row * 0.25);
         m.setMatrixAt(k, _m.compose(_p, _q.identity(), _s.set(0.55, 0.55, 0.55)));
       }
       m.count = n;

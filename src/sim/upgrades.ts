@@ -186,6 +186,8 @@ export class UpgradeSystem {
     }
     // (before staff.sync, so new stockers get the HR carry bonus right away)
     w.market.sync();
+    // (venue hands are hired here, before staff.sync gives every worker the HR carry bonus)
+    w.venues.sync();
     w.staff.sync();
     w.bounds.x0 = this.level('hr.office') > 0 ? LAYOUT.hrYard.unlockedX0 : LAYOUT.bounds.x0;
     if (this.level('river.unlock') > 0) w.bounds.x0 = Math.min(w.bounds.x0, RIVER.unlockedX0);
@@ -206,7 +208,6 @@ export class UpgradeSystem {
     w.contracts.sync();
     w.factory.sync();
     w.bounds.x1 = w.factory.open || w.mode === 'market' ? FACTORY.unlockedX1 : w.cafe.open ? CAFE.unlockedX1 : LAYOUT.bounds.x1;
-    w.venues.sync();
     if (w.venues.open) w.bounds.x1 = Math.max(w.bounds.x1, EAST.unlockedX1);
     const ex = this.level('field.expand');
     if (ex > 0) w.bounds.x1 = Math.max(w.bounds.x1, FIELDS.expandX1[Math.min(ex, FIELDS.expandX1.length) - 1]);

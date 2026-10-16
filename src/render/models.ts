@@ -169,7 +169,7 @@ export const ITEM_GEO: Record<ItemKind, THREE.BufferGeometry> = {
 };
 
 /** Stacking height of one item. */
-export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, honey: 0.47, omelette: 0.17, coffee: 0.36, cake: 0.32, cheese: 0.22, grilledFish: 0.18, fish: 0.3, corn: 0.24, wheat: 0.28, rice: 0.38, pasta: 0.4, oil: 0.48, tea: 0.26, chips: 0.34, soda: 0.28, bread: 0.2, tomato: 0.26, potato: 0.36, mango: 0.3, guava: 0.3, squab: 0.42, mangoJuice: 0.36, guavaJuice: 0.36, stuffedPigeon: 0.2, bill: 0.11 };
+export const ITEM_H: Record<ItemKind, number> = { egg: 0.44, milk: 0.66, honey: 0.47, omelette: 0.17, coffee: 0.36, cake: 0.32, cheese: 0.22, grilledFish: 0.18, fish: 0.3, corn: 0.24, wheat: 0.28, rice: 0.38, pasta: 0.4, oil: 0.48, tea: 0.26, chips: 0.34, soda: 0.28, bread: 0.2, tomato: 0.26, potato: 0.36, mango: 0.3, guava: 0.3, squab: 0.42, mangoJuice: 0.5, guavaJuice: 0.5, stuffedPigeon: 0.2, bill: 0.11 };
 
 export const ITEM_ICON: Record<ItemId, string> = { egg: '🥚', milk: '🥛', honey: '🍯', omelette: '🍳', coffee: '☕', cake: '🍰', cheese: '🥪', grilledFish: '🍢', fish: '🐟', corn: '🌽', wheat: '🌾', rice: '🍚', pasta: '🍝', oil: '🫒', tea: '🍵', chips: '🍟', soda: '🥤', bread: '🍞', tomato: '🍅', potato: '🥔', mango: '🥭', guava: '🍐', squab: '🕊️', mangoJuice: '🧃', guavaJuice: '🍹', stuffedPigeon: '🍗' };
 

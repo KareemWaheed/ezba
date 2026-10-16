@@ -23,7 +23,7 @@ export function dayKey(d = new Date()): string {
 const SOUND_KEY = 'ezba.muted';
 
 /** Number of milestone upgrades (all of them bought = ready for a bigger ezba). */
-const UPGRADE_MILESTONES = () => UPGRADES.filter((d) => d.milestone).length;
+const UPGRADE_MILESTONES = () => UPGRADES.filter((d) => d.milestone && !d.extra).length;
 
 /**
  * Side buttons under the rating: 📋 daily tasks (badge = ready to claim), 📖 customer album
@@ -293,6 +293,17 @@ export class MetaMenus {
     this.albumBadge.hidden = fresh <= 0;
     this.albumBadge.textContent = String(fresh);
     if (this.open === 'tasks' && this.modal.isOpen) this.refreshTasks();
+    if (this.open === 'shop' && this.modal.isOpen) this.refreshShop();
+  }
+
+  /** Re-render the open shop only when what the player can afford changed (money keeps coming in). */
+  private shopKey = '';
+  private refreshShop(): void {
+    const m = this.sim.money, list = this.shopTab === 'decor' ? SHOP.decor : this.shopTab === 'outfit' ? SHOP.outfits : SHOP.hats;
+    const key = list.map((it) => (m >= it.price ? 1 : 0)).join('');
+    if (key === this.shopKey) return;
+    this.shopKey = key;
+    this.showShop();
   }
 
   /** Re-render the open tasks card only when progress numbers changed. */

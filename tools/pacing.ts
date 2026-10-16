@@ -112,7 +112,7 @@ export function checkEasyTargets(eff: RunResult, casual: RunResult): TargetResul
   const out: TargetResult[] = [];
   const add = (name: string, ok: boolean, detail: string) => out.push({ name, ok, detail });
   const done = (r: RunResult) => (r.doneMin !== undefined ? `${r.doneMin.toFixed(0)} min (day ${r.doneDay})` : `never (${r.left} levels left)`);
-  add('easy: casual buys every upgrade by the end of day 2', casual.doneDay !== undefined && casual.doneDay <= 2, done(casual));
+  add('easy: casual buys every farm upgrade (the east apart) by the end of day 2', casual.doneDay !== undefined && casual.doneDay <= 2, done(casual));
   add('easy: not before the first hour of play (efficient)', eff.doneMin === undefined || eff.doneMin >= 60, done(eff));
   const c1 = casual.purchases[0];
   add('easy: casual first upgrade within ~1 min', !!c1 && c1.playMin <= 1, c1 ? `${c1.playMin.toFixed(1)} min` : 'never');

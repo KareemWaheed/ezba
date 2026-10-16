@@ -85,12 +85,16 @@ const O = EAST.venues[0], P = EAST.venues[1];
   ok(mango > 20 && guava > 5, `the pickers keep the press busy: ${mango} mango and ${guava} guava juices sold in 4 min`);
   const perMin = v.cash.value / 4;
   console.log(`      (a full orchard earns ~${Math.round(perMin)}/min at x${w.priceMult.toFixed(2)} prices; the farm makes ${Math.round(w.perSec * 60)}/min from animals)`);
-  // saved: fruit on the trees, the press, the window, the cash
+  // saved: fruit on the trees, the press, the window, the cash (with something in every buffer)
+  v.input.mango += 3; v.input.guava += 2; v.stock.mangoJuice += 4; v.stock.guavaJuice += 1;
   const s = JSON.parse(JSON.stringify(serialize(w, Date.now())));
+  const saved = s.east.orchard;
   const q = new SimWorld(11);
   restore(q, s);
   const qv = q.venues.get('orchard');
   ok(qv.open && qv.sources.map((x) => x.n).join() === v.sources.map((x) => x.n).join() && Math.abs(qv.cash.value - v.cash.value) < 1e-6, 'the orchard is saved');
+  ok(qv.input.mango === saved.in.mango && qv.input.guava === saved.in.guava && qv.stock.mangoJuice === saved.st.mangoJuice && qv.stock.guavaJuice === saved.st.guavaJuice
+    && saved.in.mango >= 3 && saved.st.mangoJuice >= 4, `the press and the window come back too (${JSON.stringify(saved.in)} ${JSON.stringify(saved.st)})`);
   const before = w.money;
   const r = simulateAway(w, 3600);
   ok(r.earned > 0 && w.money > before, `time away pays for the pickers' work (${r.earned} for an hour)`);

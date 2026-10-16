@@ -9,7 +9,7 @@ const FOLLOW = 16;
 /** Softer follow while panning to / from a focus point. */
 const FOCUS_FOLLOW = 3.5;
 /** Dev builds only: `?zoom=3` pulls the camera out (overview screenshots). */
-const DEV_ZOOM = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('zoom')) || 1 : 1;
+const DEV_ZOOM = import.meta.env.DEV ? Math.min(10, Math.max(1, Number(new URLSearchParams(location.search).get('zoom')) || 1)) : 1;
 
 /** Fixed tilted top-down camera that tightly follows a target (or briefly looks at a focus point). */
 export class CameraRig {

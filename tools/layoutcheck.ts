@@ -30,6 +30,9 @@ const problems: string[] = [];
 /** The east's buildings and trees, and the decorations that stand solid (all built later, by addSolid). */
 const EAST_SOLIDS = [
   ...EAST.venues.flatMap((v) => [v.kitchen.box, ...v.sources.map((s) => ({ x0: s.x - s.solid.hx, x1: s.x + s.solid.hx, z0: s.z - s.solid.hz, z1: s.z + s.solid.hz }))]),
+  // the factory yard's east fence either side of its gate (solid once the east opens)
+  { x0: EAST.fence.x - 0.1, x1: EAST.fence.x + 0.1, z0: EAST.fence.z0, z1: EAST.fence.gate.z0 },
+  { x0: EAST.fence.x - 0.1, x1: EAST.fence.x + 0.1, z0: EAST.fence.gate.z1, z1: EAST.fence.z1 },
   ...SHOP.decor.flatMap((d) => (d.solid ? d.spots.map((s) => ({ x0: s.x - d.solid!.hx, x1: s.x + d.solid!.hx, z0: s.z - d.solid!.hz, z1: s.z + d.solid!.hz })) : [])),
 ];
 const MARKET_SOLIDS = [...MARKET.walls, MARKET.checkout.box, MARKET.checkout2.box, MARKET.kiosk.box, MARKET.store.racks, MARKET.desk.box, ...SHELVES.map((s) => s.box)];
@@ -175,6 +178,8 @@ for (const z of zones) {
 for (const b of EAST_SOLIDS) {
   for (const z of zones) if (z.x > b.x0 - 0.3 && z.x < b.x1 + 0.3 && z.z > b.z0 - 0.3 && z.z < b.z1 + 0.3 && !EAST.venues.some((v) => z.name.startsWith(v.id))) problems.push(`work spot ${z.name} in an east/decor solid`);
   for (const p of LAYOUT.dancePads) if (p.x > b.x0 - 0.6 && p.x < b.x1 + 0.6 && p.z > b.z0 - 0.6 && p.z < b.z1 + 0.6) problems.push(`decor solid on a dance pad (${p.x},${p.z})`);
+  const P = LAYOUT.pitch;
+  if (b.x0 < P.x1 && b.x1 > P.x0 && b.z0 < P.z1 && b.z1 > P.z0) problems.push(`east/decor solid on the football pitch (${b.x0},${b.z0})`);
 }
 
 if (problems.length) {

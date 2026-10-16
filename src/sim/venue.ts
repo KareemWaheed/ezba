@@ -56,7 +56,8 @@ class VenueJob implements WorkerJob {
 
   putBack(_w: SimWorld, item: ItemId, slot: number): void {
     const s = this.v.sources[this.from[slot] ?? -1] ?? this.v.sources.find((x) => x.def.item === item);
-    if (s) s.n++;
+    // (never past what a source holds: a tree that refilled meanwhile keeps its own fruit)
+    if (s) s.n = Math.min(this.v.def.hold, s.n + 1);
   }
 }
 

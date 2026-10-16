@@ -48,8 +48,6 @@ export const EAST = {
   unlockedX1: 44.2,
   /** The factory yard's east fence turns solid once the east opens, with a gap (the gate) at gateZ. */
   fence: { x: 28.8, z0: -1.6, z1: 12.0, gate: { z0: 8.4, z1: 10.6 } },
-  /** Where the corner trees moved when the east opened up (they used to stand at x 31). */
-  trees: [[46.5, -12.5], [46.5, -3], [47, 4], [47, 11], [45.5, 17.5]] as const,
   venues: [
     {
       id: 'orchard', name: 'بستان المانجة', icon: '🥭', unlock: 'orchard.unlock',

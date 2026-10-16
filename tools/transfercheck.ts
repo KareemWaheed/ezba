@@ -79,6 +79,9 @@ ok(fromBase45('GGW') === null, 'base45 rejects an out-of-range triple');
   ok(p.perkPoints === 4 && p.carry.cap === capPerks - 2 * PERK_BY_ID.get('carry')!.step, 'points can be taken back');
 }
 
+// the shop saves one base-36 digit per thing: every list must stay under 36 entries
+ok(SHOP.decor.length < 36 && SHOP.outfits.length < 36 && SHOP.hats.length < 36, 'each shop list fits the one-digit save format');
+
 // the decorations shop: buying costs money, decorations raise prices (and the solid ones block), it's all saved and kept
 {
   const p = new SimWorld(5);

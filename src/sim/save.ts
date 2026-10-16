@@ -64,7 +64,7 @@ export interface SaveData {
   perks?: Record<string, number>;
   /**
    * The decorations shop: what was bought, per kind as a string of base-36 indices into SHOP.decor / outfits / hats
-   * (so new things must only ever be appended to those lists), and what the farmer wears.
+   * (so new things must only ever be appended to those lists, each under 36 entries: transfercheck), and what the farmer wears.
    */
   shop?: { d?: string; o?: string; h?: string; outfit?: string; hat?: string };
   /** The east, per open venue: items on each source, kitchen input, window stock, cash (config/venues.ts). */
@@ -154,7 +154,10 @@ function marketSave(w: SimWorld): SaveData['market'] {
   return { shelves, store, cash: m.cash.value, bills: m.cash.bills, price: { ...m.price } };
 }
 
-/** The east's open venues (a hand's load goes back into the kitchen, the dish cooking counts as made). */
+/**
+ * The east's open venues (a hand's load goes back into the kitchen, the dish cooking counts as made: two hands may
+ * have loaded against the same room, so a saved kitchen can hold more than inputMax; restore allows up to twice it).
+ */
 function eastSave(w: SimWorld): { east?: SaveData['east'] } {
   const out: NonNullable<SaveData['east']> = {};
   const nz = (r: Record<string, number>) => { const o: Record<string, number> = {}; for (const [k, v] of Object.entries(r)) if (v) o[k] = v; return Object.keys(o).length ? o : undefined; };
@@ -179,7 +182,7 @@ function restoreEast(w: SimWorld, s: SaveData['east']): void {
     const d = s?.[v.def.id];
     if (!d) continue;
     v.sources.forEach((x, i) => { x.n = Math.min(v.def.hold, Math.max(0, Math.floor(num(d.src?.[i])))); });
-    for (const k of Object.keys(v.input) as (keyof typeof v.input)[]) v.input[k] = Math.min(v.def.kitchen.inputMax, Math.max(0, Math.floor(num(d.in?.[k]))));
+    for (const k of Object.keys(v.input) as (keyof typeof v.input)[]) v.input[k] = Math.min(v.def.kitchen.inputMax * 2, Math.max(0, Math.floor(num(d.in?.[k]))));
     for (const k of Object.keys(v.stock) as (keyof typeof v.stock)[]) v.stock[k] = Math.min(v.def.window.max, Math.max(0, Math.floor(num(d.st?.[k]))));
     v.cash.value = num(d.cash);
     v.cash.bills = Math.min(40, Math.floor(num(d.bills)));
