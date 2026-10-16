@@ -10,6 +10,7 @@ import jsQR from 'jsqr';
 import { SimWorld } from '../src/sim/world';
 import { serialize, restore, legacyReset } from '../src/sim/save';
 import { PERK_BY_ID } from '../src/config/perks';
+import { SHOP } from '../src/config/shop';
 import { ECONOMY, type UpgradeId } from '../src/config/economy';
 import { SCENARIO_GAP } from '../src/config/scenarios';
 import { textCode, qrCode, readCode, toBase45, fromBase45 } from '../src/transfer';
@@ -78,6 +79,28 @@ ok(fromBase45('GGW') === null, 'base45 rejects an out-of-range triple');
   ok(p.perkPoints === 4 && p.carry.cap === capPerks - 2 * PERK_BY_ID.get('carry')!.step, 'points can be taken back');
 }
 
+// the decorations shop: buying costs money, decorations raise prices (and the solid ones block), it's all saved and kept
+{
+  const p = new SimWorld(5);
+  p.money = 2_000_000;
+  const m0 = p.priceMult, solids0 = p.solids.length;
+  ok(p.shop.buy('decor', 'fountain') && p.shop.buy('hat', 'tarboosh') && p.shop.buy('outfit', 'suit') && !p.shop.buy('decor', 'fountain'), 'the shop sells each thing once');
+  ok(p.money === 2_000_000 - 400_000 - 12_000 - 80_000 && p.shop.hat === 'tarboosh' && p.shop.outfit === 'suit', 'buying pays and puts the clothes on');
+  ok(Math.abs(p.priceMult / m0 - (1 + SHOP.decorBonus)) < 1e-9 && p.solids.length === solids0 + 1, 'a decoration raises the prices and stands solid');
+  const left = p.money;
+  p.money = 500;
+  ok(!p.shop.buy('decor', 'statue') && p.money === 500, "it can't be bought without the money");
+  p.money = left;
+  p.shop.wear('outfit', 'farmer');
+  const q = new SimWorld(5);
+  restore(q, JSON.parse(JSON.stringify(serialize(p, Date.now()))));
+  ok(q.shop.has('decor', 'fountain') && q.shop.hat === 'tarboosh' && q.shop.outfit === 'farmer' && q.shop.has('outfit', 'suit') && q.solids.length === solids0 + 1, 'the shop is saved');
+  for (const id of Object.keys(ECONOMY.upgrades) as UpgradeId[]) if (id !== 'eggs.unlock') p.upgrades.levels[id] = p.upgrades.maxOf(id);
+  const n = new SimWorld(5);
+  restore(n, JSON.parse(JSON.stringify(legacyReset(p, Date.now())!)));
+  ok(n.shop.has('decor', 'fountain') && n.shop.hat === 'tarboosh', 'selling the farm keeps what was bought in the shop');
+}
+
 // a late-game farm: every track maxed, money, stats, a full album page's worth of state
 const w = new SimWorld(42);
 for (const id of Object.keys(ECONOMY.upgrades) as UpgradeId[]) if (!id.startsWith('market.')) w.upgrades.levels[id] = ECONOMY.upgrades[id].max;
@@ -85,6 +108,10 @@ w.upgrades.apply();
 w.money = 12_345_678.9;
 w.legacy = 2;
 w.perks.carry = 2; w.perks.walk = 1;
+for (const d of SHOP.decor) w.shop.owned.add(`d:${d.id}`);
+for (const o of SHOP.outfits) w.shop.owned.add(`o:${o.id}`);
+for (const h of SHOP.hats) w.shop.owned.add(`h:${h.id}`);
+w.shop.outfit = 'suit'; w.shop.hat = 'crown';
 for (const k of Object.keys(w.stats) as (keyof typeof w.stats)[]) w.stats[k] = 98765;
 for (let i = 0; i < 30 * 60 * 10; i++) w.tick(1 / 30);
 const save = serialize(w, Date.now());

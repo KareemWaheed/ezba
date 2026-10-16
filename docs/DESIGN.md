@@ -429,3 +429,9 @@ This file records the decisions made on top of it.
   way; old saves with a legacy level get their points at once. Saved as `perks` (only the ones taken; a save never
   loads more levels than its points cover). The save keeps only non-zero upgrade levels/payments now (the QR went
   from version 30 to 27). `npm run transfercheck` covers perks.
+- The decorations shop (محل الزينة, the 🎨 side button, config/shop.ts): decorations for the farm (flower boxes, flags,
+  a lantern garland over the counter, street lamps, palms, a ful cart, a swing, a fountain, a pharaoh statue) around
+  the event square and the yard, clothes (galabeya, suit, football shirts, gold) and hats (tarboosh, turban, crown...)
+  for the farmer. Bought with money, kept forever (also when the farm is sold). Each decoration raises every sale
+  price by `SHOP.decorBonus` (2%); clothes and hats are only for looks. The cart, swing, fountain and statue are
+  solid (sim/shop.ts adds them). Saved as `shop` (ids prefixed o:/h:/d:, only once something was bought).

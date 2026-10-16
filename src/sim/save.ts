@@ -2,6 +2,7 @@ import { ECONOMY, ITEM_IDS, priceOf, type ItemId, type UpgradeId } from '../conf
 import { SimWorld } from './world';
 import { LEGACY } from '../config/legacy';
 import { PERKS } from '../config/perks';
+import { DECOR_BY_ID, HAT_BY_ID, OUTFIT_BY_ID } from '../config/shop';
 import { FIELDS } from '../config/fields';
 import type { GameMode } from '../config/paths';
 import { FEATURES } from '../config/features';
@@ -61,6 +62,8 @@ export interface SaveData {
   legacy?: number;
   /** Perk levels (config/perks.ts), only the ones taken. */
   perks?: Record<string, number>;
+  /** The decorations shop: what was bought ("o:suit", "h:crown", "d:palms"), and what the farmer wears. */
+  shop?: { own: string[]; outfit?: string; hat?: string };
   /** Easy mode (ECONOMY.easy). */
   easy?: boolean;
   /** 1 = saved after belts started replacing workers (older saves get the workers of their belts refunded once). */
@@ -108,7 +111,7 @@ export function serialize(w: SimWorld, now: number): SaveData {
     v: SAVE_VERSION, mode: w.mode, t: now, time: w.time, money: w.money, rng: w.rng.state,
     levels: nonZero(w.upgrades.levels), paid: nonZero(w.upgrades.paid), stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
-    rating: w.service.rating, legacy: w.legacy, rt: 1, ...(Object.keys(w.perks).length ? { perks: { ...w.perks } } : {}), ...(w.easy ? { easy: true } : {}), pv: PRICE_VERSION, vipT: w.customers.vipT,
+    rating: w.service.rating, legacy: w.legacy, rt: 1, ...(Object.keys(w.perks).length ? { perks: { ...w.perks } } : {}), ...shopSave(w), ...(w.easy ? { easy: true } : {}), pv: PRICE_VERSION, vipT: w.customers.vipT,
     market: marketSave(w),
     trust: { ...w.contracts.trust },
     ...(w.scenario.phase === 'idle' ? { eventT: Math.round(w.scenario.t) } : {}),
@@ -145,6 +148,27 @@ function marketSave(w: SimWorld): SaveData['market'] {
   return { shelves, store, cash: m.cash.value, bills: m.cash.bills, price: { ...m.price } };
 }
 
+/** The shop's state, only when something was bought. */
+function shopSave(w: SimWorld): { shop?: SaveData['shop'] } {
+  const sh = w.shop;
+  if (!sh.owned.size) return {};
+  return { shop: { own: [...sh.owned], ...(sh.outfit !== 'farmer' ? { outfit: sh.outfit } : {}), ...(sh.hat !== 'none' ? { hat: sh.hat } : {}) } };
+}
+
+/** Restore the shop (unknown ids from a newer or older game are dropped). */
+function restoreShop(w: SimWorld, s: SaveData['shop']): void {
+  const sh = w.shop;
+  for (const id of s?.own ?? []) {
+    if (typeof id !== 'string') continue;
+    const [k, rest] = [id[0], id.slice(2)];
+    const kind = k === 'o' ? 'outfit' : k === 'h' ? 'hat' : k === 'd' ? 'decor' : null;
+    if (kind && id[1] === ':' && (kind === 'outfit' ? OUTFIT_BY_ID : kind === 'hat' ? HAT_BY_ID : DECOR_BY_ID).has(rest)) sh.owned.add(id);
+  }
+  if (typeof s?.outfit === 'string') sh.wear('outfit', s.outfit);
+  if (typeof s?.hat === 'string') sh.wear('hat', s.hat);
+  sh.build();
+}
+
 /** Only the tracks with something in them (the save travels as a QR code; an absent track loads as 0). */
 function nonZero(r: Record<string, number>): Record<string, number> {
   const out: Record<string, number> = {};
@@ -171,6 +195,7 @@ export function restore(w: SimWorld, s: SaveData): void {
   w.money = num(s.money);
   w.legacy = Math.max(0, Math.floor(num(s.legacy)));
   w.easy = s.easy === true;
+  restoreShop(w, s.shop);
   // (never more levels than the points earned: a perk past them is dropped)
   let left = w.legacy * PERKS.pointsPerLegacy;
   for (const p of PERKS.list) {
@@ -301,7 +326,7 @@ export function restore(w: SimWorld, s: SaveData): void {
 
 /**
  * Sell the farm for a bigger one: a fresh farm one prestige level up, with the starting money for it.
- * The album, daily tasks, lifetime stats and perks carry over. Returns the new save (the caller writes it
+ * The album, daily tasks, lifetime stats, perks and the shop's things carry over. Returns the new save (the caller writes it
  * and reloads). Null while milestones are still missing.
  */
 export function legacyReset(w: SimWorld, now: number): SaveData | null {
@@ -310,6 +335,7 @@ export function legacyReset(w: SimWorld, now: number): SaveData | null {
   f.legacy = w.legacy + 1;
   f.easy = w.easy;
   for (const [k, n] of Object.entries(w.perks)) f.perks[k as keyof typeof f.perks] = n;
+  restoreShop(f, shopSave(w).shop);
   f.money = f.path.startMoney + LEGACY.startMoney * f.legacy + f.perk('head');
   for (const k of Object.keys(f.stats) as (keyof typeof f.stats)[]) f.stats[k] = w.stats[k];
   for (const id of w.album.seen) f.album.seen.add(id);

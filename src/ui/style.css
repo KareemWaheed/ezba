@@ -300,6 +300,18 @@ html, body {
 #modal .p-pips i { width: 14px; height: 14px; border-radius: 50%; background: #e9dfb6; border: 2px solid #c9b98a; }
 #modal .p-pips i.on { background: #f6c23e; border-color: #c98f0f; }
 
+/* decorations shop */
+#modal .sh-tabs { display: flex; gap: 6px; justify-content: center; margin: 6px 0; }
+#modal .sh-tab { font: inherit; font-weight: 800; font-size: 15px; border: 2px solid var(--panel-edge); border-radius: 12px; padding: 5px 10px; background: #fff; color: var(--ink); }
+#modal .sh-tab.on { background: var(--accent); color: #fff; border-color: #b8600f; }
+#modal .sh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; margin: 8px 0; }
+#modal .sh-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; background: #fff; border: 2px solid var(--panel-edge); border-radius: 14px; padding: 8px 4px; font-size: 14px; }
+#modal .sh-cell.own { background: #f1fbe9; border-color: #8fcf75; }
+#modal .sh-icon { font-size: 34px; line-height: 1.1; }
+#modal .sh-own { font-size: 13px; font-weight: 800; color: #2f8f3a; }
+#modal .sh-cell .t-claim { font-size: 13px; padding: 5px 8px; }
+#modal .sh-wear { background: #3fae5a; box-shadow: 0 3px 0 #2c7d40; }
+
 /* supermarket order desk */
 #modal .o-farm { background: #3fae5a; box-shadow: 0 3px 0 #2c7d40; }
 #modal .o-price { color: #2c7d40; }

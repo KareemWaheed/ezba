@@ -23,6 +23,8 @@ import { FactorySystem } from './factory';
 import { RiverSystem } from './river';
 import { ButcherSystem } from './butcher';
 import { MarketSystem } from './market';
+import { ShopSystem } from './shop';
+import { SHOP } from '../config/shop';
 import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
@@ -63,6 +65,8 @@ export class SimWorld {
   readonly market: MarketSystem;
   readonly album: AlbumSystem;
   readonly daily: DailySystem;
+  /** The decorations shop: clothes, hats and decorations (kept when the farm is sold). */
+  readonly shop: ShopSystem;
   /** Real-world clock for seasonal events (the UI updates it; the simulator keeps the default). */
   clock: Clock = { weekday: 1, hour: 12, ramadan: false };
   readonly cash = { value: 0, bills: 0 };
@@ -126,6 +130,7 @@ export class SimWorld {
     this.market = new MarketSystem(this);
     this.album = new AlbumSystem(this);
     this.daily = new DailySystem(this);
+    this.shop = new ShopSystem(this);
     this.upgrades = new UpgradeSystem(this);
     for (const [id, n] of Object.entries(this.path.startLevels)) this.upgrades.levels[id as keyof typeof this.upgrades.levels] = n;
     this.money = this.path.startMoney;
@@ -172,7 +177,7 @@ export class SimWorld {
 
   /** Sale price multiplier from farm growth (see ECONOMY.market). */
   get priceMult(): number {
-    return (1 + this.upgrades.bought * ECONOMY.market.growthPerUpgrade) * (1 + this.legacy * LEGACY.priceStep);
+    return (1 + this.upgrades.bought * ECONOMY.market.growthPerUpgrade) * (1 + this.legacy * LEGACY.priceStep) * (1 + this.shop.decorCount * SHOP.decorBonus);
   }
 
   /** A perk's effect: its level x its step (0 when not taken). */

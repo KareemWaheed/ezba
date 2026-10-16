@@ -41,6 +41,7 @@ import { updateBanner } from './ui/updateBanner';
 import { MarketBoard } from './ui/marketBoard';
 import { TransferPanel } from './ui/transferPanel';
 import { ITEM_ICON } from './render/models';
+import { DecorView, PlayerLook } from './render/shopView';
 import { ALBUM_PAGES } from './config/album';
 import { awayCap, simulateAway } from './sim/offline';
 
@@ -61,6 +62,8 @@ const playerStack = new CarrierView(player.root);
 let stepSide = 1;
 player.onStep = (c) => { stepSide = -stepSide; dust.emit(c.root.position.x, c.root.position.z, c.root.rotation.y, stepSide * 0.6); };
 view.scene.add(player.root);
+const playerLook = new PlayerLook(player, 0xf1c7a0, 0x3b2414);
+const decor = new DecorView(view.scene);
 // sickle in the right hand while standing in an open field; swings while cutting
 const sickle = player.attach(SICKLE_GEO, 'hand');
 sickle.visible = false;
@@ -172,6 +175,11 @@ menus.onEasy = (on) => { sim.setEasy(on); save(); toast.show(on ? '😌 الوض
 const transfer = new TransferPanel(modal, () => serialize(sim, Date.now()), () => menus.showSettings());
 menus.onTransfer = (kind) => { if (kind === 'send') void transfer.showSend(); else transfer.showReceive(); };
 const orderPanel = new OrderPanel(sim, modal);
+menus.onShopBuy = (kind, name) => {
+  sfx.kaching();
+  toast.show(kind === 'decor' ? `🎨 ${name} في العزبة! الأسعار زادت شوية` : `🎨 ${name}، شكلك حلو 😎`);
+  save();
+};
 menus.onLegacyReady = () => { sfx.fanfare(); toast.show('🏆 فتحت كل حاجة! دوس 🏆 وابدأ عزبة أكبر'); };
 
 const debug = new DebugPanel(uiRoot, sim, view, {
@@ -467,6 +475,8 @@ function frame(now: number): void {
 
   const p = sim.player;
   const driving = sim.field.driving ? sim.field.vehicle : null;
+  playerLook.sync(sim);
+  decor.update(sim, now / 1000);
   player.update(p.x, p.z, p.rot, driving ? 0 : p.speed, real, sim.carry.n > 0, !!driving);
   playerStack.update(sim.carry.items, Math.min(1, p.speed / ECONOMY.player.speed), real);
   const inField = !driving && (sim.field.plotAt(p.x, p.z)?.open ?? false);
