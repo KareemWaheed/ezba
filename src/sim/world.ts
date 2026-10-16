@@ -27,6 +27,7 @@ import type { Clock } from '../config/events';
 import { EventQueue } from './events';
 import { dist } from './math';
 import { LEGACY } from '../config/legacy';
+import { PERKS, PERK_BY_ID, type PerkId } from '../config/perks';
 import { PATHS, type GameMode, type PathDef } from '../config/paths';
 import { MARKET } from '../config/market';
 import { UPGRADES } from '../config/upgrades';
@@ -89,6 +90,8 @@ export class SimWorld {
   easy = false;
   /** Prestige level: how many times the farm was sold for a bigger one (config/legacy.ts). */
   legacy = 0;
+  /** Perk levels bought with legacy points (config/perks.ts); kept when the farm is sold. */
+  readonly perks = {} as Record<PerkId, number>;
   /** Trash button held: the top carried item is thrown away every trashInterval. Set by the UI. */
   trashing = false;
 
@@ -170,6 +173,33 @@ export class SimWorld {
   /** Sale price multiplier from farm growth (see ECONOMY.market). */
   get priceMult(): number {
     return (1 + this.upgrades.bought * ECONOMY.market.growthPerUpgrade) * (1 + this.legacy * LEGACY.priceStep);
+  }
+
+  /** A perk's effect: its level x its step (0 when not taken). */
+  perk(id: PerkId): number { return (this.perks[id] ?? 0) * PERK_BY_ID.get(id)!.step; }
+
+  /** Perk points earned (every sale of the farm) and not spent yet. */
+  get perkPoints(): number {
+    let spent = 0;
+    for (const p of PERKS.list) spent += this.perks[p.id] ?? 0;
+    return this.legacy * PERKS.pointsPerLegacy - spent;
+  }
+
+  /** Spend a point on a perk (false when there's no point or it's maxed). */
+  buyPerk(id: PerkId): boolean {
+    const d = PERK_BY_ID.get(id);
+    if (!d || this.perkPoints <= 0 || (this.perks[id] ?? 0) >= d.max) return false;
+    this.perks[id] = (this.perks[id] ?? 0) + 1;
+    this.upgrades.apply();
+    this.upgrades.refresh();
+    return true;
+  }
+
+  /** Take every point back to spend again. */
+  resetPerks(): void {
+    for (const p of PERKS.list) delete this.perks[p.id];
+    this.upgrades.apply();
+    this.upgrades.refresh();
   }
 
   /** Milestone upgrades not bought yet (all bought = the farm can be sold for a bigger one). */

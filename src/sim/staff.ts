@@ -417,7 +417,7 @@ export class StaffSystem {
   }
 
   update(dt: number): void {
-    const w = this.w, speedMult = 1 + w.upgrades.level('hr.speed') * ECONOMY.upgrades['hr.speed'].step;
+    const w = this.w, speedMult = 1 + w.upgrades.level('hr.speed') * ECONOMY.upgrades['hr.speed'].step + w.perk('staff');
     for (const x of this.workers) x.update(w, dt, speedMult);
     if (!w.scenario.powerCut) for (const b of this.belts) b.update(dt);
     this.updateMechanics(dt, speedMult);

@@ -1,6 +1,7 @@
 import { ECONOMY, ITEM_IDS, priceOf, type ItemId, type UpgradeId } from '../config/economy';
 import { SimWorld } from './world';
 import { LEGACY } from '../config/legacy';
+import { PERKS } from '../config/perks';
 import { FIELDS } from '../config/fields';
 import type { GameMode } from '../config/paths';
 import { FEATURES } from '../config/features';
@@ -58,6 +59,8 @@ export interface SaveData {
   daily?: { day: string; tasks: { id: string; target: number; start: number; reward: number; claimed: boolean; notified: boolean }[] };
   /** Prestige level (config/legacy.ts). */
   legacy?: number;
+  /** Perk levels (config/perks.ts), only the ones taken. */
+  perks?: Record<string, number>;
   /** Easy mode (ECONOMY.easy). */
   easy?: boolean;
   /** 1 = saved after belts started replacing workers (older saves get the workers of their belts refunded once). */
@@ -103,9 +106,9 @@ export function serialize(w: SimWorld, now: number): SaveData {
   }
   return {
     v: SAVE_VERSION, mode: w.mode, t: now, time: w.time, money: w.money, rng: w.rng.state,
-    levels: { ...w.upgrades.levels }, paid: { ...w.upgrades.paid }, stations,
+    levels: nonZero(w.upgrades.levels), paid: nonZero(w.upgrades.paid), stations,
     carry: [...w.carry.items], cash: { ...w.cash }, player: { x: w.player.x, z: w.player.z }, stats: { ...w.stats },
-    rating: w.service.rating, legacy: w.legacy, rt: 1, ...(w.easy ? { easy: true } : {}), pv: PRICE_VERSION, vipT: w.customers.vipT,
+    rating: w.service.rating, legacy: w.legacy, rt: 1, ...(Object.keys(w.perks).length ? { perks: { ...w.perks } } : {}), ...(w.easy ? { easy: true } : {}), pv: PRICE_VERSION, vipT: w.customers.vipT,
     market: marketSave(w),
     trust: { ...w.contracts.trust },
     ...(w.scenario.phase === 'idle' ? { eventT: Math.round(w.scenario.t) } : {}),
@@ -142,6 +145,13 @@ function marketSave(w: SimWorld): SaveData['market'] {
   return { shelves, store, cash: m.cash.value, bills: m.cash.bills, price: { ...m.price } };
 }
 
+/** Only the tracks with something in them (the save travels as a QR code; an absent track loads as 0). */
+function nonZero(r: Record<string, number>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(r)) if (v) out[k] = v;
+  return out;
+}
+
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 
 /** The butcher's state, without its zero fields (undefined when there's nothing to keep). */
@@ -161,6 +171,12 @@ export function restore(w: SimWorld, s: SaveData): void {
   w.money = num(s.money);
   w.legacy = Math.max(0, Math.floor(num(s.legacy)));
   w.easy = s.easy === true;
+  // (never more levels than the points earned: a perk past them is dropped)
+  let left = w.legacy * PERKS.pointsPerLegacy;
+  for (const p of PERKS.list) {
+    const n = Math.min(p.max, left, Math.max(0, Math.floor(num(s.perks?.[p.id]))));
+    if (n > 0) { w.perks[p.id] = n; left -= n; }
+  }
   w.customers.vipT = Math.max(0, num(s.vipT));
   if (s.rng) w.rng.state = num(s.rng, w.rng.state) >>> 0;
   const up = w.upgrades;
@@ -285,7 +301,7 @@ export function restore(w: SimWorld, s: SaveData): void {
 
 /**
  * Sell the farm for a bigger one: a fresh farm one prestige level up, with the starting money for it.
- * The album, daily tasks and lifetime stats carry over. Returns the new save (the caller writes it
+ * The album, daily tasks, lifetime stats and perks carry over. Returns the new save (the caller writes it
  * and reloads). Null while milestones are still missing.
  */
 export function legacyReset(w: SimWorld, now: number): SaveData | null {
@@ -293,7 +309,8 @@ export function legacyReset(w: SimWorld, now: number): SaveData | null {
   const f = new SimWorld((now % 1_000_000_007) >>> 0 || 1, w.mode);
   f.legacy = w.legacy + 1;
   f.easy = w.easy;
-  f.money = f.path.startMoney + LEGACY.startMoney * f.legacy;
+  for (const [k, n] of Object.entries(w.perks)) f.perks[k as keyof typeof f.perks] = n;
+  f.money = f.path.startMoney + LEGACY.startMoney * f.legacy + f.perk('head');
   for (const k of Object.keys(f.stats) as (keyof typeof f.stats)[]) f.stats[k] = w.stats[k];
   for (const id of w.album.seen) f.album.seen.add(id);
   for (const id of w.album.paid) f.album.paid.add(id);

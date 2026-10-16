@@ -295,6 +295,10 @@ html, body {
 #modal .l-miss { background: #fff; border: 2px solid var(--panel-edge); border-radius: 12px; padding: 3px 9px; font-size: 14px; font-weight: 700; }
 #modal .l-next { background: #fff3c4; border-radius: 14px; padding: 8px 10px; margin: 8px 0; font-size: 15px; }
 #modal .m-btn.l-later { background: #d8d2bd; color: var(--ink); box-shadow: 0 4px 0 #b3ad94; }
+#modal .m-btn.l-perks { background: #8a5cd6; box-shadow: 0 4px 0 #5f3c9e; display: block; margin: 8px auto 4px; }
+#modal .p-pips { display: flex; gap: 4px; margin-top: 3px; }
+#modal .p-pips i { width: 14px; height: 14px; border-radius: 50%; background: #e9dfb6; border: 2px solid #c9b98a; }
+#modal .p-pips i.on { background: #f6c23e; border-color: #c98f0f; }
 
 /* supermarket order desk */
 #modal .o-farm { background: #3fae5a; box-shadow: 0 3px 0 #2c7d40; }

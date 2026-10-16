@@ -362,7 +362,7 @@ export class ScenarioSystem {
     const won = this.lastGoals.every((g) => g.ok);
     this.stars = this.grade(won);
     const r = w.service;
-    const full = d.rewardSeconds * w.perSec + this.sales * d.rewardShare;
+    const full = (d.rewardSeconds * w.perSec + this.sales * d.rewardShare) * (1 + w.perk('events'));
     const met = this.lastGoals.filter((g) => g.ok).length / Math.max(1, this.lastGoals.length);
     const reward = Math.round(won ? full * STAR_MULT[this.stars] : full * (BASE_PART + BONUS_PART * met));
     if (d.guest && this.guestServed) w.album.see(`g:${d.id}`);

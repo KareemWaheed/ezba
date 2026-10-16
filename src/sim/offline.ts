@@ -76,7 +76,7 @@ export function simulateAway(w: SimWorld, seconds: number, step = 0.5): AwayResu
   // full rate up to `fullSeconds` (the simulated part included), `lateFactor` of it after
   const fullRaw = simRaw + rate * Math.max(0, Math.min(capped, O.fullSeconds) - simT);
   const lateRaw = rate * Math.max(0, capped - Math.max(simT, O.fullSeconds));
-  const earned = Math.floor((fullRaw + lateRaw * O.lateFactor) * O.efficiency);
+  const earned = Math.floor((fullRaw + lateRaw * O.lateFactor) * (O.efficiency + w.perk('away')));
   w.money += earned;
   w.stats.earned += earned;
   return { earned, raw, seconds: capped };

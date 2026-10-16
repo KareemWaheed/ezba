@@ -5,6 +5,7 @@ import { ALBUM_PAGES } from '../config/album';
 import { isMuted, setMuted } from '../audio';
 import { fmtMoney, ltr, type Modal } from './modal';
 import { LEGACY, legacyTitle } from '../config/legacy';
+import { PERKS } from '../config/perks';
 import { legacyReset } from '../sim/save';
 import { replaceSave } from '../storage';
 import { FEATURES } from '../config/features';
@@ -30,7 +31,7 @@ export class MetaMenus {
   private tasksBadge: HTMLElement;
   private albumBadge: HTMLElement;
   private albumSeen = 0;
-  private open: 'tasks' | 'album' | 'settings' | 'legacy' | null = null;
+  private open: 'tasks' | 'album' | 'settings' | 'legacy' | 'perks' | null = null;
   private legacyBadge: HTMLElement;
   private legacyReady = false;
   /** Called once when the farm becomes ready to sell for a bigger one. */
@@ -123,7 +124,9 @@ export class MetaMenus {
       ? `<div>لقبك: <b>${legacyTitle(lv)}</b> · كل الأسعار <b>${ltr(pct(lv))}</b></div>`
       : `<div>لقبك: <b>${legacyTitle(0)}</b></div>`;
     const next = `<div class="l-next">🏆 العزبة الجاية: لقب <b>${legacyTitle(lv + 1)}</b>، كل الأسعار <b>${ltr(pct(lv + 1))}</b>
-      وتبدأ بـ <b>${ltr(fmtMoney(LEGACY.startMoney * (lv + 1)))}</b> 💰</div>`;
+      وتبدأ بـ <b>${ltr(fmtMoney(LEGACY.startMoney * (lv + 1) + w.perk('head')))}</b> 💰، و<b>${PERKS.pointsPerLegacy}</b> نقط مزايا ⭐</div>`;
+    const pts = w.perkPoints;
+    const perks = `<button class="m-btn l-perks" data-perks>⭐ مزايا العزبة${pts > 0 ? ` <b>(${pts} نقطة)</b>` : ''}</button>`;
     let body: string;
     if (missing.length) {
       const all = UPGRADE_MILESTONES();
@@ -133,12 +136,12 @@ export class MetaMenus {
       body = `<div class="m-note">افتح كل حاجة في المزرعة، وبعدها تقدر تبيعها وتبدأ عزبة أكبر وأغنى</div>
         <div class="t-track"><div class="t-bar" style="width:${Math.round((done / all) * 100)}%"></div></div>
         <div class="t-sub">${done}/${all}</div>
-        <div class="l-list">${list}</div>${next}
+        <div class="l-list">${list}</div>${next}${perks}
         <button class="m-btn" data-close>تمام</button>`;
     } else if (!confirm) {
       body = `<div class="m-note">فتحت كل حاجة! 🎉 بيع العزبة وابدأ واحدة أكبر</div>${next}
-        <div class="m-note">بيفضل معاك: الألبوم والمهام. بيتصفّر: الفلوس والترقيات</div>
-        <button class="m-btn" data-legacy>🏆 بيع العزبة وابدأ أكبر</button>
+        <div class="m-note">بيفضل معاك: الألبوم والمهام والمزايا. بيتصفّر: الفلوس والترقيات</div>
+        <button class="m-btn" data-legacy>🏆 بيع العزبة وابدأ أكبر</button>${perks}
         <button class="m-btn l-later" data-close>بعدين</button>`;
     } else {
       body = `<div class="m-title">متأكد؟</div>
@@ -151,6 +154,7 @@ export class MetaMenus {
       <div class="m-title">عزبة أكبر</div>
       ${now}${body}`, () => { this.open = null; });
     card.querySelector('[data-legacy]')?.addEventListener('click', () => this.showLegacy(true));
+    card.querySelector('[data-perks]')?.addEventListener('click', () => this.showPerks());
     card.querySelector('[data-legacy-go]')?.addEventListener('click', () => {
       const s = legacyReset(w, Date.now());
       if (!s) return;
@@ -158,6 +162,38 @@ export class MetaMenus {
       this.modal.open(`<div class="m-icon">⚠️</div><div class="m-title">ماقدرناش نحفظ</div>
         <div>المتصفح مش سامح بالحفظ دلوقتي، جرّب تاني بعد شوية</div><button class="m-btn" data-close>تمام</button>`, () => { this.open = null; });
     });
+  }
+
+  /** ⭐ Perks: spend the points every sale of the farm gives; they can be taken back and spent again. */
+  private showPerks(): void {
+    const w = this.sim, pts = w.perkPoints;
+    this.open = 'perks';
+    const rows = PERKS.list.map((p) => {
+      const lv = w.perks[p.id] ?? 0;
+      const pips = Array.from({ length: p.max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('');
+      const btn = lv >= p.max ? '<span class="t-ok">✅</span>'
+        : `<button class="t-claim" data-perk="${p.id}" ${pts > 0 ? '' : 'disabled'}>+⭐</button>`;
+      return `<div class="t-row p-row">
+        <span class="t-icon">${p.icon}</span>
+        <div class="t-body"><div class="t-label">${p.name}</div>
+          <div class="t-sub">${p.desc}</div><div class="p-pips">${pips}</div></div>
+        ${btn}</div>`;
+    }).join('');
+    const intro = w.legacy > 0
+      ? `<div class="m-note">عندك <b>${pts}</b> نقطة ⭐ · كل مرة تبيع العزبة بتاخد ${PERKS.pointsPerLegacy} نقط</div>`
+      : `<div class="m-note">بيع العزبة لما تفتح كل حاجة، وخد ${PERKS.pointsPerLegacy} نقط ⭐ تختار بيهم مزايا بتفضل معاك على طول</div>`;
+    const spent = PERKS.list.some((p) => (w.perks[p.id] ?? 0) > 0);
+    const card = this.modal.open(`
+      <div class="m-title">⭐ مزايا العزبة</div>
+      ${intro}
+      <div class="t-list">${rows}</div>
+      ${spent ? '<button class="m-btn l-later" data-perk-reset>🔄 رجّع النقط ووزّعها تاني</button>' : ''}
+      <button class="m-btn" data-back>رجوع</button>`, () => { this.open = null; });
+    card.querySelectorAll<HTMLButtonElement>('[data-perk]').forEach((b) => b.addEventListener('click', () => {
+      if (w.buyPerk(b.dataset.perk as typeof PERKS.list[number]['id'])) this.showPerks();
+    }));
+    card.querySelector('[data-perk-reset]')?.addEventListener('click', () => { w.resetPerks(); this.showPerks(); });
+    card.querySelector('[data-back]')?.addEventListener('click', () => this.showLegacy());
   }
 
   /** Open the settings card (also the transfer cards' way back). */
@@ -206,8 +242,9 @@ export class MetaMenus {
     const ready = d.ready;
     this.tasksBadge.hidden = ready === 0;
     this.tasksBadge.textContent = String(ready);
-    const sellable = this.sim.legacyMissing.length === 0;
-    this.legacyBadge.hidden = !sellable;
+    const sellable = this.sim.legacyMissing.length === 0, pts = this.sim.perkPoints;
+    this.legacyBadge.hidden = !sellable && pts <= 0;
+    this.legacyBadge.textContent = sellable ? '!' : '⭐';
     if (sellable && !this.legacyReady) this.onLegacyReady?.();
     this.legacyReady = sellable;
     const fresh = this.sim.album.seen.size - this.albumSeen;

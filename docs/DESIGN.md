@@ -422,3 +422,10 @@ This file records the decisions made on top of it.
   a worker or a belt will carry it there (otherwise nobody did and the coffee ran dry). The inspector no longer checks
   the pile behind the belt he just jammed, picks an empty café table, and doesn't fail a checkpoint that went bad
   while he was looking at it. `npm run beltcheck`.
+- Perks of a bigger ezba (playtest: "once someone finishes the game they need something new to come back for"):
+  every sale of the farm gives `PERKS.pointsPerLegacy` (2) points, one per perk level (config/perks.ts: faster
+  walk, bigger carry, faster staff, cheaper upgrades, bigger event rewards, more golden animals, more money for time
+  away, more start money). Points can be taken back and spent again any time, so each new farm can be played another
+  way; old saves with a legacy level get their points at once. Saved as `perks` (only the ones taken; a save never
+  loads more levels than its points cover). The save keeps only non-zero upgrade levels/payments now (the QR went
+  from version 30 to 27). `npm run transfercheck` covers perks.

@@ -54,7 +54,7 @@ export class UpgradeSystem {
   /** Price of a level of a track in this game. */
   costAt(id: UpgradeId, level: number): number { return Math.max(1, Math.round(upgradeCost(id, level) * this.mult(id))); }
   /** This game's price factor for a track: its path's, and easy mode's. */
-  mult(id: UpgradeId): number { return (this.w.path.costMult[id] ?? 1) * (this.w.easy ? ECONOMY.easy.costMult : 1); }
+  mult(id: UpgradeId): number { return (this.w.path.costMult[id] ?? 1) * (this.w.easy ? ECONOMY.easy.costMult : 1) * (1 - this.w.perk('discount')); }
 
   /** Requirements on this game's path (the supermarket path rewires some). */
   requires(def: UpgradeDef): readonly { id: UpgradeId; level: number }[] { return this.w.path.requires[def.id] ?? def.requires; }
@@ -154,8 +154,8 @@ export class UpgradeSystem {
   /** Derived effects of all levels. Safe to call repeatedly (e.g. after loading). */
   apply(): void {
     const w = this.w, U = ECONOMY.upgrades;
-    w.carry.cap = ECONOMY.player.capacity + this.level('player.capacity') * U['player.capacity'].step;
-    w.player.speedMult = 1 + this.level('player.speed') * U['player.speed'].step;
+    w.carry.cap = ECONOMY.player.capacity + this.level('player.capacity') * U['player.capacity'].step + w.perk('carry');
+    w.player.speedMult = 1 + this.level('player.speed') * U['player.speed'].step + w.perk('walk');
     for (const s of w.stations) {
       if (s.def.unlockTrack) s.open = this.level(s.def.unlockTrack) > 0;
       // supermarket path: even the coop starts closed (eggs.unlock opens it)
